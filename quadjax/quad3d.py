@@ -12,7 +12,7 @@ import tyro
 import pickle
 import time as time_module
 
-from adaptive_control_gym.envs.jax_env.dynamics import geom
+from quadjax.dynamics import geom
 from adaptive_control_gym.envs.jax_env.dynamics.utils import get_hit_penalty, EnvParams3D, EnvState3D, Action3D
 from adaptive_control_gym.envs.jax_env.dynamics.loose import get_loose_dynamics_3d
 

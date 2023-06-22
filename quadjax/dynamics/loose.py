@@ -1,7 +1,8 @@
 from jax import numpy as jnp
 
-from adaptive_control_gym.envs.jax_env.dynamics.utils import angle_normalize, EnvParams, EnvState, Action, EnvParams3D, EnvState3D, Action3D
-from adaptive_control_gym.envs.jax_env.dynamics import geom
+from quadjax.dynamics.utils import angle_normalize
+from quadjax.dynamics.dataclass import EnvParams, EnvState, Action, EnvParams3D, EnvState3D, Action3D
+from quadjax.dynamics import geom
 
 
 def get_loose_dynamics():

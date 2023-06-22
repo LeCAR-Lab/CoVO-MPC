@@ -10,7 +10,8 @@ from sympy.physics.mechanics import (
 from jax import numpy as jnp
 from functools import partial
 
-from adaptive_control_gym.envs.jax_env.dynamics.utils import angle_normalize, EnvParams, EnvState, Action
+from quadjax.dynamics.utils import angle_normalize
+from quadjax.dynamics.dataclass import EnvParams, EnvState, Action, EnvParams3D, EnvState3D, Action3D
 
 
 def get_taut_dynamics():

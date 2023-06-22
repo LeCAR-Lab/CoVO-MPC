@@ -1,7 +1,8 @@
 import sympy as sp
 from jax import numpy as jnp
 
-from adaptive_control_gym.envs.jax_env.dynamics.utils import angle_normalize, EnvParams, EnvState, Action
+from quadjax.dynamics.utils import angle_normalize
+from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
 
 def get_dynamic_transfer():
 
