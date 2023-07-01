@@ -52,7 +52,7 @@ class Quad3D(environment.Environment):
         self,
         key: chex.PRNGKey,
         state: EnvState3D,
-        action: float,
+        action: jnp.ndarray,
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         thrust = (action[0] + 1.0) / 2.0 * params.max_thrust
@@ -72,6 +72,8 @@ class Quad3D(environment.Environment):
             reward = 1.0 - 0.8 * err_pos - 0.05 * err_vel
         reward = reward.squeeze()
         env_action = Action3D(thrust=thrust, torque=torque)
+        print(torque)
+        exit()
 
         # old_loose_state = state.l_rope < (
         #     params.l - params.rope_taut_therehold)
