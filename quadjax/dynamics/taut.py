@@ -313,6 +313,14 @@ def get_taut_dynamics_3d():
         action = [env_action.thrust, env_action.torque[0], env_action.torque[1], env_action.torque[2]]
         A = A_taut_dyn_func(*params, *states, *action)
         b = b_taut_dyn_func(*params, *states, *action)
+        jnp.set_printoptions(precision=2)
+        # print A with rows in the same line
+        print("A = ", end="")
+        for i in range(9):
+            print("[", end="")
+            for j in range(9):
+                print(f"{A[i, j]}", end=", ")
+            print("]")
         states_dot = jnp.linalg.solve(A, b).squeeze()
         acc_x, acc_y, acc_z, alpha_x, alpha_y, alpha_z, theta_rope_ddot, phi_rope_ddot, f_rope_norm = states_dot
         acc = jnp.array([acc_x, acc_y, acc_z])
@@ -343,20 +351,20 @@ def get_taut_dynamics_3d():
         vel_tar = env_state.vel_traj[time]
 
         # replace state
-        env_state.replace(
+        env_state = env_state.replace(
             pos=new_pos, vel=new_vel, quat=new_quat, omega=new_omega,
             theta_rope=new_theta_rope, theta_rope_dot=new_theta_rope_dot,
             phi_rope=new_phi_rope, phi_rope_dot=new_phi_rope_dot, 
             pos_tar = pos_tar, vel_tar = vel_tar, 
-            pos_hook = pos_hook_func(*params, *states_new, *states_dot, *action),
-            vel_hook = vel_hook_func(*params, *states_new, *states_dot, *action),
-            pos_obj = pos_obj_func(*params, *states_new, *states_dot, *action),
-            vel_obj = vel_obj_func(*params, *states_new, *states_dot, *action),
+            pos_hook = pos_hook_func(*params, *states_new, *states_dot, *action).squeeze(),
+            vel_hook = vel_hook_func(*params, *states_new, *states_dot, *action).squeeze(),
+            pos_obj = pos_obj_func(*params, *states_new, *states_dot, *action).squeeze(),
+            vel_obj = vel_obj_func(*params, *states_new, *states_dot, *action).squeeze(),
             f_rope_norm = f_rope_norm, 
-            f_rope = f_rope_func(*params, *states_new, *states_dot, *action),
+            f_rope = f_rope_func(*params, *states_new, *states_dot, *action).squeeze(),
             l_rope = env_params.l,
-            zeta = zeta_func(*params, *states_new, *states_dot, *action),
-            zeta_dot = zeta_dot_func(*params, *states_new, *states_dot, *action),
+            zeta = zeta_func(*params, *states_new, *states_dot, *action).squeeze(),
+            zeta_dot = zeta_dot_func(*params, *states_new, *states_dot, *action).squeeze(),
             last_thrust = env_action.thrust,
             last_torque = env_action.torque,
             time = time

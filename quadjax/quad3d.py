@@ -272,7 +272,6 @@ class Quad3D(environment.Environment):
             ((params.I-1.2e-5)/0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
             (params.hook_offset-0.0)/0.04 * 2.0 - 1.0,  # 3
         ]  # 4+3=7
-
         return jnp.concatenate(obs_elements+param_elements).squeeze()
 
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
@@ -470,8 +469,10 @@ def main(args: Args):
         return jnp.array([params.g*params.m/params.max_thrust * 2.0 - 1.0, 0.0, 0.0, 0.0])
 
     print('starting test...')
-    # with jax.disable_jit():
-    test_env(env, policy=fixed_policy)
+    from jax import config
+    config.update("jax_debug_nans", True)
+    with jax.disable_jit():
+        test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":
