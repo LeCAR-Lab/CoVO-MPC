@@ -144,6 +144,7 @@ class Quad3D(environment.Environment):
 
         m = 0.025 + 0.015 * rand_val[0]
         I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.5e-5 * rand_val[1:4]
+        I = jnp.diag(I)
         mo = 0.005 + 0.005 * rand_val[4]
         l = 0.2 + 0.2 * rand_val[5]
         hook_offset = rand_val[6:9] * 0.04
@@ -268,7 +269,7 @@ class Quad3D(environment.Environment):
                 (params.m-0.025)/(0.04-0.025) * 2.0 - 1.0,
                 (params.mo-0.005)/0.05 * 2.0 - 1.0,
                 (params.l-0.2)/(0.4-0.2) * 2.0 - 1.0]),  # 3
-            (params.I-1.2e-5)/0.5e-5 * 2.0 - 1.0,  # 3
+            ((params.I-1.2e-5)/0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
             (params.hook_offset-0.0)/0.04 * 2.0 - 1.0,  # 3
         ]  # 4+3=7
 
@@ -309,7 +310,7 @@ class Quad3D(environment.Environment):
     def observation_space(self, params: EnvParams3D) -> spaces.Box:
         """Observation space of the environment."""
         # NOTE: use default params for jax limitation
-        return spaces.Box(-1.0, 1.0, shape=(44+self.default_params.traj_obs_len*6+9,), dtype=jnp.float32)
+        return spaces.Box(-1.0, 1.0, shape=(44+self.default_params.traj_obs_len*6+15,), dtype=jnp.float32)
 
 
 def test_env(env: Quad3D, policy):

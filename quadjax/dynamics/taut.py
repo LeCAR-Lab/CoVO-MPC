@@ -311,6 +311,9 @@ def get_taut_dynamics_3d():
             env_state.theta_rope, env_state.theta_rope_dot, env_state.phi_rope, env_state.phi_rope_dot
         ]
         action = [env_action.thrust, env_action.torque[0], env_action.torque[1], env_action.torque[2]]
+        print(params)
+        print(states)
+        print(action)
         A = A_taut_dyn_func(*params, *states, *action)
         b = b_taut_dyn_func(*params, *states, *action)
         states_dot = jnp.linalg.solve(A, b).squeeze()
