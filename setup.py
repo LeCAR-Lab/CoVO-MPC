@@ -19,6 +19,7 @@ setup(name='quadjax',
         'meshcat', 
         'sympy', 
         'gymnax',
-        'jax'
+        'jax', 
+        'distrax'
         ]
 )
