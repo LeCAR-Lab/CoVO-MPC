@@ -354,7 +354,7 @@ def get_taut_dynamics_3d():
             vel_obj = vel_obj_func(*params, *states_new, *states_dot, *action),
             f_rope_norm = f_rope_norm, 
             f_rope = f_rope_func(*params, *states_new, *states_dot, *action),
-            l_rope = env_params.l_rope,
+            l_rope = env_params.l,
             zeta = zeta_func(*params, *states_new, *states_dot, *action),
             zeta_dot = zeta_dot_func(*params, *states_new, *states_dot, *action),
             last_thrust = env_action.thrust,

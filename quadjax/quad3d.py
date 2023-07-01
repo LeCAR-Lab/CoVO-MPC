@@ -72,8 +72,6 @@ class Quad3D(environment.Environment):
             reward = 1.0 - 0.8 * err_pos - 0.05 * err_vel
         reward = reward.squeeze()
         env_action = Action3D(thrust=thrust, torque=torque)
-        print(torque)
-        exit()
 
         # old_loose_state = state.l_rope < (
         #     params.l - params.rope_taut_therehold)
@@ -472,8 +470,8 @@ def main(args: Args):
         return jnp.array([params.g*params.m/params.max_thrust * 2.0 - 1.0, 0.0, 0.0, 0.0])
 
     print('starting test...')
-    with jax.disable_jit():
-        test_env(env, policy=fixed_policy)
+    # with jax.disable_jit():
+    test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":
