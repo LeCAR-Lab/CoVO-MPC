@@ -13,8 +13,10 @@ import pickle
 import time as time_module
 
 from quadjax.dynamics import geom
-from adaptive_control_gym.envs.jax_env.dynamics.utils import get_hit_penalty, EnvParams3D, EnvState3D, Action3D
-from adaptive_control_gym.envs.jax_env.dynamics.loose import get_loose_dynamics_3d
+from quadjax.dynamics.utils import get_hit_penalty
+from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
+from quadjax.dynamics.loose import get_loose_dynamics_3d
+from quadjax.dynamics.taut import get_taut_dynamics_3d
 
 
 class Quad3D(environment.Environment):
@@ -36,7 +38,7 @@ class Quad3D(environment.Environment):
         else:
             raise NotImplementedError
         # dynamics
-        self.taut_dynamics = None
+        self.taut_dynamics = get_taut_dynamics_3d()
         self.loose_dynamics = get_loose_dynamics_3d()
         self.dynamic_transfer = None
         # controllers
@@ -78,7 +80,7 @@ class Quad3D(environment.Environment):
         # new_state = self.dynamic_transfer(
         #     params, loose_state, taut_state, old_loose_state)
 
-        new_state = self.loose_dynamics(params, state, env_action)
+        new_state = self.taut_dynamics(params, state, env_action)
 
         done = self.is_terminal(state, params)
         return (
@@ -121,6 +123,8 @@ class Quad3D(environment.Environment):
             l_rope=params.l, zeta=jnp.array([0.0, 0.0, -1.0]), zeta_dot=zeros3,
             f_rope=zeros3, f_rope_norm=0.0,
             # trajectory
+            theta_rope = 0.0, theta_rope_dot = 0.0,
+            phi_rope = 0.0, phi_rope_dot = 0.0,
             pos_tar=pos_traj[0], vel_tar=vel_traj[0],
             pos_traj=pos_traj, vel_traj=vel_traj,
             # debug value
@@ -466,7 +470,7 @@ def main(args: Args):
 
     print('starting test...')
     with jax.disable_jit():
-        test_env(env, policy=pid_policy)
+        test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":
