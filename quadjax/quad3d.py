@@ -130,7 +130,7 @@ class Quad3D(environment.Environment):
             f_rope=zeros3,
             f_rope_norm=0.0,
             # trajectory
-            theta_rope=0.0,
+            theta_rope=jnp.pi,
             theta_rope_dot=0.0,
             phi_rope=0.0,
             phi_rope_dot=0.0,
@@ -532,15 +532,15 @@ def main(args: Args):
 
     def fixed_policy(obs, state, params, rng):
         return jnp.array(
-            [params.g * params.m / params.max_thrust * 2.0 - 1.0, 0.0, 0.0, 0.0]
+            [params.g * (params.m + params.mo) / params.max_thrust * 2.0 - 1.0, 0.0, 0.0, 0.0]
         )
 
     print("starting test...")
-    from jax import config
-
-    config.update("jax_debug_nans", True)
-    with jax.disable_jit():
-        test_env(env, policy=fixed_policy)
+    # enable NaN value detection
+    # from jax import config
+    # config.update("jax_debug_nans", True)
+    # with jax.disable_jit():
+    test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":
