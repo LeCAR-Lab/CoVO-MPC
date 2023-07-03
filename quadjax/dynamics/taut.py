@@ -254,10 +254,10 @@ def get_taut_dynamics_3d():
     vel_obj = vel_hook + l * zeta_dot
     acc_obj = acc_hook + l * zeta_ddot
     f_rope = f_rope_norm * zeta
-    thrust_local = sp.Matrix([0, 0, f_rope_norm])
-    thrust_world = rotmat @ thrust_local
     # define action
     thrust = sp.Symbol("thrust")
+    thrust_local = sp.Matrix([0, 0, thrust])
+    thrust_world = rotmat @ thrust_local
     torque = sp.Matrix(sp.symbols('torque_x torque_y torque_z')).reshape(3, 1)
     action = [thrust, torque[0], torque[1], torque[2]]
 
