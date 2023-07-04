@@ -130,7 +130,7 @@ class Quad3D(environment.Environment):
             f_rope=zeros3,
             f_rope_norm=0.0,
             # trajectory
-            theta_rope=jnp.pi,
+            theta_rope=jnp.pi*1.01,
             theta_rope_dot=0.0,
             phi_rope=0.0,
             phi_rope_dot=0.0,
@@ -540,7 +540,7 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    test_env(env, policy=fixed_policy)
+    test_env(env, policy=random_policy)
 
 
 if __name__ == "__main__":

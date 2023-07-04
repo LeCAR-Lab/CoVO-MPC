@@ -313,7 +313,7 @@ def get_taut_dynamics_3d():
         action = [env_action.thrust, env_action.torque[0], env_action.torque[1], env_action.torque[2]]
         A = A_taut_dyn_func(*params, *states, *action)
         b = b_taut_dyn_func(*params, *states, *action)
-        A_inv = jnp.linalg.pinv(A)
+        A_inv = jnp.linalg.inv(A)
         states_dot = jnp.dot(A_inv, b).squeeze()
         acc_x, acc_y, acc_z, alpha_x, alpha_y, alpha_z, theta_rope_ddot, phi_rope_ddot, f_rope_norm = states_dot
         acc = jnp.array([acc_x, acc_y, acc_z])
