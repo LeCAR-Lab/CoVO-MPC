@@ -18,6 +18,11 @@ from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.dynamics.loose import get_loose_dynamics_3d
 from quadjax.dynamics.taut import get_taut_dynamics_3d
 
+# for debug purpose
+from icecream import install
+
+install()
+
 
 class Quad3D(environment.Environment):
     """
@@ -130,7 +135,7 @@ class Quad3D(environment.Environment):
             f_rope=zeros3,
             f_rope_norm=0.0,
             # trajectory
-            theta_rope=jnp.pi*1.01,
+            theta_rope=jnp.pi * 1.01,
             theta_rope_dot=0.0,
             phi_rope=0.0,
             phi_rope_dot=0.0,
@@ -320,7 +325,12 @@ class Quad3D(environment.Environment):
             ((params.I - 1.2e-5) / 0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
             (params.hook_offset - 0.0) / 0.04 * 2.0 - 1.0,  # 3
         ]  # 4+3=7
-        return jnp.concatenate(obs_elements + param_elements).squeeze()
+        obs = jnp.concatenate(obs_elements + param_elements).squeeze()
+        # print all elements in obs_elements and param_elements
+        for i, o in enumerate(obs_elements + param_elements):
+            ic(i, o.shape)
+        ic(state.pos_tar.shape)
+        return obs
 
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
         """Check whether state is terminal."""
@@ -532,7 +542,12 @@ def main(args: Args):
 
     def fixed_policy(obs, state, params, rng):
         return jnp.array(
-            [params.g * (params.m + params.mo) / params.max_thrust * 2.0 - 1.0, 0.0, 0.0, 0.0]
+            [
+                params.g * (params.m + params.mo) / params.max_thrust * 2.0 - 1.0,
+                0.0,
+                0.0,
+                0.0,
+            ]
         )
 
     print("starting test...")
