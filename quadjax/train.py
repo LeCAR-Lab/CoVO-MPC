@@ -166,7 +166,7 @@ def make_train(config):
                 rng_params = jax.random.split(_rng, config["NUM_ENVS"])
                 new_env_params = jax.vmap(env.sample_params)(rng_params)
                 def map_fn(done, x, y):
-                    reshaped_done = jnp.broadcast_to(done, x.shape)
+                    reshaped_done = done.reshape([done.shape[0]] + [1] * (x.ndim - 1))
                     return reshaped_done * x + (1 - reshaped_done) * y
                 env_params = jax.tree_map(
                     lambda x, y: map_fn(done, x, y), new_env_params, env_params
@@ -374,7 +374,7 @@ def main(args: Args):
         pickle.dump(out["runner_state"][0].params, f)
 
     rng = jax.random.PRNGKey(1)
-    env = Quad2D(task=args.task)
+    env = Quad3D(task=args.task)
     apply_fn = out["runner_state"][0].apply_fn
     params = out["runner_state"][0].params
 
