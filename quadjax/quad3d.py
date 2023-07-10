@@ -80,14 +80,12 @@ class Quad3D(environment.Environment):
         reward = reward.squeeze()
         env_action = Action3D(thrust=thrust, torque=torque)
 
-        # old_loose_state = state.l_rope < (
-        #     params.l - params.rope_taut_therehold)
-        # taut_state = self.taut_dynamics(params, state, env_action)
-        # loose_state = self.loose_dynamics(params, state, env_action)
-        # new_state = self.dynamic_transfer(
-        #     params, loose_state, taut_state, old_loose_state)
-
-        new_state = self.loose_dynamics(params, state, env_action)
+        old_loose_state = state.l_rope < (
+            params.l - params.rope_taut_therehold)
+        taut_state = self.taut_dynamics(params, state, env_action)
+        loose_state = self.loose_dynamics(params, state, env_action)
+        new_state = self.dynamic_transfer(
+            params, loose_state, taut_state, old_loose_state)
 
         done = self.is_terminal(state, params)
         return (
@@ -158,7 +156,7 @@ class Quad3D(environment.Environment):
         m = 0.025 + 0.015 * rand_val[0]
         I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.5e-5 * rand_val[1:4]
         I = jnp.diag(I)
-        mo = 0.005 + 0.005 * rand_val[4]
+        mo = 0.01 + 0.01 * rand_val[4]
         l = 0.2 + 0.2 * rand_val[5]
         hook_offset = rand_val[6:9] * 0.04
 
@@ -322,11 +320,11 @@ class Quad3D(environment.Environment):
             ((params.I - 1.2e-5) / 0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
             (params.hook_offset - 0.0) / 0.04 * 2.0 - 1.0,  # 3
         ]  # 4+3=7
-        obs = jnp.concatenate(obs_elements + param_elements).squeeze()
         # DEBUG print all elements in obs_elements and param_elements
         # for i, o in enumerate(obs_elements + param_elements):
         #     ic(i, o.shape)
         # ic(state.pos_tar.shape)
+        obs = jnp.concatenate(obs_elements + param_elements).squeeze()
         return obs
 
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
@@ -547,9 +545,14 @@ def main(args: Args):
         kp = I_diag * (w0**2)
         kd = I_diag * 2.0 * zeta * w0
         torque = kp * rot_err + kd * (-state.omega)
+        if state.pos[2]<0:
+            thrust = params.g * (params.m + params.mo) / params.max_thrust * 2.0 - 1.0
+            thrust = 1.0
+        else:
+            thrust = -1.5
         return jnp.array(
             [
-                params.g * (params.m + params.mo) / params.max_thrust * 2.0 - 1.0,
+                thrust,
                 *(torque / params.max_torque),
             ]
         )
@@ -558,8 +561,8 @@ def main(args: Args):
     # enable NaN value detection
     # from jax import config
     # config.update("jax_debug_nans", True)
-    with jax.disable_jit():
-        test_env(env, policy=fixed_policy)
+    # with jax.disable_jit():
+    test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":

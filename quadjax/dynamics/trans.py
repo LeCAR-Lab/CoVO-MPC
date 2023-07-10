@@ -196,7 +196,7 @@ def get_dynamic_transfer_3d():
     eqs = []
     for ee in [lin_quad, ang_quad, lin_obj]:
         for i in range(3):
-            eqs.append(ee[i])
+            eqs.append(ee[i].expand()) # NOTE expand is important!
     eq_zeta = zeta[0] * taut_zeta_dot[0] + zeta[1] * taut_zeta_dot[1] + zeta[2] * taut_zeta_dot[2]
     eqs.append(eq_zeta)
     
@@ -210,7 +210,7 @@ def get_dynamic_transfer_3d():
     Atrans_func = sp.lambdify(params+loose_state, Atrans, modules='jax')
     btrans_func = sp.lambdify(params+loose_state, btrans, modules='jax')
 
-    def dynamic_transfer_3d(env_params: EnvParams3D, loose_state: EnvState3D, taut_state: EnvState3D, old_loose_state: bool):
+    def loose2taut_transfer_3d(env_params: EnvParams3D, loose_state: EnvState3D, loose2taut: bool):
         params = [
             env_params.g,
             env_params.m,
@@ -256,12 +256,35 @@ def get_dynamic_transfer_3d():
             loose_state.l_rope * (1 - loose2taut)
 
         loose_state = loose_state.replace(
-            y_dot=new_y_dot,
-            z_dot=new_z_dot,
-            theta_dot=new_theta_dot,
-            phi_dot=new_phi_dot,
-            l_rope=new_l_rope
+            vel = new_vel,
+            omega = new_omega,
+            zeta_dot = new_zeta_dot,
+            l_rope = new_l_rope
         )
+
+        return loose_state
+    
+    def dynamic_transfer_3d(env_params: EnvParams3D, loose_state: EnvState3D, taut_state: EnvState3D, old_loose_state: bool):
+        new_loose_state = loose_state.l_rope < (
+            env_params.l - env_params.rope_taut_therehold)
+        taut2loose = (taut_state.f_rope_norm < 0.0) & (~old_loose_state)
+        loose2taut = (~new_loose_state) & (old_loose_state)
+
+        # taut2loose dynamics
+        new_taut_l_rope = taut_state.l_rope - taut2loose * \
+            env_params.rope_taut_therehold * 2.0
+        taut_state = taut_state.replace(l_rope=new_taut_l_rope)
+
+        # loose2taut dynamics
+        loose_state = loose2taut_transfer_3d(env_params, loose_state, loose2taut)
+
+        # use loose_state when old_loose_state is True, else use taut_state
+        new_state = {}
+        for k in loose_state.__dict__.keys():
+            new_state[k] = jnp.where(old_loose_state, loose_state.__dict__[
+                                     k], taut_state.__dict__[k])
+
+        loose_state = loose_state.replace(**new_state)
 
         return loose_state
 

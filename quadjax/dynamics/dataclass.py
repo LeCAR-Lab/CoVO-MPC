@@ -106,7 +106,7 @@ class EnvParams3D:
         [1.7e-5, 0.0, 0.00], 
         [0.0, 1.7e-5, 0.0], 
         [0.0, 0.0, 3.0e-5]])  # moment of inertia
-    mo: float = 0.005  # mass of the object attached to the rod
+    mo: float = 0.01  # mass of the object attached to the rod
     l: float = 0.3  # length of the rod
     hook_offset: jnp.ndarray = default_array([0.03, 0.02, -0.06])
     max_steps_in_episode: int = 300
