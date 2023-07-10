@@ -372,7 +372,7 @@ class Quad3D(environment.Environment):
         )
 
 
-def test_env(env: Quad3D, policy):
+def test_env(env: Quad3D, policy, render_video=False):
     # running environment
     t0 = time_module.time()
     rng = jax.random.PRNGKey(1)

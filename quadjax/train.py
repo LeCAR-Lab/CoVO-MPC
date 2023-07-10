@@ -367,9 +367,8 @@ def main(args: Args):
     # save
     plt.savefig("../results/ppo.png")
 
-    # save network params
     import pickle
-
+    # save network params
     with open("../results/ppo_params.pkl", "wb") as f:
         pickle.dump(out["runner_state"][0].params, f)
 
