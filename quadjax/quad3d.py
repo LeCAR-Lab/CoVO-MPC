@@ -31,7 +31,7 @@ class Quad3D(environment.Environment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking_zigzag"):
+    def __init__(self, task: str = "tracking"):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -75,7 +75,6 @@ class Quad3D(environment.Environment):
         elif self.task == "hovering":
             reward = 1.0 - 0.6 * err_pos - 0.1 * err_vel
         else:
-            raise NotImplementedError
             reward = 1.0 - 0.8 * err_pos - 0.05 * err_vel
         reward = reward.squeeze()
         env_action = Action3D(thrust=thrust, torque=torque)
@@ -194,7 +193,8 @@ class Quad3D(environment.Environment):
                 rand_amp[i, 0] * jnp.sin(w1 * ts + rand_phase[i, 0])
                 + rand_amp[i, 1] * jnp.sin(w2 * ts + rand_phase[i, 1])
                 for i in range(3)
-            ]
+            ], 
+            axis=1
         )
 
         vel_traj = scale * jnp.stack(
@@ -202,7 +202,8 @@ class Quad3D(environment.Environment):
                 rand_amp[i, 0] * w1 * jnp.cos(w1 * ts + rand_phase[i, 0])
                 + rand_amp[i, 1] * w2 * jnp.cos(w2 * ts + rand_phase[i, 1])
                 for i in range(3)
-            ]
+            ], 
+            axis=1
         )
 
         return pos_traj, vel_traj
@@ -365,7 +366,7 @@ class Quad3D(environment.Environment):
         return spaces.Box(
             -1.0,
             1.0,
-            shape=(44 + self.default_params.traj_obs_len * 6 + 15,),
+            shape=(42 + self.default_params.traj_obs_len * 6 + 15,),
             dtype=jnp.float32,
         )
 

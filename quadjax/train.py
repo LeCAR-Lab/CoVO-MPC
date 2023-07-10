@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
 
-from quadjax.quad2d import Quad2D, test_env
+from quadjax.quad3d import Quad3D, test_env
 
 from icecream import install
 
@@ -165,8 +165,11 @@ def make_train(config):
                 # resample environment parameters if done
                 rng_params = jax.random.split(_rng, config["NUM_ENVS"])
                 new_env_params = jax.vmap(env.sample_params)(rng_params)
+                def map_fn(done, x, y):
+                    reshaped_done = jnp.broadcast_to(done, x.shape)
+                    return reshaped_done * x + (1 - reshaped_done) * y
                 env_params = jax.tree_map(
-                    lambda x, y: jax.lax.select(done, x, y), new_env_params, env_params
+                    lambda x, y: map_fn(done, x, y), new_env_params, env_params
                 )
 
                 transition = Transition(
