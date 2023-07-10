@@ -317,9 +317,9 @@ class Args:
 def main(args: Args):
     config = {
         "LR": 3e-4,
-        "NUM_ENVS": 2048,
+        "NUM_ENVS": 8192,
         "NUM_STEPS": 300,
-        "TOTAL_TIMESTEPS": 2.0e7,
+        "TOTAL_TIMESTEPS": 5.0e7,
         "UPDATE_EPOCHS": 2,
         "NUM_MINIBATCHES": 320,
         "GAMMA": 0.99,
@@ -371,7 +371,7 @@ def main(args: Args):
     import pickle
 
     with open("../results/ppo_params.pkl", "wb") as f:
-        pickle.dump(out["runner_state"][0].params, f)
+        pickle.dump(out["runner_state"][0], f)
 
     rng = jax.random.PRNGKey(1)
     env = Quad3D(task=args.task)

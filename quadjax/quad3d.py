@@ -291,7 +291,7 @@ class Quad3D(environment.Environment):
             # rope
             jnp.expand_dims(state.l_rope, axis=0),
             state.zeta,
-            state.zeta_dot,  # 3*3=9
+            state.zeta_dot / 5.0,  # 3*3=9
             state.f_rope,
             jnp.expand_dims(state.f_rope_norm, axis=0),  # 3+1=4
             # trajectory
@@ -314,7 +314,7 @@ class Quad3D(environment.Environment):
             jnp.array(
                 [
                     (params.m - 0.025) / (0.04 - 0.025) * 2.0 - 1.0,
-                    (params.mo - 0.005) / 0.05 * 2.0 - 1.0,
+                    (params.mo - 0.01) / 0.01 * 2.0 - 1.0,
                     (params.l - 0.2) / (0.4 - 0.2) * 2.0 - 1.0,
                 ]
             ),  # 3
@@ -336,6 +336,7 @@ class Quad3D(environment.Environment):
             | (jnp.abs(state.pos) > 2.0).any()
             | (jnp.abs(state.pos_obj) > 2.0).any()
             | (jnp.abs(state.omega) > 100.0).any()
+            | (state.quat[3] < np.cos(jnp.pi/3 * 0.5))
         )
         return done
 
@@ -557,6 +558,15 @@ def main(args: Args):
                 *(torque / params.max_torque),
             ]
         )
+    
+    def make_ppo_policy(path='../results/ppo_params.pkl'):
+        with open(path, 'rb') as f:
+            out = pickle.load(f)
+        apply_fn = out["runner_state"][0].apply_fn
+        params = out["runner_state"][0].params
+
+        def policy(obs, rng):
+            return apply_fn(params, obs)[0].mean()
 
     print("starting test...")
     # enable NaN value detection
