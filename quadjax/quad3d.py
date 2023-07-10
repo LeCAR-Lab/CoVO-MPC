@@ -135,10 +135,6 @@ class Quad3D(environment.Environment):
             f_rope=zeros3,
             f_rope_norm=0.0,
             # trajectory
-            theta_rope=jnp.pi * 1.01,
-            theta_rope_dot=0.0,
-            phi_rope=0.0,
-            phi_rope_dot=0.0,
             pos_tar=pos_traj[0],
             vel_tar=vel_traj[0],
             pos_traj=pos_traj,
@@ -326,10 +322,10 @@ class Quad3D(environment.Environment):
             (params.hook_offset - 0.0) / 0.04 * 2.0 - 1.0,  # 3
         ]  # 4+3=7
         obs = jnp.concatenate(obs_elements + param_elements).squeeze()
-        # print all elements in obs_elements and param_elements
-        for i, o in enumerate(obs_elements + param_elements):
-            ic(i, o.shape)
-        ic(state.pos_tar.shape)
+        # DEBUG print all elements in obs_elements and param_elements
+        # for i, o in enumerate(obs_elements + param_elements):
+        #     ic(i, o.shape)
+        # ic(state.pos_tar.shape)
         return obs
 
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:

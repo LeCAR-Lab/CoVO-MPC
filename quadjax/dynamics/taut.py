@@ -10,9 +10,9 @@ from sympy.physics.mechanics import (
 from jax import numpy as jnp
 from functools import partial
 
-from .utils import angle_normalize
-from . import geom
-from .dataclass import (
+from quadjax.dynamics.utils import angle_normalize
+from quadjax.dynamics import geom
+from quadjax.dynamics.dataclass import (
     EnvParams,
     EnvState,
     Action,
@@ -337,9 +337,9 @@ def get_taut_dynamics_3d():
         alpha[0, 0],
         alpha[1, 0],
         alpha[2, 0],
-        zeta_dot[0, 0],
-        zeta_dot[1, 0], 
-        zeta_dot[2, 0],
+        zeta_ddot[0, 0],
+        zeta_ddot[1, 0], 
+        zeta_ddot[2, 0],
         f_rope_norm,
     ]
     # get other state variables
@@ -477,12 +477,14 @@ def get_taut_dynamics_3d():
             alpha_x,
             alpha_y,
             alpha_z,
-            theta_rope_ddot,
-            phi_rope_ddot,
+            zeta_ddot_x,
+            zeta_ddot_y,
+            zeta_ddot_z,
             f_rope_norm,
         ) = states_dot
         acc = jnp.array([acc_x, acc_y, acc_z])
         alpha = jnp.array([alpha_x, alpha_y, alpha_z])
+        zeta_ddot = jnp.array([zeta_ddot_x, zeta_ddot_y, zeta_ddot_z])
 
         # calculate updated state variables
         new_vel = env_state.vel + acc * env_params.dt
