@@ -11,12 +11,7 @@ from functools import partial
 from dataclasses import dataclass as pydataclass
 import tyro
 
-from quadjax.dynamics.utils import angle_normalize, get_hit_penalty
-from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
-from quadjax.dynamics.taut import get_taut_dynamics
-from quadjax.dynamics.loose import get_loose_dynamics
-from quadjax.dynamics.trans import get_dynamic_transfer
-
+from quadjax.dynamics import get_hit_penalty, EnvParams, EnvState, Action, get_taut_dynamics, get_loose_dynamics, get_dynamic_transfer
 
 class Quad2D(environment.Environment):
     """

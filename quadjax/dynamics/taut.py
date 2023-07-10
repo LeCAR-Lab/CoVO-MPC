@@ -10,9 +10,9 @@ from sympy.physics.mechanics import (
 from jax import numpy as jnp
 from functools import partial
 
-from quadjax.dynamics.utils import angle_normalize
-from quadjax.dynamics import geom
-from quadjax.dynamics.dataclass import (
+from .utils import angle_normalize
+from . import geom
+from .dataclass import (
     EnvParams,
     EnvState,
     Action,
@@ -41,8 +41,8 @@ def get_taut_dynamics():
     params = [m, I, g, l, mo, delta_yh, delta_zh]
     action = [thrust, tau]
 
-    # Define state variables and their derivatives
     y, z, theta, phi = dynamicsymbols("y z theta phi")
+    # Define state variables and their derivatives
     y_dot, z_dot, theta_dot, phi_dot = (
         sp.diff(y, t),
         sp.diff(z, t),
@@ -91,6 +91,8 @@ def get_taut_dynamics():
         f_rope_y,
         f_rope_z,
     ]
+    theta = angle_normalize(theta)
+    phi = angle_normalize(phi)
 
     # Define inertial reference frame
     N = ReferenceFrame("N")
@@ -236,7 +238,6 @@ def get_taut_dynamics():
 
         time = env_state.time + 1
 
-
         # Update all state variables at once using replace()
         env_state = env_state.replace(
             y=new_y,
@@ -306,8 +307,7 @@ def get_taut_dynamics_3d():
     quat = sp.Matrix(sp.symbols("quat_x quat_y quat_z quat_w")).reshape(4, 1)
     omega = sp.Matrix(sp.symbols("omega_x omega_y omega_z")).reshape(3, 1)
     zeta = sp.Matrix(sp.symbols("zeta_x zeta_y zeta_z")).reshape(3, 1)
-    theta_rope_dot = sp.Symbol("theta_rope_dot")
-    phi_rope_dot = sp.Symbol("phi_rope_dot")
+    zeta_dot = sp.Matrix(sp.symbols("zeta_dot_x zeta_dot_y zeta_dot_z")).reshape(3, 1)
     states = [
         pos[0],
         pos[1],
@@ -322,16 +322,13 @@ def get_taut_dynamics_3d():
         omega[0],
         omega[1],
         omega[2],
-        theta_rope,
-        theta_rope_dot,
-        phi_rope,
-        phi_rope_dot,
+        zeta[0],zeta[1],zeta[2],
+        zeta_dot[0],zeta_dot[1],zeta_dot[2],
     ]
     # dynamic variables to solve
     acc = sp.Matrix(sp.symbols("acc_x acc_y acc_z")).reshape(3, 1)
     alpha = sp.Matrix(sp.symbols("alpha_x alpha_y alpha_z")).reshape(3, 1)
-    theta_rope_ddot = sp.Symbol("theta_rope_ddot")
-    phi_rope_ddot = sp.Symbol("phi_rope_ddot")
+    zeta_ddot = sp.Matrix(sp.symbols("zeta_ddot_x zeta_ddot_y zeta_ddot_z")).reshape(3, 1)
     f_rope_norm = sp.Symbol("f_rope_norm")
     states_dot = [
         acc[0, 0],
@@ -340,8 +337,9 @@ def get_taut_dynamics_3d():
         alpha[0, 0],
         alpha[1, 0],
         alpha[2, 0],
-        theta_rope_ddot,
-        phi_rope_ddot,
+        zeta_dot[0, 0],
+        zeta_dot[1, 0], 
+        zeta_dot[2, 0],
         f_rope_norm,
     ]
     # get other state variables
@@ -353,47 +351,6 @@ def get_taut_dynamics_3d():
         acc
         + sp.Matrix.cross(alpha, hook_offset_world)
         + sp.Matrix.cross(omega, sp.Matrix.cross(omega, hook_offset_world))
-    )
-    zeta_dot = sp.Matrix(
-        [
-            -sp.sin(theta_rope) * sp.sin(phi_rope) * theta_rope_dot
-            + sp.cos(theta_rope) * sp.cos(phi_rope) * phi_rope_dot,
-            sp.sin(phi_rope) * sp.cos(theta_rope) * theta_rope_dot
-            + sp.cos(phi_rope) * sp.sin(theta_rope) * phi_rope_dot,
-            -sp.sin(theta_rope) * theta_rope_dot,
-        ]
-    )
-    zeta_ddot = sp.Matrix(
-        [
-            [
-                -sp.sin(phi_rope) * sp.sin(theta_rope) * phi_rope_ddot
-                - 2
-                * sp.sin(phi_rope)
-                * sp.cos(theta_rope)
-                * phi_rope_dot
-                * theta_rope_dot
-                - sp.sin(theta_rope) * sp.cos(phi_rope) * phi_rope_dot**2
-                - sp.sin(theta_rope) * sp.cos(phi_rope) * theta_rope_dot**2
-                + sp.cos(phi_rope) * sp.cos(theta_rope) * theta_rope_ddot
-            ],
-            [
-                -sp.sin(phi_rope) * sp.sin(theta_rope) * phi_rope_dot**2
-                - sp.sin(phi_rope) * sp.sin(theta_rope) * theta_rope_dot**2
-                + sp.sin(phi_rope) * sp.cos(theta_rope) * theta_rope_ddot
-                + sp.sin(theta_rope) * sp.cos(phi_rope) * phi_rope_ddot
-                + 2
-                * sp.cos(phi_rope)
-                * sp.cos(theta_rope)
-                * phi_rope_dot
-                * theta_rope_dot
-            ],
-            [
-                -(
-                    sp.sin(theta_rope) * theta_rope_ddot
-                    + sp.cos(theta_rope) * theta_rope_dot**2
-                )
-            ],
-        ]
     )
     pos_obj = pos_hook + l * zeta
     vel_obj = vel_hook + l * zeta_dot
@@ -417,6 +374,8 @@ def get_taut_dynamics_3d():
     )
     # object
     eq_obj_pos = -f_rope + sp.Matrix([0, 0, -mo * g]) - mo * acc_obj
+    # acceleration constrains
+    eq_zeta = zeta[0]*zeta_ddot[0] + zeta[1]*zeta_ddot[1] + zeta[2]*zeta_ddot[2] + zeta_dot[0]**2 + zeta_dot[1]**2 + zeta_dot[2]**2
 
     # expand all equations
     eqs = []
@@ -424,6 +383,7 @@ def get_taut_dynamics_3d():
         eqs.append(eq_quad_pos[i].expand())
         eqs.append(eq_quad_rot[i].expand())
         eqs.append(eq_obj_pos[i].expand())
+    eqs.append(eq_zeta.expand())
     unknowns = [
         acc[0],
         acc[1],
@@ -431,18 +391,21 @@ def get_taut_dynamics_3d():
         alpha[0],
         alpha[1],
         alpha[2],
-        theta_rope_ddot,
-        phi_rope_ddot,
+        zeta_ddot[0],
+        zeta_ddot[1], 
+        zeta_ddot[2],
         f_rope_norm,
     ]
 
     # Solve for the acceleration
-    A_taut_dyn = sp.zeros(9, 9)
-    b_taut_dyn = sp.zeros(9, 1)
-    for i in range(9):
-        for j in range(9):
+    assert len(eqs) == len(unknowns), "Number of equations and unknowns do not match"
+    num_eqs = len(eqs)
+    A_taut_dyn = sp.zeros(num_eqs, num_eqs)
+    b_taut_dyn = sp.zeros(num_eqs, 1)
+    for i in range(num_eqs):
+        for j in range(num_eqs):
             A_taut_dyn[i, j] = eqs[i].coeff(unknowns[j])
-        b_taut_dyn[i] = -eqs[i].subs([(unknowns[j], 0) for j in range(9)])
+        b_taut_dyn[i] = -eqs[i].subs([(unknowns[j], 0) for j in range(num_eqs)])
 
     # Define matrix function
     A_taut_dyn_func = sp.lambdify(params + states + action, A_taut_dyn, "jax")
@@ -454,8 +417,6 @@ def get_taut_dynamics_3d():
     pos_obj_func = sp.lambdify(params + states + states_dot + action, pos_obj, "jax")
     vel_obj_func = sp.lambdify(params + states + states_dot + action, vel_obj, "jax")
     f_rope_func = sp.lambdify(params + states + states_dot + action, f_rope, "jax")
-    zeta_func = sp.lambdify(params + states + states_dot + action, zeta, "jax")
-    zeta_dot_func = sp.lambdify(params + states + states_dot + action, zeta_dot, "jax")
 
     def taut_dynamics_3d(
         env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D
@@ -492,10 +453,12 @@ def get_taut_dynamics_3d():
             env_state.omega[0],
             env_state.omega[1],
             env_state.omega[2],
-            env_state.theta_rope,
-            env_state.theta_rope_dot,
-            env_state.phi_rope,
-            env_state.phi_rope_dot,
+            env_state.zeta[0],
+            env_state.zeta[1],
+            env_state.zeta[2],
+            env_state.zeta_dot[0], 
+            env_state.zeta_dot[1], 
+            env_state.zeta_dot[2]
         ]
         action = [
             env_action.thrust,
@@ -526,14 +489,8 @@ def get_taut_dynamics_3d():
         new_pos = env_state.pos + new_vel * env_params.dt
         new_omega = env_state.omega + alpha * env_params.dt
         new_quat = geom.integrate_quat(env_state.quat, new_omega, env_params.dt)
-        new_theta_rope_dot = env_state.theta_rope_dot + theta_rope_ddot * env_params.dt
-        new_theta_rope = env_state.theta_rope + new_theta_rope_dot * env_params.dt
-        new_phi_rope_dot = angle_normalize(
-            env_state.phi_rope_dot + phi_rope_ddot * env_params.dt
-        )
-        new_phi_rope = angle_normalize(
-            env_state.phi_rope + new_phi_rope_dot * env_params.dt
-        )
+        new_zeta_dot = env_state.zeta_dot + zeta_ddot * env_params.dt
+        new_zeta = env_state.zeta + new_zeta_dot * env_params.dt
 
         # Update states list
         states_new = [
@@ -550,10 +507,12 @@ def get_taut_dynamics_3d():
             new_omega[0],
             new_omega[1],
             new_omega[2],
-            new_theta_rope,
-            new_theta_rope_dot,
-            new_phi_rope,
-            new_phi_rope_dot,
+            new_zeta[0],
+            new_zeta[1],
+            new_zeta[2],
+            new_zeta_dot[0], 
+            new_zeta_dot[1], 
+            new_zeta_dot[2]
         ]
 
         # Compute other state variables
@@ -567,10 +526,6 @@ def get_taut_dynamics_3d():
             vel=new_vel,
             quat=new_quat,
             omega=new_omega,
-            theta_rope=new_theta_rope,
-            theta_rope_dot=new_theta_rope_dot,
-            phi_rope=new_phi_rope,
-            phi_rope_dot=new_phi_rope_dot,
             pos_tar=pos_tar,
             vel_tar=vel_tar,
             pos_hook=pos_hook_func(
@@ -584,10 +539,8 @@ def get_taut_dynamics_3d():
             f_rope_norm=f_rope_norm,
             f_rope=f_rope_func(*params, *states_new, *states_dot, *action).squeeze(),
             l_rope=env_params.l,
-            zeta=zeta_func(*params, *states_new, *states_dot, *action).squeeze(),
-            zeta_dot=zeta_dot_func(
-                *params, *states_new, *states_dot, *action
-            ).squeeze(),
+            zeta=new_zeta, 
+            zeta_dot=new_zeta_dot, 
             last_thrust=env_action.thrust,
             last_torque=env_action.torque,
             time=time,
