@@ -8,8 +8,8 @@ def default_array(array):
 class EnvState:
     y: float
     z: float
-    theta: float
-    phi: float
+    theta: float # drone orientation
+    phi: float # rope orientation in local frame
     y_dot: float
     z_dot: float
     theta_dot: float

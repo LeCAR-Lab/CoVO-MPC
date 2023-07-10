@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
 
-from quadjax.quad3d import Quad3D, test_env
+from quadjax.quad2d import Quad2D, test_env
 
 from icecream import install
 

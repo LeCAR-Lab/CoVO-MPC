@@ -139,7 +139,7 @@ def get_taut_dynamics():
     A_taut_dyn_func = sp.lambdify(params + states_val + action, A_taut_dyn, "jax")
     b_taut_dyn_func = sp.lambdify(params + states_val + action, b_taut_dyn, "jax")
 
-    # Solve for tion
+    # Solve for other states
     obs_eqs = [
         y_obj,
         z_obj,
@@ -208,7 +208,7 @@ def get_taut_dynamics():
         new_theta = angle_normalize(env_state.theta + new_theta_dot * env_params.dt)
         new_phi = angle_normalize(env_state.phi + new_phi_dot * env_params.dt)
 
-        # Update states list
+        # NOTE Update states list
         states = [
             new_y,
             new_z,
@@ -234,6 +234,9 @@ def get_taut_dynamics():
             f_rope_z,
         ) = obs_eqs_func(*params, *states, *states_dot, *action)
 
+        time = env_state.time + 1
+
+
         # Update all state variables at once using replace()
         env_state = env_state.replace(
             y=new_y,
@@ -258,11 +261,11 @@ def get_taut_dynamics():
             l_rope=env_params.l,
             last_thrust=env_action.thrust,
             last_tau=env_action.tau,
-            time=env_state.time + 1,
-            y_tar=env_state.y_traj[env_state.time],
-            z_tar=env_state.z_traj[env_state.time],
-            y_dot_tar=env_state.y_dot_traj[env_state.time],
-            z_dot_tar=env_state.z_dot_traj[env_state.time],
+            time=time,
+            y_tar=env_state.y_traj[time],
+            z_tar=env_state.z_traj[time],
+            y_dot_tar=env_state.y_dot_traj[time],
+            z_dot_tar=env_state.z_dot_traj[time],
         )
 
         return env_state
@@ -302,9 +305,8 @@ def get_taut_dynamics_3d():
     vel = sp.Matrix(sp.symbols("vel_x vel_y vel_z")).reshape(3, 1)
     quat = sp.Matrix(sp.symbols("quat_x quat_y quat_z quat_w")).reshape(4, 1)
     omega = sp.Matrix(sp.symbols("omega_x omega_y omega_z")).reshape(3, 1)
-    theta_rope = sp.Symbol("theta_rope")
+    zeta = sp.Matrix(sp.symbols("zeta_x zeta_y zeta_z")).reshape(3, 1)
     theta_rope_dot = sp.Symbol("theta_rope_dot")
-    phi_rope = sp.Symbol("phi_rope")
     phi_rope_dot = sp.Symbol("phi_rope_dot")
     states = [
         pos[0],
@@ -351,13 +353,6 @@ def get_taut_dynamics_3d():
         acc
         + sp.Matrix.cross(alpha, hook_offset_world)
         + sp.Matrix.cross(omega, sp.Matrix.cross(omega, hook_offset_world))
-    )
-    zeta = sp.Matrix(
-        [
-            sp.sin(theta_rope) * sp.cos(phi_rope),
-            sp.sin(theta_rope) * sp.sin(phi_rope),
-            sp.cos(theta_rope),
-        ]
     )
     zeta_dot = sp.Matrix(
         [
