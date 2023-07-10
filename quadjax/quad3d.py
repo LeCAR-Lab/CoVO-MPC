@@ -537,12 +537,19 @@ def main(args: Args):
         return env.action_space(env.default_params).sample(rng)
 
     def fixed_policy(obs, state, params, rng):
+        target_vec = jnp.array([0.0, 0.0, 1.0])
+        target_vec_local = geom.rotate_with_quat(target_vec, geom.conjugate_quat(state.quat))
+        rot_err = jnp.cross(target_vec, target_vec_local)
+        w0 = 10.0
+        zeta = 0.95
+        I_diag = jnp.array([params.I[0,0], params.I[1,1], params.I[2,2]])
+        kp = I_diag * (w0**2)
+        kd = I_diag * 2.0 * zeta * w0
+        torque = kp * rot_err + kd * (-state.omega)
         return jnp.array(
             [
                 params.g * (params.m + params.mo) / params.max_thrust * 2.0 - 1.0,
-                0.0,
-                0.0,
-                0.0,
+                *(torque / params.max_torque),
             ]
         )
 
@@ -551,7 +558,7 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    test_env(env, policy=random_policy)
+    test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":
