@@ -17,6 +17,7 @@ from quadjax.dynamics.utils import get_hit_penalty
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.dynamics.loose import get_loose_dynamics_3d
 from quadjax.dynamics.taut import get_taut_dynamics_3d
+from quadjax.dynamics.trans import get_dynamic_transfer_3d
 
 # for debug purpose
 from icecream import install
@@ -45,7 +46,7 @@ class Quad3D(environment.Environment):
         # dynamics
         self.taut_dynamics = get_taut_dynamics_3d()
         self.loose_dynamics = get_loose_dynamics_3d()
-        self.dynamic_transfer = None
+        self.dynamic_transfer = get_dynamic_transfer_3d()
         # controllers
 
     @property
@@ -86,7 +87,7 @@ class Quad3D(environment.Environment):
         # new_state = self.dynamic_transfer(
         #     params, loose_state, taut_state, old_loose_state)
 
-        new_state = self.taut_dynamics(params, state, env_action)
+        new_state = self.loose_dynamics(params, state, env_action)
 
         done = self.is_terminal(state, params)
         return (
@@ -557,8 +558,8 @@ def main(args: Args):
     # enable NaN value detection
     # from jax import config
     # config.update("jax_debug_nans", True)
-    # with jax.disable_jit():
-    test_env(env, policy=fixed_policy)
+    with jax.disable_jit():
+        test_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":

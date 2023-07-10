@@ -107,6 +107,7 @@ def get_loose_dynamics_3d():
         # quadrotor
         vel = env_state.vel + env_params.dt * acc
         pos = env_state.pos + env_params.dt * vel
+        ic(env_state.omega.shape, alpha.shape)
         omega = env_state.omega + env_params.dt * alpha
         quat = geom.integrate_quat(env_state.quat, omega, env_params.dt)
         # object
