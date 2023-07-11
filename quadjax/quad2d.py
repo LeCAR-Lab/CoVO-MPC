@@ -13,9 +13,9 @@ import tyro
 
 from quadjax.dynamics import geom
 from quadjax.dynamics.utils import get_hit_penalty
-from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
-from quadjax.dynamics.loose import get_loose_dynamics_3d
-from quadjax.dynamics.taut import get_taut_dynamics_3d
+from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
+from quadjax.dynamics.loose import get_loose_dynamics
+from quadjax.dynamics.taut import get_taut_dynamics
 
 class Quad2D(environment.Environment):
     """

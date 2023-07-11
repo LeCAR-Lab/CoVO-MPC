@@ -63,8 +63,8 @@ class Quad3D(environment.Environment):
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         thrust = (action[0] + 1.0) / 2.0 * params.max_thrust
         torque = action[1:4] * params.max_torque
-        err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
-        err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
+        err_pos = jnp.linalg.norm(state.pos_tar - state.pos_obj)
+        err_vel = jnp.linalg.norm(state.vel_tar - state.vel_obj)
         if self.task == "jumping":
             raise NotImplementedError
             drone_panelty = get_hit_penalty(state.y, state.z) * 3.0
@@ -560,20 +560,26 @@ def main(args: Args):
         )
     
     def make_ppo_policy(path='../results/ppo_params.pkl'):
+        from quadjax.train import ActorCritic
+        network = ActorCritic(
+            env.action_space(env.default_params).shape[0], activation='tanh')
+        apply_fn = network.apply
         with open(path, 'rb') as f:
-            out = pickle.load(f)
-        apply_fn = out["runner_state"][0].apply_fn
-        params = out["runner_state"][0].params
+            network_params = pickle.load(f)
 
-        def policy(obs, rng):
-            return apply_fn(params, obs)[0].mean()
+        def ppo_policy(obs, state, params, rng):
+            return apply_fn(network_params, obs)[0].mean()
+        # jit ppo_policy
+        ppo_policy_jit = jax.jit(ppo_policy)
+
+        return ppo_policy_jit
 
     print("starting test...")
     # enable NaN value detection
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    test_env(env, policy=fixed_policy)
+    test_env(env, policy=make_ppo_policy())
 
 
 if __name__ == "__main__":

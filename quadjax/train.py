@@ -377,7 +377,7 @@ def main(args: Args):
     apply_fn = out["runner_state"][0].apply_fn
     params = out["runner_state"][0].params
 
-    def policy(obs, rng):
+    def policy(obs, env_state, env_params, rng_act):
         return apply_fn(params, obs)[0].mean()
 
     env.reset(rng)
