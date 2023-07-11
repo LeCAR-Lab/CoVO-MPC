@@ -109,8 +109,8 @@ class Quad3D(environment.Environment):
 
         if self.task == "jumping":
             pos = jnp.array([-1.0, 0.0, 0.0])
-        elif 'tracking' in self.task:
-            pos = pos_traj[0]
+        # elif 'tracking' in self.task:
+        #     pos = pos_traj[0]
         else:
             pos = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
         pos_hook = pos + params.hook_offset
@@ -187,8 +187,8 @@ class Quad3D(environment.Environment):
         ts = jnp.arange(
             0, self.default_params.max_steps_in_episode + 50, self.default_params.dt
         )  # NOTE: do not use params for jax limitation
-        w1 = 2 * jnp.pi * 0.125
-        w2 = 2 * jnp.pi * 0.25
+        w1 = 2 * jnp.pi * 0.25
+        w2 = 2 * jnp.pi * 0.50
 
         pos_traj = scale * jnp.stack(
             [
