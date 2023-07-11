@@ -10,7 +10,7 @@ import pickle
 vis = meshcat.Visualizer()
 anim = Animation(default_framerate=50)
 
-def vis_vector(obj, origin, vec, scale=1.0):
+def vis_vector(frame_id, name, origin, vec, scale=1.0):
     # visualize the force with arrow
     vec_norm = np.linalg.norm(vec)
     if vec_norm == 0:
@@ -29,15 +29,16 @@ def vis_vector(obj, origin, vec, scale=1.0):
     rot_mat[:3, 0] = vec_1
     rot_mat[:3, 1] = vec_2
     rot_mat[:3, :3] *= vec_norm*scale
-    obj.set_transform(tf.translation_matrix(origin) @ rot_mat)
+    with anim.at_frame(vis, frame_id) as frame:
+        frame[name].set_transform(tf.translation_matrix(origin) @ rot_mat)
 
-def vis_traj(traj_x, traj_v):
-    for i in range(300):
-        vis_vector(vis[f'traj{i}'], traj_x[i], traj_v[i], scale=0.5)
+def vis_traj(frame_id, traj_x, traj_v):
+    for i in range(50):
+        vis_vector(frame_id, f'traj{i}', traj_x[i*10], traj_v[i*10], scale=0.5)
 
-def set_frame(i, name, pos, quat):
+def set_frame(frame_id, name, pos, quat):
     transform = tf.translation_matrix(pos) @ tf.quaternion_matrix(quat)
-    with anim.at_frame(vis, i) as frame:
+    with anim.at_frame(vis, frame_id) as frame:
         frame[name].set_transform(transform)
 
 # Add a box to the scene
@@ -55,11 +56,17 @@ with open(file_path, "rb") as f:
     state_seq = pickle.load(f)
 
 # visualize the trajectory
-with anim.at_frame(vis, 0) as frame:
-    vis_traj(state_seq[0].pos_traj,state_seq[0].vel_traj)
+# with anim.at_frame(vis, 0) as frame:
+#     vis_traj(state_seq[0].pos_traj,state_seq[0].vel_traj)
 
 # Apply the transformations according to the time sequence
+old_traj = (state_seq[0].pos_traj, state_seq[0].vel_traj)
+vis_traj(i-1, old_traj[0], old_traj[1])
 for i, state in enumerate(state_seq):
+    if i > 0 and (state.pos_traj[0,0] != old_traj[0][0,0]):
+        vis_traj(i-1, old_traj[0], old_traj[1]) # due to key frame operation
+        vis_traj(i, state.pos_traj,state.vel_traj)
+        old_traj = (state.pos_traj, state.vel_traj)
     set_frame(i, 'drone', state.pos, state.quat)
     set_frame(i, 'obj', state.pos_obj, np.array([0,0,0,1]))
     set_frame(i, 'obj_tar', state.pos_tar, np.array([0,0,0,1]))

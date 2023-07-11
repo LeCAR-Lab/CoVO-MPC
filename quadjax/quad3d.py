@@ -109,6 +109,8 @@ class Quad3D(environment.Environment):
 
         if self.task == "jumping":
             pos = jnp.array([-1.0, 0.0, 0.0])
+        elif 'tracking' in self.task:
+            pos = pos_traj[0]
         else:
             pos = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
         pos_hook = pos + params.hook_offset
@@ -185,8 +187,8 @@ class Quad3D(environment.Environment):
         ts = jnp.arange(
             0, self.default_params.max_steps_in_episode + 50, self.default_params.dt
         )  # NOTE: do not use params for jax limitation
-        w1 = 2 * jnp.pi * 0.25
-        w2 = 2 * jnp.pi * 0.5
+        w1 = 2 * jnp.pi * 0.125
+        w2 = 2 * jnp.pi * 0.25
 
         pos_traj = scale * jnp.stack(
             [
@@ -372,7 +374,7 @@ class Quad3D(environment.Environment):
         )
 
 
-def test_env(env: Quad3D, policy, render_video=False):
+def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     # running environment
     t0 = time_module.time()
     rng = jax.random.PRNGKey(1)
@@ -399,10 +401,18 @@ def test_env(env: Quad3D, policy, render_video=False):
             n_dones += 1
         obs = next_obs
         env_state = next_env_state
-        if n_dones >= 1:
+        if n_dones >= num_episodes:
             break
     print(f"env running time: {time_module.time()-t0:.2f}s")
 
+    # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
+    with open("../results/state_seq.pkl", "wb") as f:
+        pickle.dump(state_seq, f)
+
+    # only keep the last 50 steps to plot
+    state_seq = state_seq[-50:]
+    obs_seq = obs_seq[-50:]
+    reward_seq = reward_seq[-50:]
     t0 = time_module.time()
     # plot results
     num_figs = len(state_seq[0].__dict__) + 20
@@ -454,10 +464,6 @@ def test_env(env: Quad3D, policy, render_video=False):
     plt.xlabel("time")
     plt.savefig("../results/plot.png")
     print(f"plotting time: {time_module.time()-t0:.2f}s")
-
-    # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
-    with open("../results/state_seq.pkl", "wb") as f:
-        pickle.dump(state_seq, f)
 
 
 @pydataclass
