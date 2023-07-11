@@ -109,7 +109,7 @@ class EnvParams3D:
     mo: float = 0.01  # mass of the object attached to the rod
     l: float = 0.3  # length of the rod
     hook_offset: jnp.ndarray = default_array([0.03, 0.02, -0.06])
-    max_steps_in_episode: int = 500
+    max_steps_in_episode: int = 300
     rope_taut_therehold: float = 1e-4
     traj_obs_len: int = 5
     traj_obs_gap: int = 5

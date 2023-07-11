@@ -75,7 +75,7 @@ class Quad3D(environment.Environment):
         elif self.task == "hovering":
             reward = 1.0 - 0.6 * err_pos - 0.1 * err_vel
         else:
-            reward = 1.0 - 0.8 * err_pos - 0.05 * err_vel
+            reward = 1.0 - 0.8 * err_pos - 0.1 * err_vel
         reward = reward.squeeze()
         env_action = Action3D(thrust=thrust, torque=torque)
 
