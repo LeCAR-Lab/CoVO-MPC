@@ -13,7 +13,36 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
 
+# from quadjax.Quad2D import Quad2D, test_env
 from quadjax.quad2d import Quad2D, test_env
+
+import logging
+logger = logging.getLogger(__name__)
+date_format = '%Y-%m-%d %H:%M:%S'
+log_format = '%(asctime)s: [%(levelname)s]: %(message)s'
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+
+# Set up the FileHandler for logging to a file
+file_handler = logging.FileHandler("train.log", mode='a')
+file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+logging.basicConfig(level=logging.INFO, handlers=[stdout_handler, file_handler])
+
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.DEBUG)
+
+# file_handler = logging.FileHandler('debug.log')
+# file_handler.setLevel(logging.DEBUG)
+
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# file_handler.setFormatter(formatter)
+
+# logger.addHandler(file_handler)
+# jax.debug.print = logger.debug
+
+from icecream import install
+
+install()
 
 class ActorCritic(nn.Module):
     action_dim: Sequence[int]
@@ -40,7 +69,7 @@ class ActorCritic(nn.Module):
         actor_mean = nn.Dense(
             self.action_dim, kernel_init=orthogonal(0.01), bias_init=constant(0.0)
         )(actor_mean)
-        actor_logtstd = self.param('log_std', nn.initializers.zeros, (self.action_dim,))
+        actor_logtstd = self.param("log_std", nn.initializers.zeros, (self.action_dim,))
         pi = distrax.MultivariateNormalDiag(actor_mean, jnp.exp(actor_logtstd))
 
         critic = nn.Dense(
@@ -60,7 +89,8 @@ class ActorCritic(nn.Module):
         )
 
         return pi, jnp.squeeze(critic, axis=-1)
-    
+
+
 # create a param_dim-256-128-embed_dim MLP activate with relu in between and tanh at the end
 class Compressor(nn.Module):
     param_dim: int
@@ -69,11 +99,16 @@ class Compressor(nn.Module):
     @nn.compact
     def __call__(self, x):
         # create a param_dim-128-embed_dim MLP activate with relu in between and tanh at the end
-        x = nn.Dense(128, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.Dense(128, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(
+            x
+        )
         x = nn.relu(x)
-        x = nn.Dense(self.embed_dim, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.Dense(
+            self.embed_dim, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
+        )(x)
         x = nn.tanh(x)
         return x
+
 
 class Transition(NamedTuple):
     done: jnp.ndarray
@@ -84,6 +119,7 @@ class Transition(NamedTuple):
     obs: jnp.ndarray
     info: jnp.ndarray
 
+
 def make_train(config):
     config["NUM_UPDATES"] = (
         config["TOTAL_TIMESTEPS"] // config["NUM_STEPS"] // config["NUM_ENVS"]
@@ -91,11 +127,15 @@ def make_train(config):
     config["MINIBATCH_SIZE"] = (
         config["NUM_ENVS"] * config["NUM_STEPS"] // config["NUM_MINIBATCHES"]
     )
-    env= Quad2D(config["task"])
+    env = Quad2D(config["task"])
     env = LogWrapper(env)
 
     def linear_schedule(count):
-        frac = 1.0 - (count // (config["NUM_MINIBATCHES"] * config["UPDATE_EPOCHS"])) / config["NUM_UPDATES"]
+        frac = (
+            1.0
+            - (count // (config["NUM_MINIBATCHES"] * config["UPDATE_EPOCHS"]))
+            / config["NUM_UPDATES"]
+        )
         return config["LR"] * frac
 
     def train(rng):
@@ -107,7 +147,9 @@ def make_train(config):
         obsv, env_state = jax.vmap(env.reset)(reset_rng, env_params)
 
         # INIT NETWORK
-        network = ActorCritic(env.action_space(env_params).shape[0], activation=config["ACTIVATION"])
+        network = ActorCritic(
+            env.action_space(env_params).shape[0], activation=config["ACTIVATION"]
+        )
         rng, _rng = jax.random.split(rng)
         init_x = jnp.zeros(env.observation_space(env_params).shape)
         network_params = network.init(_rng, init_x)
@@ -117,7 +159,10 @@ def make_train(config):
                 optax.adam(learning_rate=linear_schedule, eps=1e-5),
             )
         else:
-            tx = optax.chain(optax.clip_by_global_norm(config["MAX_GRAD_NORM"]), optax.adam(config["LR"], eps=1e-5))
+            tx = optax.chain(
+                optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
+                optax.adam(config["LR"], eps=1e-5),
+            )
         train_state = TrainState.create(
             apply_fn=network.apply,
             params=network_params,
@@ -145,7 +190,9 @@ def make_train(config):
                 # resample environment parameters if done
                 rng_params = jax.random.split(_rng, config["NUM_ENVS"])
                 new_env_params = jax.vmap(env.sample_params)(rng_params)
-                env_params = jax.tree_map(lambda x, y: jax.lax.select(done, x, y), new_env_params, env_params)
+                env_params = jax.tree_map(
+                    lambda x, y: jax.lax.select(done, x, y), new_env_params, env_params
+                )
 
                 transition = Transition(
                     done, action, value, reward, log_prob, last_obs, info
@@ -261,6 +308,14 @@ def make_train(config):
                     _update_minbatch, train_state, minibatches
                 )
                 update_state = (train_state, traj_batch, advantages, targets, rng)
+
+                # LOGGING INTERMEDIATE VARIABLES
+                def _log_loss(total_loss):
+                    total_loss_mean = jnp.mean(total_loss[0])
+                    # jax.debug.print("Epoch {}, total loss mean: {:.4f}", epochindex, total_loss_mean)
+                    jax.debug.print("Total loss mean: {}", total_loss_mean)
+
+                _log_loss(total_loss=total_loss)
                 return update_state, total_loss
 
             update_state = (train_state, traj_batch, advantages, targets, rng)
@@ -283,9 +338,11 @@ def make_train(config):
 
     return train
 
+
 @pydataclass
 class Args:
     task: str = "tracking"
+
 
 def main(args: Args):
     config = {
@@ -303,7 +360,7 @@ def main(args: Args):
         "MAX_GRAD_NORM": 0.5,
         "ACTIVATION": "tanh",
         "ANNEAL_LR": False,
-        "task": args.task
+        "task": args.task,
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
@@ -315,19 +372,30 @@ def main(args: Args):
     print(f"train time: {time.time() - t0:.2f} s")
     # plot in three subplots of returned_episode_returns, err_pos, err_vel
     fig, axs = plt.subplots(3, 1)
-    step = (np.arange(out["metrics"]["returned_episode_returns"].shape[0]) + 1) * config["NUM_STEPS"] * config["NUM_ENVS"]
+    step = (
+        (np.arange(out["metrics"]["returned_episode_returns"].shape[0]) + 1)
+        * config["NUM_STEPS"]
+        * config["NUM_ENVS"]
+    )
     returns = out["metrics"]["returned_episode_returns"].mean([-1, -2])
     err_pos = out["metrics"]["err_pos"].mean([-1, -2])
     err_vel = out["metrics"]["err_vel"].mean([-1, -2])
-    for i, (ax, data, title) in enumerate(zip(axs, [returns, err_pos, err_vel], ["returns", "err_pos", "err_vel"])):
+    for i, (ax, data, title) in enumerate(
+        zip(axs, [returns, err_pos, err_vel], ["returns", "err_pos", "err_vel"])
+    ):
         ax.plot(step, data)
         ax.set_ylabel(title)
         ax.set_xlabel("steps")
         # label out last value in a box
         last_value = data[-1]
-        ax.text(step[-1], last_value, f"{last_value:.2f}", bbox=dict(facecolor='red', alpha=0.8))
-    # save 
-    plt.savefig('../results/ppo.png')
+        ax.text(
+            step[-1],
+            last_value,
+            f"{last_value:.2f}",
+            bbox=dict(facecolor="red", alpha=0.8),
+        )
+    # save
+    plt.savefig("../results/ppo.png")
 
     # save network params
     import pickle
@@ -336,13 +404,15 @@ def main(args: Args):
 
     rng = jax.random.PRNGKey(1)
     env = Quad2D(task=args.task)
-    apply_fn = out['runner_state'][0].apply_fn
-    params= out['runner_state'][0].params
+    apply_fn = out["runner_state"][0].apply_fn
+    params = out["runner_state"][0].params
+
     def policy(obs, rng):
         return apply_fn(params, obs)[0].mean()
     env.reset(rng)
     # test policy
-    test_env(env, policy=policy, render_video=True)  
+    test_env(env, policy=policy, render_video=True)
+
 
 if __name__ == "__main__":
     main(tyro.cli(Args))
