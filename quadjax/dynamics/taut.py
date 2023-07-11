@@ -91,8 +91,6 @@ def get_taut_dynamics():
         f_rope_y,
         f_rope_z,
     ]
-    theta = angle_normalize(theta)
-    phi = angle_normalize(phi)
 
     # Define inertial reference frame
     N = ReferenceFrame("N")

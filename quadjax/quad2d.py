@@ -16,6 +16,7 @@ from quadjax.dynamics.utils import get_hit_penalty
 from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
 from quadjax.dynamics.loose import get_loose_dynamics
 from quadjax.dynamics.taut import get_taut_dynamics
+from quadjax.dynamics.trans import get_dynamic_transfer
 
 class Quad2D(environment.Environment):
     """
