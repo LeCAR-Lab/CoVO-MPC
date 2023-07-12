@@ -15,9 +15,7 @@ import time as time_module
 from quadjax.dynamics import geom
 from quadjax.dynamics.utils import get_hit_penalty
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
-from quadjax.dynamics.loose import get_loose_dynamics_3d
-from quadjax.dynamics.taut import get_taut_dynamics_3d
-from quadjax.dynamics.trans import get_dynamic_transfer_3d
+from quadjax.dynamics import make_hybrid_rope_dyn_3d, make_free_dyn_3d
 
 # for debug purpose
 from icecream import install
@@ -31,7 +29,7 @@ class Quad3D(environment.Environment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking"):
+    def __init__(self, task: str = "tracking", dynamic_model: str = "hybrid"):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -44,9 +42,12 @@ class Quad3D(environment.Environment):
         else:
             raise NotImplementedError
         # dynamics
-        self.taut_dynamics = get_taut_dynamics_3d()
-        self.loose_dynamics = get_loose_dynamics_3d()
-        self.dynamic_transfer = get_dynamic_transfer_3d()
+        if dynamic_model == "hybrid":
+            self.dynamics_fn = make_hybrid_rope_dyn_3d()
+        elif dynamic_model == "free":
+            self.dynamics_fn = make_free_dyn_3d()
+        else:
+            raise NotImplementedError
         # controllers
 
     @property
@@ -79,12 +80,7 @@ class Quad3D(environment.Environment):
         reward = reward.squeeze()
         env_action = Action3D(thrust=thrust, torque=torque)
 
-        old_loose_state = state.l_rope < (
-            params.l - params.rope_taut_therehold)
-        taut_state = self.taut_dynamics(params, state, env_action)
-        loose_state = self.loose_dynamics(params, state, env_action)
-        new_state = self.dynamic_transfer(
-            params, loose_state, taut_state, old_loose_state)
+        new_state = self.dynamics_fn(state, env_action, params)
 
         done = self.is_terminal(state, params)
         return (
@@ -469,10 +465,10 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
 @pydataclass
 class Args:
     task: str = "hovering"
-
+    dynamic_model: str = "hybrid"
 
 def main(args: Args):
-    env = Quad3D(task=args.task)
+    env = Quad3D(task=args.task, dynamic_model=args.dynamic_model)
 
     def pid_policy(
         obs: jnp.ndarray,
@@ -544,6 +540,9 @@ def main(args: Args):
         return env.action_space(env.default_params).sample(rng)
 
     def fixed_policy(obs, state, params, rng):
+        '''
+        policy to keep quadrotor straight up
+        '''
         target_vec = jnp.array([0.0, 0.0, 1.0])
         target_vec_local = geom.rotate_with_quat(target_vec, geom.conjugate_quat(state.quat))
         rot_err = jnp.cross(target_vec, target_vec_local)

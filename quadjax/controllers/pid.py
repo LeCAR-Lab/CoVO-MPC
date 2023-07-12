@@ -2,6 +2,8 @@ import jax
 from jax import numpy as jnp
 from functools import partial
 
+from quadjax.quad3d import Quad3D
+
 class PIDController:
     """PID controller for attitude rate control
 
@@ -29,3 +31,18 @@ class PIDController:
         derivative = (error - self.last_error) / dt
         self.last_error = error
         return self.kp * error + self.ki * self.integral + self.kd * derivative
+
+class Quad3DPID:
+    """PID controller for 3d quadrotor environment
+    """
+
+    def __init__(self, env:Quad3D):
+        self.quadpos_controller = PIDController(
+            kp=1.0,
+            ki=0.0,
+            kd=0.0,
+            ki_max=0.0,
+            integral=0.0,
+            last_error=0.0
+        )
+        self.quadatti_controller 
