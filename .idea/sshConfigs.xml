@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="SshConfigs">
-    <configs>
-      <sshConfig host="lxwfq.slab.fit" id="3a4e73d3-22af-47bf-852d-678f669b64e2" keyPath="$USER_HOME$/.ssh/id_ed25519" port="10371" nameFormat="DESCRIPTIVE" username="pancy" useOpenSSHConfig="true" />
-    </configs>
-  </component>
-</project>
