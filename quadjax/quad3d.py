@@ -105,8 +105,8 @@ class Quad3D(environment.Environment):
 
         if self.task == "jumping":
             pos = jnp.array([-1.0, 0.0, 0.0])
-        # elif 'tracking' in self.task:
-        #     pos = pos_traj[0]
+        elif ('tracking' in self.task):
+            pos = pos_traj[0]
         else:
             pos = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
         pos_hook = pos + params.hook_offset
@@ -334,7 +334,7 @@ class Quad3D(environment.Environment):
             | (jnp.abs(state.pos) > 2.0).any()
             | (jnp.abs(state.pos_obj) > 2.0).any()
             | (jnp.abs(state.omega) > 100.0).any()
-            | (state.quat[3] < np.cos(jnp.pi/3 * 0.5))
+            | (state.quat[3] < np.cos(jnp.pi/2 * 0.5))
         )
         return done
 
@@ -518,7 +518,8 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    test_env(env, policy=make_ppo_policy())
+    from quadjax.controllers.pid import quad3d_free_pid_policy
+    test_env(env, policy=quad3d_free_pid_policy, num_episodes=3)
 
 
 if __name__ == "__main__":

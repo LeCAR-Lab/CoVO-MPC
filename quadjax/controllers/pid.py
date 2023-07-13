@@ -101,10 +101,8 @@ def quad3d_free_pid_policy(
         rng: jax.random.PRNGKey,
 ):
     # get drone target force
-    w0 = 10.0
-    zeta = 0.95
-    kp = w0**2
-    kd = 2.0 * zeta * w0
+    kp = 3.0**2
+    kd = 2.0 * 1.05 * 3.0
     target_force = env_params.m * (
         kp * (env_state.pos_tar - env_state.pos)
         + kd * (env_state.vel_tar - env_state.vel)
@@ -117,19 +115,23 @@ def quad3d_free_pid_policy(
     # )
 
     target_unitvec = target_force / thrust
-    theta = jnp.arcsin(target_unitvec[2])
-    phi = jnp.arctan2(target_unitvec[1], target_unitvec[0])
-    psi = 0.0
-    quat_target_world = geom.euler2quat(theta, phi, psi)
+    x, y, z = target_unitvec
+    angle = jnp.arctan2(jnp.sqrt(x**2 + y**2), z)
+    if (x**2 + y**2) > 1e-6:
+        axis = 1.0 / jnp.sqrt(x**2+y**2) * jnp.array([-y, x, 0.0])
+    else:
+        axis = jnp.array([1.0, 0.0, 0.0])
+    quat_target_world = geom.rotvec2quat(angle, axis)
+    # quat_target_world = geom.euler2quat(roll, pitch, yaw)
     quat_target = geom.multiple_quat(geom.conjugate_quat(env_state.quat), quat_target_world)
     quat_error = quat_target
     qx, qy, qz, qw = quat_error
-    quat_red = 1.0 / jnp.sqrt(qw**2+qz**2) * jnp.array([qw**2+qz**2, qw*qx-qy*qz, qw*qy+qx*qz, 0.0])
-    quat_yaw = 1.0 / jnp.sqrt(qw**2+qz**2) * jnp.array([qw, 0.0, 0.0, qz])
+    quat_red = 1.0 / jnp.sqrt(qw**2+qz**2) * jnp.array([qw*qx-qy*qz, qw*qy+qx*qz, 0.0, qw**2+qz**2])
+    quat_yaw = 1.0 / jnp.sqrt(qw**2+qz**2) * jnp.array([0.0, 0.0, qz, qw])
     kpxy = 38.0**2
     kdxy = 2.0 * 1.30 * 38.0
     kpz = 6.5**2
-    kdz = 2.0 * 0.77 * 6.5
+    kdz = 2.0 * 1.0 * 6.5
     alpha = kpxy * quat_red[:3] + jnp.sign(qw) * kpz * quat_yaw[:3] + jnp.array([kdxy, kdxy, kdz]) * (0.0 - env_state.omega)
     torque = env_params.I @ alpha - jnp.cross((env_params.I @ env_state.omega), env_state.omega)
     # current_unitvec_local = jnp.array([0.0, 0.0, 1.0])
