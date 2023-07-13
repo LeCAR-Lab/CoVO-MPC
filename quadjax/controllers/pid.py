@@ -3,6 +3,8 @@ from jax import numpy as jnp
 from functools import partial
 
 from quadjax.quad3d import Quad3D
+from quadjax.dynamics.dataclass import EnvParams, EnvParams3D, Action, Action3D, EnvState, EnvState3D
+from quadjax.dynamics import geom
 
 class PIDController:
     """PID controller for attitude rate control
@@ -32,17 +34,113 @@ class PIDController:
         self.last_error = error
         return self.kp * error + self.ki * self.integral + self.kd * derivative
 
-class Quad3DPID:
-    """PID controller for 3d quadrotor environment
-    """
+def quad3d_trans_pid_policy(
+        obs: jnp.ndarray,
+        env_state: EnvState3D,
+        env_params: EnvParams3D,
+        rng: jax.random.PRNGKey,
+    ):
+    # get object target force
+    w0 = 8.0
+    zeta = 0.95
+    kp = env_params.mo * (w0**2)
+    kd = env_params.mo * 2.0 * zeta * w0
+    target_force_obj = (
+        kp * (env_state.pos_tar - env_state.pos_obj)
+        + kd * (env_state.vel_tar - env_state.vel_obj)
+        + env_params.mo * jnp.array([0.0, 0.0, env_params.g])
+    )
+    target_force_obj_norm = jnp.linalg.norm(target_force_obj)
+    zeta_target = -target_force_obj / target_force_obj_norm
+    pos_tar_quad = env_state.pos_obj - env_params.l * zeta_target
+    vel_tar_quad = env_state.vel_tar
 
-    def __init__(self, env:Quad3D):
-        self.quadpos_controller = PIDController(
-            kp=1.0,
-            ki=0.0,
-            kd=0.0,
-            ki_max=0.0,
-            integral=0.0,
-            last_error=0.0
-        )
-        self.quadatti_controller 
+    # get drone target force
+    w0 = 10.0
+    zeta = 0.95
+    kp = env_params.m * (w0**2)
+    kd = env_params.m * 2.0 * zeta * w0
+    target_force = (
+        kp * (pos_tar_quad - env_state.pos)
+        + kd * (vel_tar_quad - env_state.vel)
+        + env_params.m * jnp.array([0.0, 0.0, env_params.g])
+        + target_force_obj
+    )
+    thrust = jnp.linalg.norm(target_force)
+    target_unitvec = target_force / thrust
+    # target_unitvec = jnp.array([jnp.sin(jnp.pi/6), 0.0, jnp.cos(jnp.pi/6)]) # DEBUG
+    target_unitvec_local = geom.rotate_with_quat(
+        target_unitvec, geom.conjugate_quat(env_state.quat)
+    )
+
+    w0 = 10.0
+    zeta = 0.95
+    kp = env_params.I[0] * (w0**2)
+    kd = env_params.I[0] * 2.0 * zeta * w0
+    current_unitvec_local = jnp.array([0.0, 0.0, 1.0])
+    rot_axis = jnp.cross(current_unitvec_local, target_unitvec_local)
+    rot_angle = jnp.arccos(jnp.dot(current_unitvec_local, target_unitvec_local))
+    omega_local = geom.rotate_with_quat(
+        env_state.omega, geom.conjugate_quat(env_state.quat)
+    )
+    torque = kp * rot_angle * rot_axis / jnp.linalg.norm(rot_axis) + kd * (
+        -omega_local
+    )
+
+    # convert into action space
+    thrust_normed = jnp.clip(
+        thrust / env.default_params.max_thrust * 2.0 - 1.0, -1.0, 1.0
+    )
+    tau_normed = jnp.clip(torque / env.default_params.max_torque, -1.0, 1.0)
+    return jnp.array([thrust_normed, tau_normed[0], tau_normed[1], 0.0])
+
+def quad3d_free_pid_policy(
+        obs: jnp.ndarray,
+        env_state: EnvState3D,
+        env_params: EnvParams3D,
+        rng: jax.random.PRNGKey,
+):
+    # get drone target force
+    w0 = 10.0
+    zeta = 0.95
+    kp = env_params.m * (w0**2)
+    kd = env_params.m * 2.0 * zeta * w0
+    target_force = (
+        kp * (env_state.pos_tar - env_state.pos)
+        + kd * (env_state.vel_tar - env_state.vel)
+        + env_params.m * jnp.array([0.0, 0.0, env_params.g])
+    )
+    thrust = jnp.linalg.norm(target_force)
+    target_unitvec = target_force / thrust
+    theta = jnp.arcsin(target_unitvec[2])
+    phi = jnp.arctan2(target_unitvec[1], target_unitvec[0])
+    psi = 0.0
+    quat_target_world = geom.euler2quat(theta, phi, psi)
+    quat_target = geom.multiple_quat(geom.conjugate_quat(env_state.quat), quat_target_world)
+    quat_error = quat_target
+    # target_unitvec = jnp.array([jnp.sin(jnp.pi/6), 0.0, jnp.cos(jnp.pi/6)]) # DEBUG
+    # target_unitvec_local = geom.rotate_with_quat(
+    #     target_unitvec, geom.conjugate_quat(env_state.quat)
+    # )
+
+    w0 = 10.0
+    zeta = 0.95
+    kp = env_params.I[0] * (w0**2)
+    kd = env_params.I[0] * 2.0 * zeta * w0
+    
+    # current_unitvec_local = jnp.array([0.0, 0.0, 1.0])
+    # rot_axis = jnp.cross(current_unitvec_local, target_unitvec_local)
+    # rot_angle = jnp.arccos(jnp.dot(current_unitvec_local, target_unitvec_local))
+    omega_local = geom.rotate_with_quat(
+        env_state.omega, geom.conjugate_quat(env_state.quat)
+    )
+    torque = kp * rot_angle * rot_axis / jnp.linalg.norm(rot_axis) + kd * (
+        -omega_local
+    )
+
+    # convert into action space
+    thrust_normed = jnp.clip(
+        thrust / env.default_params.max_thrust * 2.0 - 1.0, -1.0, 1.0
+    )
+    tau_normed = jnp.clip(torque / env.default_params.max_torque, -1.0, 1.0)
+    return jnp.array([thrust_normed, tau_normed[0], tau_normed[1], 0.0])

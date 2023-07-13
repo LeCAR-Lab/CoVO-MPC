@@ -8,8 +8,8 @@ def conjugate_quat(quat: jnp.ndarray) -> jnp.ndarray:
 
 @jax.jit
 def integrate_quat(quat: jnp.ndarray, omega: jnp.ndarray, dt: float) -> jnp.ndarray:
-    """Integrate quaternion with angular velocity omega."""
-    quat_dot = 0.5 * multiple_quat(quat, jnp.concatenate([omega, jnp.zeros(1)]))
+    """Integrate quaternion with *local* angular velocity omega."""
+    quat_dot = 0.5 * multiple_quat(jnp.concatenate([omega, jnp.zeros(1)]), quat)
     quat = quat + dt * quat_dot
     quat = quat / jnp.linalg.norm(quat)
     return quat
@@ -30,3 +30,25 @@ def rotate_with_quat(v: jnp.ndarray, quat: jnp.ndarray) -> jnp.ndarray:
     v = jnp.concatenate([v, jnp.zeros(1)])
     v_rot = multiple_quat(multiple_quat(quat, v), conjugate_quat(quat))
     return v_rot[:3]
+
+@jax.jit
+def euler2quat(theta: float, phi: float, psi: float) -> jnp.ndarray:
+    """Convert Euler angles (in radians) to quaternion (x, y, z, w)."""
+    quat = jnp.zeros(4)
+    quat = quat.at[0].set(
+        jnp.sin(theta / 2) * jnp.cos(phi / 2) * jnp.cos(psi / 2)
+        - jnp.cos(theta / 2) * jnp.sin(phi / 2) * jnp.sin(psi / 2)
+    )
+    quat = quat.at[1].set(
+        jnp.cos(theta / 2) * jnp.sin(phi / 2) * jnp.cos(psi / 2)
+        + jnp.sin(theta / 2) * jnp.cos(phi / 2) * jnp.sin(psi / 2)
+    )
+    quat = quat.at[2].set(
+        jnp.cos(theta / 2) * jnp.cos(phi / 2) * jnp.sin(psi / 2)
+        - jnp.sin(theta / 2) * jnp.sin(phi / 2) * jnp.cos(psi / 2)
+    )
+    quat = quat.at[3].set(
+        jnp.cos(theta / 2) * jnp.cos(phi / 2) * jnp.cos(psi / 2)
+        + jnp.sin(theta / 2) * jnp.sin(phi / 2) * jnp.sin(psi /
+    2))
+    return quat

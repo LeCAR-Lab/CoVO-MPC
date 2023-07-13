@@ -98,9 +98,9 @@ def get_loose_dynamics_3d():
         # dynamics
         thrust_local = jnp.array([0.0, 0.0, env_action.thrust])
         thrust_world = geom.rotate_with_quat(thrust_local, env_state.quat)
-        torque_world = geom.rotate_with_quat(env_action.torque, env_state.quat)
+        # torque_world = geom.rotate_with_quat(env_action.torque, env_state.quat)
         acc = thrust_world / env_params.m - jnp.array([0.0, 0.0, env_params.g])
-        alpha = jnp.linalg.inv(env_params.I) @ torque_world
+        alpha = jnp.linalg.inv(env_params.I) @ env_action.torque
         acc_obj = jnp.array([0.0, 0.0, -env_params.g])
 
         # meta variables
