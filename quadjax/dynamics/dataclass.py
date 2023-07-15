@@ -10,12 +10,22 @@ class EnvState:
     z: float
     theta: float
     phi: float
+    y2: float
+    z2: float
+    theta2: float
+    phi2: float
     y_dot: float
     z_dot: float
     theta_dot: float
     phi_dot: float
+    y2_dot: float
+    z2_dot: float
+    theta2_dot: float
+    phi2_dot: float
     last_thrust: float  # Only needed for rendering
     last_tau: float  # Only needed for rendering
+    last_thrust2: float  # Only needed for rendering
+    last_tau2: float  # Only needed for rendering
     time: int
     y_traj: jnp.ndarray
     z_traj: jnp.ndarray
@@ -29,6 +39,10 @@ class EnvState:
     z_hook: float
     y_hook_dot: float
     z_hook_dot: float
+    y_hook2: float
+    z_hook2: float
+    y_hook2_dot: float
+    z_hook2_dot: float
     y_obj: float
     z_obj: float
     y_obj_dot: float
@@ -37,6 +51,10 @@ class EnvState:
     f_rope_y: float
     f_rope_z: float
     l_rope: float
+    f_rope2: float
+    f_rope2_y: float
+    f_rope2_z: float
+    l_rope2: float
 
 
 @struct.dataclass
@@ -62,6 +80,8 @@ class EnvParams:
 class Action:
     thrust: float
     tau: float
+    # thrust: jnp.ndarray
+    # tau: jnp.ndarray
 
 
 @struct.dataclass

@@ -12,9 +12,11 @@ import time
 from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
-
+import sys
+# sys.path.append("/home/bianzx/jax/quadjax/")
 # from quadjax.Quad2D import Quad2D, test_env
-from quadjax.quad2d import Quad2D, test_env
+# from quadjax.quad2d import Quad2D, test_env
+from quadjax.quad_dual2d import Quad2D, test_env
 
 import logging
 logger = logging.getLogger(__name__)
