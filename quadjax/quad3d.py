@@ -372,7 +372,6 @@ class Quad3D(environment.Environment):
 
 def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     # running environment
-    t0 = time_module.time()
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
@@ -386,6 +385,7 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     final_reward = 0.0
     a_mean = jnp.zeros([10, 4], dtype=jnp.float32)
     a_sigma = jnp.tile(jnp.eye(4, dtype=jnp.float32), [10, 1, 1])
+    t0 = time_module.time()
     while True:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
