@@ -376,6 +376,7 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
+    step_jit = jax.jit(env.step)
 
     state_seq, obs_seq, reward_seq = [], [], []
     rng, rng_reset = jax.random.split(rng)
@@ -392,7 +393,7 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
         if 'a_mean' in policy_info.keys() and 'a_sigma' in policy_info.keys():
             a_mean = policy_info['a_mean']
             a_sigma = policy_info['a_sigma']
-        next_obs, next_env_state, reward, done, info = env.step(
+        next_obs, next_env_state, reward, done, info = step_jit(
             rng_step, env_state, action, env_params
         )
         if done:
@@ -471,7 +472,6 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     print(f"plotting time: {time_module.time()-t0:.2f}s")
     print(f"average steps: {n_steps/n_dones}")
     print(f"average reward: {final_reward/n_dones}")
-
 
 @pydataclass
 class Args:
