@@ -99,6 +99,7 @@ def quad3d_free_pid_policy(
         env_state: EnvState3D,
         env_params: EnvParams3D,
         rng: jax.random.PRNGKey,
+        **kwargs
 ):
     # get drone target force
     kp = 3.0**2
@@ -140,4 +141,4 @@ def quad3d_free_pid_policy(
         thrust / env_params.max_thrust * 2.0 - 1.0, -1.0, 1.0
     )
     tau_normed = jnp.clip(torque / env_params.max_torque, -1.0, 1.0)
-    return jnp.array([thrust_normed, *tau_normed])
+    return jnp.array([thrust_normed, *tau_normed]), {}

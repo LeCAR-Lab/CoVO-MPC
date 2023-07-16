@@ -381,10 +381,15 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
     n_dones = 0
+    a_mean = jnp.zeros([10, 4], dtype=jnp.float32)
+    a_sigma = jnp.tile(jnp.eye(4, dtype=jnp.float32), [10, 1, 1])
     while True:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action = policy(obs, env_state, env_params, rng_act)
+        action, policy_info = policy(obs, env_state, env_params, rng_act, old_a_mean = a_mean, old_a_sigma = a_sigma)
+        if 'a_mean' in policy_info.keys() and 'a_sigma' in policy_info.keys():
+            a_mean = policy_info['a_mean']
+            a_sigma = policy_info['a_sigma']
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params
         )
@@ -518,9 +523,9 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    from quadjax.controllers.pid import quad3d_free_pid_policy
-    test_env(env, policy=quad3d_free_pid_policy, num_episodes=3)
-
+    from quadjax.controllers.mppi import quad3d_free_mppi_policy
+    mppi_jit = jax.jit(partial(quad3d_free_mppi_policy, env=env))
+    test_env(env, policy=mppi_jit, num_episodes=1)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

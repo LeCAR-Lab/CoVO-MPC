@@ -13,18 +13,19 @@ def quad3d_free_mppi_policy(
     rng: jax.random.PRNGKey,
     env: Quad3D,
     old_a_mean: jnp.ndarray, 
-    old_a_sigma: jnp.ndarray
+    old_a_sigma: jnp.ndarray, 
 ):
     horizon = 10
-    sample_num = 128
+    sample_num = 8192
     discount = 0.99
     lam = 0.003  # temperature
     gamma_mean = 0.9  # learning rate
     gamma_sigma = 0.0  # learning rate
+    action_dim = 4
 
     # set new action by shift old_a_mean and old_a_sigma to the right for 1 step
-    a_mean = jnp.concatenate([old_a_mean[1:], jnp.zeros(horizon, 3)], axis=0)
-    a_sigma = jnp.concatenate([old_a_sigma[1:], jnp.tile(jnp.eye(3), (horizon, 1, 1))], axis=0)
+    a_mean = jnp.concatenate([old_a_mean[1:], jnp.zeros([1, action_dim], dtype=jnp.float32)], axis=0)
+    a_sigma = jnp.concatenate([old_a_sigma[1:], jnp.eye(action_dim, dtype=jnp.float32)[None, ...]], axis=0)
     # sample action
     rng, _rng = jax.random.split(rng)
     def sample_for_each_batch(rng):
@@ -32,11 +33,11 @@ def quad3d_free_mppi_policy(
         samples = jax.vmap(jax.random.multivariate_normal)(rngs, a_mean, a_sigma)
         return samples
     actions_sampled = jax.vmap(sample_for_each_batch)(jax.random.split(_rng, sample_num))
-    actions_sampled = jnp.transpose(actions_sampled, (1, 0, 2))  # (horizon, sample_num, 3)
+    actions_sampled = jnp.transpose(actions_sampled, (1, 0, 2))  # (horizon, sample_num, action_dim)
     actions_sampled = jnp.clip(actions_sampled, -1.0, 1.0)
 
     def _env_step(runner_state, action):
-        train_state, env_state, last_obs, rng, env_params = runner_state
+        env_state, rng, env_params = runner_state
 
         # STEP ENV
         rng, _rng = jax.random.split(rng)
@@ -56,11 +57,15 @@ def quad3d_free_mppi_policy(
             lambda x, y: map_fn(done, x, y), new_env_params, env_params
         )
 
-        runner_state = (train_state, env_state, obsv, rng, env_params)
+        runner_state = (env_state, rng, env_params)
         return runner_state, (reward, done)
 
     # rollout environment
-    runner_state, traj_batch = jax.lax.scan(_env_step, runner_state, actions_sampled)
+    # repeat env_state for sample_num times
+    env_state_batch = jax.tree_map(lambda x: jnp.repeat(x[None, ...], sample_num, axis=0), env_state)
+    # repeat env_params for sample_num times
+    env_params_batch = jax.tree_map(lambda x: jnp.repeat(x[None, ...], sample_num, axis=0), env_params)
+    runner_state, traj_batch = jax.lax.scan(_env_step, (env_state_batch, rng, env_params_batch), actions_sampled)
     reward_batch = traj_batch[0]
     done_batch = traj_batch[1]
 
@@ -69,7 +74,7 @@ def quad3d_free_mppi_policy(
     first_terminate_mask = (jnp.cumsum(terminate_mask, axis=0) == 1)
     reward_terminated = reward_batch * (1 - terminate_mask) + jnp.cumsum(reward_batch * first_terminate_mask, axis=0)
     discount_factor = discount ** jnp.arange(horizon)
-    cost = - jnp.sum(reward_terminated * discount_factor, axis=0)
+    cost = - jnp.sum(reward_terminated * discount_factor[:, None], axis=0)
     # compute weight
     cost -= jnp.min(cost)
     cost = jnp.exp(-1.0 / lam * cost)
@@ -77,8 +82,11 @@ def quad3d_free_mppi_policy(
 
     # get new action
     actions_sampled_T = actions_sampled.transpose(1,0,2)
-    samples_T = actions_sampled_T - a_mean[None, :, :] # (batch, horizon, 3)
-    a_mean_new = (1 - gamma_mean) * a_mean + gamma_mean * jnp.sum(weight[:, None, None] * actions_sampled_T, axis=0) # (horizon, 3)
-    a_sigma_new = (1 - gamma_sigma) * a_sigma + gamma_sigma * jnp.sum(weight[:, None, None, None] * jnp.einsum("...i,...j->...ij", samples_T, samples_T), axis=0) # (horizon, 3, 3)
+    samples_T = actions_sampled_T - a_mean[None, :, :] # (batch, horizon, action_dim)
+    a_mean_new = (1 - gamma_mean) * a_mean + gamma_mean * jnp.sum(weight[:, None, None] * actions_sampled_T, axis=0) # (horizon, action_dim)
+    a_sigma_new = (1 - gamma_sigma) * a_sigma + gamma_sigma * jnp.sum(weight[:, None, None, None] * jnp.einsum("...i,...j->...ij", samples_T, samples_T), axis=0) # (horizon, action_dim, action_dim)
 
-    
+    return a_mean_new[0], {
+        "a_mean": a_mean_new,
+        "a_sigma": a_sigma_new,
+    }
