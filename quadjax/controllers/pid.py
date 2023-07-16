@@ -134,16 +134,7 @@ def quad3d_free_pid_policy(
     kdz = 2.0 * 1.0 * 6.5
     alpha = kpxy * quat_red[:3] + jnp.sign(qw) * kpz * quat_yaw[:3] + jnp.array([kdxy, kdxy, kdz]) * (0.0 - env_state.omega)
     torque = env_params.I @ alpha - jnp.cross((env_params.I @ env_state.omega), env_state.omega)
-    # current_unitvec_local = jnp.array([0.0, 0.0, 1.0])
-    # rot_axis = jnp.cross(current_unitvec_local, target_unitvec_local)
-    # rot_angle = jnp.arccos(jnp.dot(current_unitvec_local, target_unitvec_local))
-    # omega_local = geom.rotate_with_quat(
-    #     env_state.omega, geom.conjugate_quat(env_state.quat)
-    # )
-    # torque = kp * rot_angle * rot_axis / jnp.linalg.norm(rot_axis) + kd * (
-    #     -omega_local
-    # )
-
+    
     # convert into action space
     thrust_normed = jnp.clip(
         thrust / env_params.max_thrust * 2.0 - 1.0, -1.0, 1.0
