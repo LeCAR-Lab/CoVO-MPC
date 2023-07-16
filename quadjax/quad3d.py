@@ -381,6 +381,8 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
     n_dones = 0
+    n_steps = 0
+    final_reward = 0.0
     a_mean = jnp.zeros([10, 4], dtype=jnp.float32)
     a_sigma = jnp.tile(jnp.eye(4, dtype=jnp.float32), [10, 1, 1])
     while True:
@@ -400,6 +402,8 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
         obs_seq.append(obs)
         if done:
             n_dones += 1
+            final_reward += reward
+        n_steps += 1
         obs = next_obs
         env_state = next_env_state
         if n_dones >= num_episodes:
@@ -465,6 +469,8 @@ def test_env(env: Quad3D, policy, render_video=False, num_episodes=3):
     plt.xlabel("time")
     plt.savefig("../results/plot.png")
     print(f"plotting time: {time_module.time()-t0:.2f}s")
+    print(f"average steps: {n_steps/n_dones}")
+    print(f"average reward: {final_reward/n_dones}")
 
 
 @pydataclass
