@@ -14,7 +14,7 @@ import sys
 sys.path.append("/home/bianzx/jax/quadjax/")
 from quadjax.dynamics.utils import angle_normalize, get_hit_penalty
 from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
-from quadjax.dynamics.taut import get_taut_dynamics
+from quadjax.dynamics.taut_dual import get_taut_dynamics
 # from quadjax.dynamics.loose import get_loose_dynamics
 from quadjax.dynamics.loose_dual import get_loose_dynamics
 from quadjax.dynamics.trans import get_dynamic_transfer
@@ -83,11 +83,11 @@ class Quad2D(environment.Environment):
         env_action = [Action(thrust=thrust1, tau=tau1), Action(thrust=thrust2, tau=tau2)]
 
         # TODO...
-        # old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
-        # taut_state = self.taut_dynamics(params, state, env_action[0])
-        # loose_state = self.loose_dynamics(params, state, env_action[0])
-        # new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
-        new_state = self.loose_dynamics(params, state, env_action)
+        old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
+        taut_state = self.taut_dynamics(params, state, env_action)
+        loose_state = self.loose_dynamics(params, state, env_action)
+        new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
+        # new_state = self.loose_dynamics(params, state, env_action)
 
         done = self.is_terminal(state, params)
         return (
