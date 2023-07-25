@@ -80,14 +80,13 @@ class Quad2D(environment.Environment):
         reward = reward.squeeze()
         # env_action = Action(thrust=thrust, tau=tau)
         # env_action = [Action(thrust=thrust[i], tau=tau[i]) for i in range(len(action))]
-        env_action = [Action(thrust=thrust1, tau=tau1), Action(thrust=thrust2, tau=tau2)]
+        env_action = (Action(thrust=thrust1, tau=tau1), Action(thrust=thrust2, tau=tau2))
 
         # TODO...
-        old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
-        taut_state = self.taut_dynamics(params, state, env_action)
-        loose_state = self.loose_dynamics(params, state, env_action)
-        new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
-        # new_state = self.loose_dynamics(params, state, env_action)
+        # old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
+        new_state = self.taut_dynamics(params, state, env_action)
+        # loose_state = self.loose_dynamics(params, state, env_action)
+        # new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
 
         done = self.is_terminal(state, params)
         return (
@@ -147,8 +146,10 @@ class Quad2D(environment.Environment):
         l = jax.random.uniform(key4, shape=(), minval=0.2, maxval=0.4)
         delta_yh = jax.random.uniform(key5, shape=(), minval=-0.04, maxval=0.04)
         delta_zh = jax.random.uniform(key6, shape=(), minval=-0.06, maxval=0.00)
+        delta_yh2 = jax.random.uniform(key5, shape=(), minval=-0.04, maxval=0.04)
+        delta_zh2 = jax.random.uniform(key6, shape=(), minval=-0.06, maxval=0.00)
         
-        return EnvParams(m=m, I=I, mo=mo, l=l, delta_yh=delta_yh, delta_zh=delta_zh)
+        return EnvParams(m=m, I=I, mo=mo, l=l, delta_yh=delta_yh, delta_zh=delta_zh, delta_yh2=delta_yh2, delta_zh2=delta_zh2)
     
     @partial(jax.jit, static_argnums=(0,))
     def generate_fixed_traj(self, key: chex.PRNGKey) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
@@ -311,6 +312,8 @@ class Quad2D(environment.Environment):
             (params.l-0.2)/(0.4-0.2) * 2.0 - 1.0,
             (params.delta_yh-(-0.04))/(0.04-(-0.04)) * 2.0 - 1.0,
             (params.delta_zh-(-0.06))/(0.0-(-0.06)) * 2.0 - 1.0,
+            (params.delta_yh2-(-0.04))/(0.04-(-0.04)) * 2.0 - 1.0,
+            (params.delta_zh2-(-0.06))/(0.0-(-0.06)) * 2.0 - 1.0,
         ]
 
         return jnp.array(obs_elements+param_elements).squeeze()

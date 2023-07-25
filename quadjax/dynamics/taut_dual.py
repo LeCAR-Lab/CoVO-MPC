@@ -14,6 +14,9 @@ from quadjax.dynamics.utils import angle_normalize
 from quadjax.dynamics import geom
 from quadjax.dynamics.dataclass import EnvParams, EnvState, Action, EnvParams3D, EnvState3D, Action3D
 from typing import Tuple
+from jax import jit
+import numpy as np
+
 
 def get_taut_dynamics():
 
@@ -40,7 +43,7 @@ def get_taut_dynamics():
     # z displacement of the hook from the quadrotor center
     delta_zh2 = sp.Symbol("delta_zh2")
     # TODO...
-    params = [m, I, g, l, mo, delta_yh, delta_zh]
+    params = [m, I, g, l, mo, delta_yh, delta_zh, delta_yh2, delta_zh2]
     # action = [thrust, tau]
     action = [thrust, tau, thrust2, tau2]
 
@@ -136,6 +139,7 @@ def get_taut_dynamics():
     obj_particle = Particle("obj_particle", obj, mo)
 
     # Newton's law
+    # 8 equations
     eq_quad_y = -thrust * sp.sin(theta) + f_rope_y - m * y_ddot
     eq_quad_z = thrust * sp.cos(theta) + f_rope_z - m * g - m * z_ddot
     eq_quad_theta = tau + delta_yh_global * f_rope_z - \
@@ -158,13 +162,13 @@ def get_taut_dynamics():
     eqs = [eq.subs([(states[i], states_val[i])
                    for i in range(len(states))]) for eq in eqs]
     # Solve for the acceleration
-    A_taut_dyn = sp.zeros(5, 5)
-    b_taut_dyn = sp.zeros(5, 1)
-    for i in range(5):
-        for j in range(5):
+    A_taut_dyn = sp.zeros(8, 8)
+    b_taut_dyn = sp.zeros(8, 1)
+    for i in range(8):
+        for j in range(8):
             A_taut_dyn[i, j] = eqs[i].coeff(states_dot_val[j])
         b_taut_dyn[i] = -eqs[i].subs([(states_dot_val[j], 0)
-                                     for j in range(5)])
+                                     for j in range(8)])
     # lambda A_taut_dyn
     A_taut_dyn_func = sp.lambdify(
         params + states_val + action, A_taut_dyn, "jax")
@@ -192,7 +196,7 @@ def get_taut_dynamics():
     # dynamics (params, states) -> states_dot
     def taut_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Tuple[Action, Action]):
         params = [env_params.m, env_params.I, env_params.g, env_params.l,
-                  env_params.mo, env_params.delta_yh, env_params.delta_zh]
+                  env_params.mo, env_params.delta_yh, env_params.delta_zh,env_params.delta_yh2, env_params.delta_zh2]
         states = [env_state.y, env_state.z, env_state.theta, env_state.phi,
                   env_state.y_dot, env_state.z_dot, env_state.theta_dot, env_state.phi_dot,
                   env_state.y2, env_state.z2, env_state.theta2, env_state.phi2,
