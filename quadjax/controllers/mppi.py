@@ -16,7 +16,7 @@ def quad3d_free_mppi_policy(
     old_a_sigma: jnp.ndarray, 
 ):
     horizon = 10
-    sample_num = 8192
+    sample_num = 128
     discount = 0.99
     lam = 0.003  # temperature
     gamma_mean = 0.9  # learning rate

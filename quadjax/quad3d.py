@@ -107,6 +107,8 @@ class Quad3D(environment.Environment):
             pos = jnp.array([-1.0, 0.0, 0.0])
         elif ('tracking' in self.task):
             pos = pos_traj[0]
+        elif self.task == "hovering":
+            pos = pos_traj[0]
         else:
             pos = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
         pos_hook = pos + params.hook_offset
