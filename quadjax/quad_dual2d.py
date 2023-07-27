@@ -347,14 +347,14 @@ class Quad2D(environment.Environment):
         return spaces.Box(
             low=-1.0,
             high=1.0,
-            shape=(2,),
+            shape=(4,),
             dtype=jnp.float32,
         )
 
     def observation_space(self, params: EnvParams) -> spaces.Box:
         """Observation space of the environment."""
         # NOTE: use default params for jax limitation
-        return spaces.Box(-1.0, 1.0, shape=(40+self.default_params.traj_obs_len*4+6,), dtype=jnp.float32)
+        return spaces.Box(-1.0, 1.0, shape=(42+self.default_params.traj_obs_len*4+6,), dtype=jnp.float32)
 
     def state_space(self, params: EnvParams) -> spaces.Dict:
         """State space of the environment."""

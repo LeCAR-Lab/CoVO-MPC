@@ -7,6 +7,7 @@ from sympy.physics.mechanics import (
     RigidBody,
     inertia,
 )
+import jax
 from jax import numpy as jnp
 from functools import partial
 
@@ -17,6 +18,8 @@ from typing import Tuple
 from jax import jit
 import numpy as np
 
+# Enable debug mode with print statements
+jax.config.update("jax_debug_nans", True)
 
 def get_taut_dynamics():
 
@@ -204,6 +207,10 @@ def get_taut_dynamics():
         # action = [env_action.thrust, env_action.tau]
         action = [env_action[0].thrust, env_action[0].tau,
                 env_action[1].thrust, env_action[1].tau]
+        jax.debug.print("params: {}", params)
+        jax.debug.print("states: {}", states)
+        jax.debug.print("action: {}", action)
+        
         A = A_taut_dyn_func(*params, *states, *action)
         b = b_taut_dyn_func(*params, *states, *action)
         states_dot = jnp.linalg.solve(A, b).squeeze()
