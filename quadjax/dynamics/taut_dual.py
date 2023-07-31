@@ -157,8 +157,10 @@ def get_taut_dynamics():
     eq_obj_y = -f_rope_y -f_rope2_y - mo * y_obj_ddot
     eq_obj_z = -f_rope_z -f_rope2_z - mo * g - mo * z_obj_ddot
 
-    eq_quad1_obj = (y-y_obj)*(y_dot-y_obj_dot)+(z-z_obj)*(z_dot-z_obj_dot)
-    eq_quad2_obj = (y2-y_obj)*(y2_dot-y_obj_dot)+(z2-z_obj)*(z2_dot-z_obj_dot)
+    # eq_quad1_obj = (y-y_obj)*(y_dot-y_obj_dot)+(z-z_obj)*(z_dot-z_obj_dot)
+    # eq_quad2_obj = (y2-y_obj)*(y2_dot-y_obj_dot)+(z2-z_obj)*(z2_dot-z_obj_dot)
+    eq_quad1_obj = (y_dot-y_obj_dot)**2+(y-y_obj)*(y_ddot-y_obj_ddot)+(z_dot-z_obj_dot)**2+(z-z_obj)*(z_ddot-z_obj_ddot)
+    eq_quad2_obj = (y2_dot-y_obj_dot)**2+(y2-y_obj)*(y2_ddot-y_obj_ddot)+(z2_dot-z_obj_dot)**2+(z2-z_obj)*(z2_ddot-z_obj_ddot)
 
     # TODO...
     eqs = [eq_quad_y, eq_quad_z, eq_quad_theta, eq_obj_y, eq_obj_z, eq_quad_y2, eq_quad_z2, eq_quad_theta2, eq_quad1_obj, eq_quad2_obj]
