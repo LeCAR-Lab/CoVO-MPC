@@ -53,7 +53,8 @@ class Quad2D(environment.Environment):
         self,
         key: chex.PRNGKey,
         state: EnvState,
-        action: jnp.ndarray,
+        # action: jnp.ndarray,
+        action: float,
         # action: Tuple[Action, Action],
         params: EnvParams,
     ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
@@ -84,6 +85,9 @@ class Quad2D(environment.Environment):
 
         # TODO...
         # old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
+        # jax.debug.print("params: {}", params)
+        # jax.debug.print("state: {}", state)
+        # jax.debug.print("action: {}", action)
         new_state = self.taut_dynamics(params, state, env_action)
         # loose_state = self.loose_dynamics(params, state, env_action)
         # new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)

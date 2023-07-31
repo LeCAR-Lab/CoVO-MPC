@@ -106,8 +106,8 @@ def get_taut_dynamics():
     obses = [y_obj, z_obj, y_obj_dot, z_obj_dot,
              y_obj_ddot, z_obj_ddot, f_rope_y, f_rope_z]
 
-    delta_yh2_global = delta_yh2 * sp.cos(theta2) - delta_zh * sp.sin(theta2)
-    delta_zh2_global = delta_yh2 * sp.sin(theta2) + delta_zh * sp.cos(theta2)
+    delta_yh2_global = delta_yh2 * sp.cos(theta2) - delta_zh2 * sp.sin(theta2)
+    delta_zh2_global = delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2)
     f_rope2_y = f_rope2 * sp.sin(theta2+phi2)
     f_rope2_z = -f_rope2 * sp.cos(theta2+phi2)
     y_hook2 = y2 + delta_yh2_global
@@ -157,21 +157,24 @@ def get_taut_dynamics():
     eq_obj_y = -f_rope_y -f_rope2_y - mo * y_obj_ddot
     eq_obj_z = -f_rope_z -f_rope2_z - mo * g - mo * z_obj_ddot
 
+    eq_quad1_obj = (y-y_obj)*(y_dot-y_obj_dot)+(z-z_obj)*(z_dot-z_obj_dot)
+    eq_quad2_obj = (y2-y_obj)*(y2_dot-y_obj_dot)+(z2-z_obj)*(z2_dot-z_obj_dot)
+
     # TODO...
-    eqs = [eq_quad_y, eq_quad_z, eq_quad_theta, eq_obj_y, eq_obj_z, eq_quad_y2, eq_quad_z2, eq_quad_theta2]
+    eqs = [eq_quad_y, eq_quad_z, eq_quad_theta, eq_obj_y, eq_obj_z, eq_quad_y2, eq_quad_z2, eq_quad_theta2, eq_quad1_obj, eq_quad2_obj]
     eqs = [eq.expand() for eq in eqs]
     eqs = [eq.subs([(states_dot[i], states_dot_val[i])
-                   for i in range(len(states_dot))]) for eq in eqs]
+                    for i in range(len(states_dot))]) for eq in eqs]
     eqs = [eq.subs([(states[i], states_val[i])
-                   for i in range(len(states))]) for eq in eqs]
+                    for i in range(len(states))]) for eq in eqs]
     # Solve for the acceleration
-    A_taut_dyn = sp.zeros(8, 8)
-    b_taut_dyn = sp.zeros(8, 1)
-    for i in range(8):
-        for j in range(8):
+    A_taut_dyn = sp.zeros(10, 10)
+    b_taut_dyn = sp.zeros(10, 1)
+    for i in range(10):
+        for j in range(10):
             A_taut_dyn[i, j] = eqs[i].coeff(states_dot_val[j])
         b_taut_dyn[i] = -eqs[i].subs([(states_dot_val[j], 0)
-                                     for j in range(8)])
+                                        for j in range(10)])
     # lambda A_taut_dyn
     A_taut_dyn_func = sp.lambdify(
         params + states_val + action, A_taut_dyn, "jax")
@@ -197,7 +200,7 @@ def get_taut_dynamics():
     z_hook_dot_func = sp.lambdify(params + states_val, obs_eqs[7], "jax")
 
     # dynamics (params, states) -> states_dot
-    def taut_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Tuple[Action, Action]):
+    def taut_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Action):
         params = [env_params.m, env_params.I, env_params.g, env_params.l,
                   env_params.mo, env_params.delta_yh, env_params.delta_zh,env_params.delta_yh2, env_params.delta_zh2]
         states = [env_state.y, env_state.z, env_state.theta, env_state.phi,
@@ -207,10 +210,9 @@ def get_taut_dynamics():
         # action = [env_action.thrust, env_action.tau]
         action = [env_action[0].thrust, env_action[0].tau,
                 env_action[1].thrust, env_action[1].tau]
-        jax.debug.print("params: {}", params)
-        jax.debug.print("states: {}", states)
-        jax.debug.print("action: {}", action)
-        
+        jax.debug.print("taut_params: {}", params)
+        jax.debug.print("taut_states: {}", states)
+        jax.debug.print("taut_action: {}", action)
         A = A_taut_dyn_func(*params, *states, *action)
         b = b_taut_dyn_func(*params, *states, *action)
         states_dot = jnp.linalg.solve(A, b).squeeze()

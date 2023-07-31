@@ -10,7 +10,8 @@ import numpy as np
 from functools import partial
 from dataclasses import dataclass as pydataclass
 import tyro
-
+import sys
+sys.path.append("/home/bianzx/jax/quadjax/")
 from quadjax.dynamics.utils import angle_normalize, get_hit_penalty
 from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
 from quadjax.dynamics.taut import get_taut_dynamics

@@ -55,7 +55,39 @@ class EnvState:
     f_rope2_y: float
     f_rope2_z: float
     l_rope2: float
-
+# @struct.dataclass
+# class EnvState:
+#     y: float
+#     z: float
+#     theta: float
+#     phi: float
+#     y_dot: float
+#     z_dot: float
+#     theta_dot: float
+#     phi_dot: float
+#     last_thrust: float  # Only needed for rendering
+#     last_tau: float  # Only needed for rendering
+#     time: int
+#     y_traj: jnp.ndarray
+#     z_traj: jnp.ndarray
+#     y_dot_traj: jnp.ndarray
+#     z_dot_traj: jnp.ndarray
+#     y_tar: float
+#     z_tar: float
+#     y_dot_tar: float
+#     z_dot_tar: float
+#     y_hook: float
+#     z_hook: float
+#     y_hook_dot: float
+#     z_hook_dot: float
+#     y_obj: float
+#     z_obj: float
+#     y_obj_dot: float
+#     z_obj_dot: float
+#     f_rope: float
+#     f_rope_y: float
+#     f_rope_z: float
+#     l_rope: float
 
 @struct.dataclass
 class EnvParams:
