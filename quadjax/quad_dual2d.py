@@ -120,8 +120,8 @@ class Quad2D(environment.Environment):
             y2, z2, theta2 = jax.random.uniform(key, shape=(3,), minval=-high, maxval=high)
         y_hook = y + params.delta_yh * jnp.cos(theta) - params.delta_zh * jnp.sin(theta) 
         z_hook = z + params.delta_yh * jnp.sin(theta) + params.delta_zh * jnp.cos(theta)
-        y_hook2 = y + params.delta_yh * jnp.cos(theta2) - params.delta_zh * jnp.sin(theta2) 
-        z_hook2 = z + params.delta_yh * jnp.sin(theta2) + params.delta_zh * jnp.cos(theta2)
+        y_hook2 = y2 + params.delta_yh2 * jnp.cos(theta2) - params.delta_zh2 * jnp.sin(theta2) 
+        z_hook2 = z2 + params.delta_yh2 * jnp.sin(theta2) + params.delta_zh2 * jnp.cos(theta2)
         state = EnvState(
             y=y, z=z, theta=theta, 
             y_dot=0.0, z_dot=0.0, theta_dot=0.0,last_thrust=0.0,last_tau=0.0,time=0,

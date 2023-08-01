@@ -87,6 +87,10 @@ def get_taut_dynamics():
                         theta_ddot_val, phi_ddot_val, f_rope, 
                         y2_ddot_val, z2_ddot_val,
                         theta2_ddot_val, phi2_ddot_val, f_rope2]
+    # states_dot = [y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope, theta2_ddot, phi2_ddot, f_rope2]
+    # states_dot_val = [y_ddot_val, z_ddot_val,
+    #                     theta_ddot_val, phi_ddot_val, f_rope,
+    #                     theta2_ddot_val, phi2_ddot_val, f_rope2]
 
     # intermediate variables
     delta_yh_global = delta_yh * sp.cos(theta) - delta_zh * sp.sin(theta)
@@ -104,14 +108,18 @@ def get_taut_dynamics():
     y_obj_ddot = sp.diff(y_obj_dot, t)
     z_obj_ddot = sp.diff(z_obj_dot, t)
     obses = [y_obj, z_obj, y_obj_dot, z_obj_dot,
-             y_obj_ddot, z_obj_ddot, f_rope_y, f_rope_z]
+                y_obj_ddot, z_obj_ddot, f_rope_y, f_rope_z]
 
     delta_yh2_global = delta_yh2 * sp.cos(theta2) - delta_zh2 * sp.sin(theta2)
     delta_zh2_global = delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2)
     f_rope2_y = f_rope2 * sp.sin(theta2+phi2)
     f_rope2_z = -f_rope2 * sp.cos(theta2+phi2)
+    # y_hook2 = y_obj - l * sp.sin(theta2+phi2)
+    # z_hook2 = z_obj + l * sp.cos(theta2+phi2)
     y_hook2 = y2 + delta_yh2_global
     z_hook2 = z2 + delta_zh2_global
+    # y2 = y_hook2 - delta_yh2_global
+    # z2 = z_hook2 - delta_zh2_global
     y_hook2_dot = sp.diff(y_hook2, t)
     z_hook2_dot = sp.diff(z_hook2, t)
     # obses = [y_obj, z_obj, y_obj_dot, z_obj_dot,
@@ -159,11 +167,29 @@ def get_taut_dynamics():
 
     # eq_quad1_obj = (y-y_obj)*(y_dot-y_obj_dot)+(z-z_obj)*(z_dot-z_obj_dot)
     # eq_quad2_obj = (y2-y_obj)*(y2_dot-y_obj_dot)+(z2-z_obj)*(z2_dot-z_obj_dot)
-    eq_quad1_obj = (y_dot-y_obj_dot)**2+(y-y_obj)*(y_ddot-y_obj_ddot)+(z_dot-z_obj_dot)**2+(z-z_obj)*(z_ddot-z_obj_ddot)
-    eq_quad2_obj = (y2_dot-y_obj_dot)**2+(y2-y_obj)*(y2_ddot-y_obj_ddot)+(z2_dot-z_obj_dot)**2+(z2-z_obj)*(z2_ddot-z_obj_ddot)
+    # eq_quad1_obj = (y_dot-y_obj_dot)**2+(y-y_obj)*(y_ddot-y_obj_ddot)+(z_dot-z_obj_dot)**2+(z-z_obj)*(z_ddot-z_obj_ddot)
+    # eq_quad2_obj = (y2_dot-y_obj_dot)**2+(y2-y_obj)*(y2_ddot-y_obj_ddot)+(z2_dot-z_obj_dot)**2+(z2-z_obj)*(z2_ddot-z_obj_ddot)
+    # eq_quad1_obj = y_ddot + l * (sp.cos(theta + phi) * (theta_ddot + phi_ddot) - sp.sin(theta + phi) * (theta_dot + phi_dot)**2) -\
+    #      theta_ddot * (delta_yh * sp.sin(theta) + delta_zh * sp.cos(theta)) - theta_dot**2 * (delta_yh * sp.cos(theta - delta_zh * sp.sin(theta))) -\
+    #         y2_ddot + l * (sp.cos(theta2 + phi2) * (theta2_ddot + phi2_ddot) - sp.sin(theta2 + phi2) * (theta2_dot + phi2_dot)**2) -\
+    #      theta2_ddot * (delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2)) - theta2_dot**2 * (delta_yh2 * sp.cos(theta2 - delta_zh2 * sp.sin(theta2))) 
+
+    # eq_quad2_obj = z_ddot + l * (theta_dot + phi_dot) * (sp.sin(theta + phi) * (theta_ddot + phi_ddot) + sp.cos(theta + phi) * (theta_dot + phi_dot)) - \
+    #                 z2_ddot - l * (theta_dot + phi_dot) * (sp.sin(theta + phi) * (theta_ddot + phi_ddot) + sp.cos(theta + phi) * (theta_dot + phi_dot))
+
+    eq_quad1_obj = y_ddot + l * (sp.cos(theta + phi) * (theta_ddot + phi_ddot) - sp.sin(theta + phi) * (theta_dot + phi_dot)**2) -\
+         theta_ddot * (delta_yh * sp.sin(theta) + delta_zh * sp.cos(theta)) - theta_dot**2 * (delta_yh * sp.cos(theta) - delta_zh * sp.sin(theta)) -\
+            y2_ddot - l * (sp.cos(theta2 + phi2) * (theta2_ddot + phi2_ddot) - sp.sin(theta2 + phi2) * (theta2_dot + phi2_dot)**2) +\
+         theta2_ddot * (delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2)) + theta2_dot**2 * (delta_yh2 * sp.cos(theta2) - delta_zh2 * sp.sin(theta2))
+
+    eq_quad2_obj = z_ddot + l * (sp.sin(theta + phi) * (theta_ddot + phi_ddot) + sp.cos(theta + phi) * (theta_dot + phi_dot)**2) -\
+         theta_ddot * (delta_yh * sp.cos(theta) - delta_zh * sp.sin(theta)) - theta_dot**2 * (delta_yh * sp.sin(theta) + delta_zh * sp.cos(theta)) -\
+            z2_ddot - l * (sp.sin(theta2 + phi2) * (theta2_ddot + phi2_ddot) + sp.cos(theta2 + phi2) * (theta2_dot + phi2_dot)**2) +\
+         theta2_ddot * (delta_yh2 * sp.cos(theta2) - delta_zh2 * sp.sin(theta2)) + theta2_dot**2 * (delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2))
 
     # TODO...
     eqs = [eq_quad_y, eq_quad_z, eq_quad_theta, eq_obj_y, eq_obj_z, eq_quad_y2, eq_quad_z2, eq_quad_theta2, eq_quad1_obj, eq_quad2_obj]
+    # eqs = [eq_quad_y, eq_quad_z, eq_quad_theta, eq_obj_y, eq_obj_z, eq_quad_y2, eq_quad_z2, eq_quad_theta2]
     eqs = [eq.expand() for eq in eqs]
     eqs = [eq.subs([(states_dot[i], states_dot_val[i])
                     for i in range(len(states_dot))]) for eq in eqs]
@@ -177,6 +203,7 @@ def get_taut_dynamics():
             A_taut_dyn[i, j] = eqs[i].coeff(states_dot_val[j])
         b_taut_dyn[i] = -eqs[i].subs([(states_dot_val[j], 0)
                                         for j in range(10)])
+
     # lambda A_taut_dyn
     A_taut_dyn_func = sp.lambdify(
         params + states_val + action, A_taut_dyn, "jax")
@@ -212,14 +239,16 @@ def get_taut_dynamics():
         # action = [env_action.thrust, env_action.tau]
         action = [env_action[0].thrust, env_action[0].tau,
                 env_action[1].thrust, env_action[1].tau]
-        jax.debug.print("taut_params: {}", params)
-        jax.debug.print("taut_states: {}", states)
-        jax.debug.print("taut_action: {}", action)
+        jax.debug.print("taut_params: {}\n", params)
+        jax.debug.print("taut_states: {}\n", states)
+        jax.debug.print("taut_action: {}\n", action)
         A = A_taut_dyn_func(*params, *states, *action)
         b = b_taut_dyn_func(*params, *states, *action)
         states_dot = jnp.linalg.solve(A, b).squeeze()
         # y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope = states_dot
+        # y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope, y2_ddot, z2_ddot, theta2_ddot, phi2_ddot, f_rope2 = states_dot
         y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope, y2_ddot, z2_ddot, theta2_ddot, phi2_ddot, f_rope2 = states_dot
+        jax.debug.print("result: {}\n", states_dot)
 
         # Calculate updated state variables
         new_y_dot = env_state.y_dot + y_ddot * env_params.dt
@@ -241,6 +270,7 @@ def get_taut_dynamics():
         new_theta2 = angle_normalize(
             env_state.theta2 + new_theta2_dot * env_params.dt)
         new_phi2 = angle_normalize(env_state.phi2 + new_phi2_dot * env_params.dt)
+        
 
         # Update states list
         states = [new_y, new_z, new_theta, new_phi,
