@@ -60,10 +60,10 @@ def get_loose_dynamics():
         y_hook_dot = new_y_dot - new_theta_dot * delta_z_hook
         z_hook_dot = new_z_dot + new_theta_dot * delta_y_hook
 
-        delta_y_hook2 = env_params.delta_yh * \
-            jnp.cos(new_theta2) - env_params.delta_zh * jnp.sin(new_theta2)
-        delta_z_hook2 = env_params.delta_yh * \
-            jnp.sin(new_theta2) + env_params.delta_zh * jnp.cos(new_theta2)
+        delta_y_hook2 = env_params.delta_yh2 * \
+            jnp.cos(new_theta2) - env_params.delta_zh2 * jnp.sin(new_theta2)
+        delta_z_hook2 = env_params.delta_yh2 * \
+            jnp.sin(new_theta2) + env_params.delta_zh2 * jnp.cos(new_theta2)
         y_hook2 = new_y2 + delta_y_hook2
         z_hook2 = new_z2 + delta_z_hook2
         y_hook2_dot = new_y2_dot - new_theta2_dot * delta_z_hook2
@@ -96,7 +96,7 @@ def get_loose_dynamics():
         new_phi2_dot = phi2_th_dot - new_theta2_dot
 
         new_l_rope2 = jnp.sqrt((y_hook2 - new_y_obj) **
-                              2 + (z_hook - new_z_obj) ** 2)
+                              2 + (z_hook2 - new_z_obj) ** 2)
 
         env_state = env_state.replace(
             y=new_y,

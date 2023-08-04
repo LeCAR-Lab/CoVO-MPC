@@ -17,6 +17,7 @@ from quadjax.dynamics.dataclass import EnvParams, EnvState, Action
 from quadjax.dynamics.taut_dual import get_taut_dynamics
 # from quadjax.dynamics.loose import get_loose_dynamics
 from quadjax.dynamics.loose_dual import get_loose_dynamics
+from quadjax.dynamics.loose_taut_dual import get_loose_taut_dynamics
 from quadjax.dynamics.trans import get_dynamic_transfer
 
 
@@ -41,6 +42,7 @@ class Quad2D(environment.Environment):
         # dynamics
         self.taut_dynamics = get_taut_dynamics()
         self.loose_dynamics = get_loose_dynamics()
+        self.loose_taut_dynamics = get_loose_taut_dynamics()
         self.dynamic_transfer = get_dynamic_transfer()
         # controllers
 
@@ -89,7 +91,10 @@ class Quad2D(environment.Environment):
         # jax.debug.print("state: {}", state)
         # jax.debug.print("action: {}", action)
         new_state = self.taut_dynamics(params, state, env_action)
-        # loose_state = self.loose_dynamics(params, state, env_action)
+        loose_state = self.loose_dynamics(params, state, env_action)
+        taut_loose_state = self.loose_taut_dynamics(params, state, env_action, False)
+        loose_taut_state = self.loose_taut_dynamics(params, state, env_action, True)
+
         # new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
 
         done = self.is_terminal(state, params)

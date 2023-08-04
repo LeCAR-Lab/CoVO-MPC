@@ -73,7 +73,7 @@ def get_dynamic_transfer():
 
         return loose_state
 
-    def dynamic_transfer(env_params:EnvParams, loose_state:EnvState, taut_state:EnvState, old_loose_state:bool):
+    def dynamic_transfer(env_params:EnvParams, loose_state:EnvState, taut_state:EnvState, loose_taut_state:EnvState, taut_loose_state:EnvState, old_loose_state:bool):
         new_loose_state = loose_state.l_rope < (env_params.l - env_params.rope_taut_therehold)
         taut2loose = (taut_state.f_rope < 0.0) & (~old_loose_state)
         loose2taut = (~new_loose_state) & (old_loose_state)
@@ -93,5 +93,5 @@ def get_dynamic_transfer():
         loose_state = loose_state.replace(**new_state)
 
         return loose_state
-    
+        
     return dynamic_transfer

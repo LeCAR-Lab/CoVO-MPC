@@ -229,7 +229,7 @@ def get_taut_dynamics():
     z_hook_dot_func = sp.lambdify(params + states_val, obs_eqs[7], "jax")
 
     # dynamics (params, states) -> states_dot
-    def taut_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Action):
+    def taut_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Tuple[Action, Action]):
         params = [env_params.m, env_params.I, env_params.g, env_params.l,
                   env_params.mo, env_params.delta_yh, env_params.delta_zh,env_params.delta_yh2, env_params.delta_zh2]
         states = [env_state.y, env_state.z, env_state.theta, env_state.phi,
