@@ -105,7 +105,7 @@ class EnvParams:
     delta_yh2: float = 0.03  # y displacement of the hook from the quadrotor center
     delta_zh2: float = -0.06  # z displacement of the hook from the quadrotor center
     max_steps_in_episode: int = 300
-    rope_taut_therehold: float = 1e-4
+    rope_taut_threshold: float = 1e-4
     traj_obs_len: int = 5
     traj_obs_gap: int = 5
 
@@ -168,7 +168,7 @@ class EnvParams3D:
     l: float = 0.3  # length of the rod
     hook_offset: jnp.ndarray = default_array([0.03, 0.02, -0.06])
     max_steps_in_episode: int = 300
-    rope_taut_therehold: float = 1e-4
+    rope_taut_threshold: float = 1e-4
     traj_obs_len: int = 5
     traj_obs_gap: int = 5
 

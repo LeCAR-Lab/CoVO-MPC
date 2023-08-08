@@ -18,7 +18,7 @@ from quadjax.dynamics.taut_dual import get_taut_dynamics
 # from quadjax.dynamics.loose import get_loose_dynamics
 from quadjax.dynamics.loose_dual import get_loose_dynamics
 from quadjax.dynamics.loose_taut_dual import get_loose_taut_dynamics
-from quadjax.dynamics.trans import get_dynamic_transfer
+from quadjax.dynamics.trans_dual import get_dynamic_transfer
 
 
 class Quad2D(environment.Environment):
@@ -86,16 +86,18 @@ class Quad2D(environment.Environment):
         env_action = (Action(thrust=thrust1, tau=tau1), Action(thrust=thrust2, tau=tau2))
 
         # TODO...
-        # old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
+        old_loose_state1 = state.l_rope < (params.l - params.rope_taut_threshold)
+        old_loose_state2 = state.l_rope2 < (params.l - params.rope_taut_threshold)
+        old_loose_state = (old_loose_state1, old_loose_state2)
         # jax.debug.print("params: {}", params)
         # jax.debug.print("state: {}", state)
         # jax.debug.print("action: {}", action)
-        new_state = self.taut_dynamics(params, state, env_action)
+        taut_state = self.taut_dynamics(params, state, env_action)
         loose_state = self.loose_dynamics(params, state, env_action)
         taut_loose_state = self.loose_taut_dynamics(params, state, env_action, False)
         loose_taut_state = self.loose_taut_dynamics(params, state, env_action, True)
 
-        # new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
+        new_state = self.dynamic_transfer(params, loose_state, taut_state, loose_taut_state, taut_loose_state, old_loose_state)
 
         done = self.is_terminal(state, params)
         return (
@@ -499,7 +501,7 @@ def test_env(env: Quad2D, policy, render_video=False):
                 state_seq[i].y_obj - state_seq[i].y_hook,
                 state_seq[i].z_obj - state_seq[i].z_hook,
                 width=0.01,
-                color="r" if state_seq[i].l_rope > (env_params.l - env_params.rope_taut_therehold) else "g",
+                color="r" if state_seq[i].l_rope > (env_params.l - env_params.rope_taut_threshold) else "g",
                 alpha=alpha,
             )
             plt.arrow(
@@ -508,7 +510,7 @@ def test_env(env: Quad2D, policy, render_video=False):
                 state_seq[i].y_obj - state_seq[i].y_hook2,
                 state_seq[i].z_obj - state_seq[i].z_hook2,
                 width=0.01,
-                color="r" if state_seq[i].l_rope2 > (env_params.l - env_params.rope_taut_therehold) else "g",
+                color="r" if state_seq[i].l_rope2 > (env_params.l - env_params.rope_taut_threshold) else "g",
                 alpha=alpha,
             )
             # plot y_tar and z_tar with red dot

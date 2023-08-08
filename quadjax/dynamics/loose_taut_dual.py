@@ -34,7 +34,7 @@ def get_loose_taut_dynamics():
     f_rope = sp.Symbol("f_rope")  # force in the rope
     thrust2 = sp.Function("thrust2")(t)  # thrust force
     tau2 = sp.Function("tau2")(t)  # torque
-    f_rope2 = sp.Symbol("f_rope2")  # force in the rope
+    # f_rope2 = sp.Symbol("f_rope2")  # force in the rope
     # y displacement of the hook from the quadrotor center
     delta_yh = sp.Symbol("delta_yh")
     # z displacement of the hook from the quadrotor center
@@ -44,7 +44,7 @@ def get_loose_taut_dynamics():
     # z displacement of the hook from the quadrotor center
     delta_zh2 = sp.Symbol("delta_zh2")
     # TODO...
-    params = [m, I, g, l, mo, delta_yh, delta_zh]
+    params = [m, I, g, l, mo, delta_yh, delta_zh, delta_yh2, delta_zh2]
     # action = [thrust, tau]
     action = [thrust, tau, thrust2, tau2]
 
@@ -75,16 +75,12 @@ def get_loose_taut_dynamics():
     y2_ddot_val, z2_ddot_val, theta2_ddot_val, phi2_ddot_val = sp.symbols(
         "y2_ddot_val z2_ddot_val theta2_ddot_val phi2_ddot_val")
 
-    states = [y, z, theta, phi, y_dot, z_dot, theta_dot, phi_dot,
-            y2, z2, theta2, phi2, y2_dot, z2_dot, theta2_dot, phi2_dot]
+    states = [y, z, theta, phi, y_dot, z_dot, theta_dot, phi_dot]
     states_val = [y, z, theta, phi, y_dot_val,
-                    z_dot_val, theta_dot_val, phi_dot_val, 
-                    y2, z2, theta2, phi2, y2_dot_val, z2_dot_val, theta2_dot_val, phi2_dot_val]
-    states_dot = [y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope, y2_ddot, z2_ddot, theta2_ddot, phi2_ddot, f_rope2]
+                    z_dot_val, theta_dot_val, phi_dot_val]
+    states_dot = [y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope]
     states_dot_val = [y_ddot_val, z_ddot_val,
-                        theta_ddot_val, phi_ddot_val, f_rope, 
-                        y2_ddot_val, z2_ddot_val,
-                        theta2_ddot_val, phi2_ddot_val, f_rope2]
+                        theta_ddot_val, phi_ddot_val, f_rope]
     # states_dot = [y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope, theta2_ddot, phi2_ddot, f_rope2]
     # states_dot_val = [y_ddot_val, z_ddot_val,
     #                     theta_ddot_val, phi_ddot_val, f_rope,
@@ -108,14 +104,14 @@ def get_loose_taut_dynamics():
     obses = [y_obj, z_obj, y_obj_dot, z_obj_dot,
                 y_obj_ddot, z_obj_ddot, f_rope_y, f_rope_z]
 
-    delta_yh2_global = delta_yh2 * sp.cos(theta2) - delta_zh2 * sp.sin(theta2)
-    delta_zh2_global = delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2)
-    f_rope2_y = f_rope2 * sp.sin(theta2+phi2)
-    f_rope2_z = -f_rope2 * sp.cos(theta2+phi2)
-    y_hook2 = y2 + delta_yh2_global
-    z_hook2 = z2 + delta_zh2_global
-    y_hook2_dot = sp.diff(y_hook2, t)
-    z_hook2_dot = sp.diff(z_hook2, t)
+    # delta_yh2_global = delta_yh2 * sp.cos(theta2) - delta_zh2 * sp.sin(theta2)
+    # delta_zh2_global = delta_yh2 * sp.sin(theta2) + delta_zh2 * sp.cos(theta2)
+    # f_rope2_y = f_rope2 * sp.sin(theta2+phi2)
+    # f_rope2_z = -f_rope2 * sp.cos(theta2+phi2)
+    # y_hook2 = y2 + delta_yh2_global
+    # z_hook2 = z2 + delta_zh2_global
+    # y_hook2_dot = sp.diff(y_hook2, t)
+    # z_hook2_dot = sp.diff(z_hook2, t)
 
 
     # Define inertial reference frame
@@ -190,7 +186,7 @@ def get_loose_taut_dynamics():
         if taut_index:
             # the 2rd drone's rope is taut
             params = [env_params.m, env_params.I, env_params.g, env_params.l,
-                  env_params.mo,env_params.delta_yh2, env_params.delta_zh2]
+                  env_params.mo,env_params.delta_yh2, env_params.delta_zh2, env_params.delta_yh, env_params.delta_zh]
             states = [env_state.y2, env_state.z2, env_state.theta2, env_state.phi2,
                     env_state.y2_dot, env_state.z2_dot, env_state.theta2_dot, env_state.phi2_dot]
             action = [env_action[1].thrust, env_action[1].tau,
@@ -198,7 +194,7 @@ def get_loose_taut_dynamics():
         else:
             # the 1st drone's rope is taut
             params = [env_params.m, env_params.I, env_params.g, env_params.l,
-                    env_params.mo, env_params.delta_yh, env_params.delta_zh]
+                    env_params.mo, env_params.delta_yh, env_params.delta_zh, env_params.delta_yh2, env_params.delta_zh2]
             states = [env_state.y, env_state.z, env_state.theta, env_state.phi,
                     env_state.y_dot, env_state.z_dot, env_state.theta_dot, env_state.phi_dot,]
             action = [env_action[0].thrust, env_action[0].tau,
@@ -236,12 +232,12 @@ def get_loose_taut_dynamics():
         new_y2_dot = env_state.y2_dot + y2_ddot * env_params.dt
         new_z2_dot = env_state.z2_dot + z2_ddot * env_params.dt
         new_theta2_dot = env_state.theta2_dot + theta2_ddot * env_params.dt
-        new_phi2_dot = env_state.phi2_dot + phi2_ddot * env_params.dt
+        # new_phi2_dot = env_state.phi2_dot + phi2_ddot * env_params.dt
         new_y2 = env_state.y2 + new_y2_dot * env_params.dt
         new_z2 = env_state.z2 + new_z2_dot * env_params.dt
         new_theta2 = angle_normalize(
             env_state.theta2 + new_theta2_dot * env_params.dt)
-        new_phi2 = angle_normalize(env_state.phi2 + new_phi2_dot * env_params.dt)
+        # new_phi2 = angle_normalize(env_state.phi2 + new_phi2_dot * env_params.dt)
         
         delta_y_hook2 = env_params.delta_yh2 * \
             jnp.cos(new_theta2) - env_params.delta_zh2 * jnp.sin(new_theta2)

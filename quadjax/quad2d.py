@@ -71,7 +71,7 @@ class Quad2D(environment.Environment):
         reward = reward.squeeze()
         env_action = Action(thrust=thrust, tau=tau)
 
-        old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
+        old_loose_state = state.l_rope < (params.l - params.rope_taut_threshold)
         taut_state = self.taut_dynamics(params, state, env_action)
         loose_state = self.loose_dynamics(params, state, env_action)
         new_state = self.dynamic_transfer(params, loose_state, taut_state, old_loose_state)
@@ -439,7 +439,7 @@ def test_env(env: Quad2D, policy, render_video=False):
                 state_seq[i].y_obj - state_seq[i].y_hook,
                 state_seq[i].z_obj - state_seq[i].z_hook,
                 width=0.01,
-                color="r" if state_seq[i].l_rope > (env_params.l - env_params.rope_taut_therehold) else "g",
+                color="r" if state_seq[i].l_rope > (env_params.l - env_params.rope_taut_threshold) else "g",
                 alpha=alpha,
             )
             # plot y_tar and z_tar with red dot
