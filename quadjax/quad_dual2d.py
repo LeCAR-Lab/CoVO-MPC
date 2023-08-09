@@ -85,7 +85,6 @@ class Quad2D(environment.Environment):
         # env_action = [Action(thrust=thrust[i], tau=tau[i]) for i in range(len(action))]
         env_action = (Action(thrust=thrust1, tau=tau1), Action(thrust=thrust2, tau=tau2))
 
-        # TODO...
         old_loose_state1 = state.l_rope < (params.l - params.rope_taut_threshold)
         old_loose_state2 = state.l_rope2 < (params.l - params.rope_taut_threshold)
         old_loose_state = (old_loose_state1, old_loose_state2)
@@ -96,7 +95,6 @@ class Quad2D(environment.Environment):
         loose_state = self.loose_dynamics(params, state, env_action)
         taut_loose_state = self.loose_taut_dynamics(params, state, env_action, False)
         loose_taut_state = self.loose_taut_dynamics(params, state, env_action, True)
-
         new_state = self.dynamic_transfer(params, loose_state, taut_state, loose_taut_state, taut_loose_state, old_loose_state)
 
         done = self.is_terminal(state, params)
@@ -338,6 +336,10 @@ class Quad2D(environment.Environment):
             | (jnp.abs(state.z) > 2.0)
             | (jnp.abs(state.theta_dot) > 100.0)
             | (jnp.abs(state.phi_dot) > 100.0)
+            | (jnp.abs(state.y2) > 2.0)
+            | (jnp.abs(state.z2) > 2.0)
+            | (jnp.abs(state.theta2_dot) > 100.0)
+            | (jnp.abs(state.phi2_dot) > 100.0)
         )
         return done
 
@@ -349,7 +351,7 @@ class Quad2D(environment.Environment):
     @property
     def num_actions(self) -> int:
         """Number of actions possible in environment."""
-        return 2
+        return 4
 
     def action_space(self, params: Optional[EnvParams] = None) -> spaces.Box:
         """Action space of the environment."""
@@ -414,6 +416,54 @@ class Quad2D(environment.Environment):
                     jnp.float32,
                 ),
                 "last_tau": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "y2": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "z2": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "y2_dot": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "z2_dot": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "theta2": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "theta2_dot": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "last_thrust2": spaces.Box(
+                    -jnp.finfo(jnp.float32).max,
+                    jnp.finfo(jnp.float32).max,
+                    (),
+                    jnp.float32,
+                ),
+                "last_tau2": spaces.Box(
                     -jnp.finfo(jnp.float32).max,
                     jnp.finfo(jnp.float32).max,
                     (),

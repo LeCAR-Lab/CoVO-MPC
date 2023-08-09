@@ -122,8 +122,8 @@ def get_taut_dynamics():
     # z2 = z_hook2 - delta_zh2_global
     y_hook2_dot = sp.diff(y_hook2, t)
     z_hook2_dot = sp.diff(z_hook2, t)
-    # obses = [y_obj, z_obj, y_obj_dot, z_obj_dot,
-    #          y_obj_ddot, z_obj_ddot, f_rope_y, f_rope_z]
+    obses = [y_obj, z_obj, y_obj_dot, z_obj_dot,
+             y_obj_ddot, z_obj_ddot, f_rope_y, f_rope_z]
 
 
     # Define inertial reference frame

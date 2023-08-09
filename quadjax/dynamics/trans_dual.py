@@ -51,7 +51,7 @@ def get_dynamic_transfer():
 
     # Define the function to compute A^-1 (x-b)
     def loose2taut_transfer(env_params: EnvParams, loose_state: EnvState, loose2taut: bool):
-        if ~loose2taut:
+        if not loose2taut:
             params = [env_params.I, env_params.m, env_params.l, env_params.mo, env_params.delta_yh, env_params.delta_zh]
             loose_state_values = [loose_state.theta, loose_state.phi, loose_state.y, loose_state.z, loose_state.y_dot, loose_state.z_dot, loose_state.theta_dot, loose_state.y_obj_dot, loose_state.z_obj_dot]
         else:
@@ -69,7 +69,7 @@ def get_dynamic_transfer():
         new_l_rope = loose_state.l_rope * loose2taut +  env_params.l * (1 - loose2taut)
             
 
-        if ~loose2taut:
+        if not loose2taut:
             loose_state = loose_state.replace(
                 y_dot=new_y_dot,
                 z_dot=new_z_dot,
@@ -246,55 +246,42 @@ def get_dynamic_transfer():
         l2 = old_loose_state[1]
         # if (l1 & l2):
         #     return loose_state
-        # elif(l1 & ~l2):
+        # elif(l1 & not l2):
         #     return loose_taut_state
-        # elif(~l1 & l2):
+        # elif(not l1 & l2):
         #     return taut_loose_state
         # else:
         #     return taut_state
         # new_state = {}
-        # loose_state1 = both_loose2taut_transfer(env_params, loose_state)
-        # loose_state2 = loose2taut_transfer(env_params, loose_state, 0)
-        # loose_state3 = loose2taut_transfer(env_params, loose_state, 1)
-        # for k in loose_state.__dict__.keys():
-        #     new_state[k] = jnp.where(ll2tt, loose_state1.__dict__[k], loose_state.__dict__[k])
-        #     new_state[k] = jnp.where(ll2tl, loose_state2.__dict__[k], loose_state.__dict__[k])
-        #     new_state[k] = jnp.where(ll2lt, loose_state3.__dict__[k], loose_state.__dict__[k])
-        
-        # loose_taut_state1 = loose2taut_transfer(env_params, loose_taut_state, 0)
-        # for k in loose_taut_state.__dict__.keys():
-        #     new_state[k] = jnp.where(lt2tl | lt2tt, loose_taut_state1.__dict__[k], loose_taut_state.__dict__[k])
+        loose_state1 = both_loose2taut_transfer(env_params, loose_state)
+        loose_state2 = loose2taut_transfer(env_params, loose_state, False)
+        loose_state3 = loose2taut_transfer(env_params, loose_state, True)
+ 
+        loose_taut_state1 = loose2taut_transfer(env_params, loose_taut_state, False)
 
-        # taut_loose_state1 = loose2taut_transfer(env_params, taut_loose_state, 1)
-        # for k in taut_loose_state.__dict__.keys():
-        #     new_state[k] = jnp.where(tl2lt | tl2tt, taut_loose_state1.__dict__[k], taut_loose_state.__dict__[k])
-
-
-
-        # loose_state = jnp.where(ll2tt, both_loose2taut_transfer(env_params, loose_state), loose_state)
-        # loose_state = jnp.where(ll2tl, loose2taut_transfer(env_params, loose_state, 0), loose_state)
-        # loose_state = jnp.where(ll2lt, loose2taut_transfer(env_params, loose_state, 1), loose_state)
-        # loose_taut_state = jnp.where(lt2tl | lt2tt, loose2taut_transfer(env_params, loose_taut_state, 0), loose_taut_state)
-        # taut_loose_state = jnp.where(tl2lt | tl2tt, loose2taut_transfer(env_params, taut_loose_state, 1), taut_loose_state)
-
-        # return jnp.where(l1 & l2, loose_state, jnp.where(l1 & ~l2, loose_taut_state, jnp.where(~l1 & l2, taut_loose_state, taut_state)))
-        # loose_state = jnp.where(ll2tt, both_loose2taut_transfer(env_params, loose_state),
-        #                jnp.where(ll2tl, loose2taut_transfer(env_params, loose_state, 0),
-        #                         jnp.where(ll2lt, loose2taut_transfer(env_params, loose_state, 1), loose_state)))
-
-        # return jnp.where(l1 & l2, loose_state,
-        #                 jnp.where(l1 & ~l2, loose_taut_state,
-        #                         jnp.where(~l1 & l2, taut_loose_state, taut_state)))
+        taut_loose_state1 = loose2taut_transfer(env_params, taut_loose_state, True)
+  
+        new_state = {}
+        for k in loose_state.__dict__.keys():
+            new_state[k] = jnp.where(ll2tt, loose_state1.__dict__[k], 
+                            jnp.where(ll2tl, loose_state2.__dict__[k],
+                            jnp.where(ll2lt, loose_state3.__dict__[k],
+                            loose_state.__dict__[k])))
+        loose_state = loose_state.replace(**new_state)
 
         new_state = {}
-        for k in taut_state.__dict__.keys():
-            new_state[k] = jnp.where(ll2tt, loose_state.__dict__[k], 
-                            jnp.where(ll2tl, loose_state.__dict__[k],
-                            jnp.where(ll2lt, loose_state.__dict__[k],
-                            jnp.where(lt2tl | lt2tt, loose_taut_state.__dict__[k],
-                            jnp.where(tl2lt | tl2tt, taut_loose_state.__dict__[k],
-                            taut_state.__dict__[k])))))
+        for k in loose_taut_state.__dict__.keys():
+            new_state[k] = jnp.where(lt2tl | lt2tt, loose_taut_state1.__dict__[k],
+                            loose_taut_state.__dict__[k])
+        loose_taut_state = loose_taut_state.replace(**new_state)
 
+        new_state = {}
+        for k in taut_loose_state.__dict__.keys():
+            new_state[k] = jnp.where(tl2lt | tl2tt, taut_loose_state1.__dict__[k],
+                            taut_loose_state.__dict__[k])
+        taut_loose_state = taut_loose_state.replace(**new_state)
+
+        new_state = {}
         for k in taut_state.__dict__.keys():
             new_state[k] = jnp.where(l1 & l2, loose_state.__dict__[k],
                             jnp.where(l1 & ~l2, loose_taut_state.__dict__[k],
