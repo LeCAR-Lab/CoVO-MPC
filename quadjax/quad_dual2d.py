@@ -96,6 +96,7 @@ class Quad2D(environment.Environment):
         taut_loose_state = self.loose_taut_dynamics(params, state, env_action, False)
         loose_taut_state = self.loose_taut_dynamics(params, state, env_action, True)
         new_state = self.dynamic_transfer(params, loose_state, taut_state, loose_taut_state, taut_loose_state, old_loose_state)
+        # new_state = self.loose_taut_dynamics(params, state, env_action, False)
 
         done = self.is_terminal(state, params)
         return (
@@ -619,7 +620,7 @@ def test_env(env: Quad2D, policy, render_video=False):
 @pydataclass
 class Args:
     task: str = "tracking"
-    render: bool = False
+    render: bool = True
     num_drone: int = 2
 
 def main(args: Args):
@@ -641,20 +642,21 @@ def main(args: Args):
         z_obj = obs[17]
         y_obj_dot = obs[18] * 4.0
         z_obj_dot = obs[19] * 4.0
-        # y2 = obs[28]
-        # z2 = obs[29]
-        # theta2 = obs[30]
-        # y2_dot = obs[31] * 4.0
-        # z2_dot = obs[32] * 4.0
-        # theta2_dot = obs[33] * 40.0
+        # TODO
+        y2 = obs[28]
+        z2 = obs[29]
+        theta2 = obs[30]
+        y2_dot = obs[31] * 4.0
+        z2_dot = obs[32] * 4.0
+        theta2_dot = obs[33] * 40.0
 
 
-        m = obs[41+5*4+0] * (0.04-0.025)/2.0 + (0.04+0.025)/2.0
-        I = obs[41+5*4+1] * (3.5e-5 - 2.5e-5)/2.0 + (3.5e-5 + 2.5e-5)/2.0
-        mo = obs[41+5*4+2] * (0.01-0.003)/2.0 + (0.01+0.003)/2.0
-        l = obs[41+5*4+3] * (0.4-0.2)/2.0 + (0.4+0.2)/2.0
-        delta_yh = obs[41+5*4+4] * (0.04-(-0.04))/2.0 + (0.04+(-0.04))/2.0
-        delta_zh = obs[41+5*4+5] * (0.0-(-0.06))/2.0 + (0.0+(-0.06))/2.0
+        m = obs[40+5*4+0] * (0.04-0.025)/2.0 + (0.04+0.025)/2.0
+        I = obs[40+5*4+1] * (3.5e-5 - 2.5e-5)/2.0 + (3.5e-5 + 2.5e-5)/2.0
+        mo = obs[40+5*4+2] * (0.01-0.003)/2.0 + (0.01+0.003)/2.0
+        l = obs[40+5*4+3] * (0.4-0.2)/2.0 + (0.4+0.2)/2.0
+        delta_yh = obs[40+5*4+4] * (0.04-(-0.04))/2.0 + (0.04+(-0.04))/2.0
+        delta_zh = obs[40+5*4+5] * (0.0-(-0.06))/2.0 + (0.0+(-0.06))/2.0
 
         # get object target force
         w0 = 8.0
@@ -693,14 +695,39 @@ def main(args: Args):
             thrust / env.default_params.max_thrust * 2.0 - 1.0, -1.0, 1.0
         )
         tau_normed = jnp.clip(tau / env.default_params.max_torque, -1.0, 1.0)
-        return jnp.array([thrust_normed, tau_normed])
+        
+        # For the second drone
+        target_force_y2_obj = kp * (y_tar - y_obj) + kd * (y_dot_tar - y_obj_dot)
+        target_force_z2_obj = kp * (z_tar - z_obj) + kd * (z_dot_tar - z_obj_dot) + mo * 9.81
+        phi2_tar = -jnp.arctan2(target_force_y2_obj, target_force_z2_obj)
+        y2_drone_tar = y_obj - l * jnp.sin(phi2_tar) - delta_yh
+        z2_drone_tar = z_obj + l * jnp.cos(phi2_tar) - delta_zh
+
+        target_force_y2 = kp * (y2_drone_tar - y2) + kd * (y_dot_tar - y2_dot) + target_force_y2_obj
+        target_force_z2 = (
+            kp * (z2_drone_tar - z2)
+            + kd * (z_dot_tar - z2_dot)
+            + m * 9.81
+        ) + target_force_z2_obj
+        thrust2 = -target_force_y2 * jnp.sin(theta2) + target_force_z2 * jnp.cos(theta2)
+        thrust2 = jnp.sqrt(target_force_y2 ** 2 + target_force_z2 ** 2)
+        target_theta2 = -jnp.arctan2(target_force_y2, target_force_z2)
+
+        tau2 = I * ((w0 ** 2) * (target_theta2 - theta2) + 2.0 * zeta * w0 * (0.0 - theta2_dot))
+
+        thrust_normed2 = jnp.clip(thrust2 / env.default_params.max_thrust * 2.0 - 1.0, -1.0, 1.0)
+        tau_normed2 = jnp.clip(tau2 / env.default_params.max_torque, -1.0, 1.0)
+        
+        return jnp.array([thrust_normed, tau_normed,thrust_normed2, tau_normed2])
+        
+        # return jnp.array([thrust_normed, tau_normed])
 
     random_policy = lambda obs, rng: env.action_space(env.default_params).sample(rng)
 
     print('starting test...')
     # with jax.disable_jit():
-    # test_env(env, policy=pid_policy, render_video=args.render)
-    test_env(env, policy=random_policy, render_video=args.render)
+    test_env(env, policy=pid_policy, render_video=args.render)
+    # test_env(env, policy=random_policy, render_video=args.render)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

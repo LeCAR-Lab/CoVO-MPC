@@ -200,7 +200,6 @@ def get_dynamic_transfer():
         taut2loose1 = (taut_state.f_rope < 0.0) & (~old_loose_state[0])
         taut2loose2 = (taut_state.f_rope2 < 0.0) & (~old_loose_state[1])
 
-        # old_tt,tl,lt,ll new_tt,tl,lt,tt
         # 定义改变状态量，4个状态之间的转移，共12种
         # tt2ll = taut2loose1 & taut2loose2
         # tt2tl = (~old_loose_state[0]) &  (~old_loose_state[1]) & (taut_state.f_rope >= 0.0) & (taut_state.f_rope2 < 0.0)
