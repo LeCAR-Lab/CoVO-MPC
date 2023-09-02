@@ -21,7 +21,6 @@ from quadjax.dynamics.trans import get_dynamic_transfer_3d
 
 # for debug purpose
 from icecream import install
-
 install()
 
 
@@ -457,7 +456,6 @@ def test_env(env: Quad3D, policy):
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
     with open("../results/state_seq.pkl", "wb") as f:
         pickle.dump(state_seq, f)
-
 
 @pydataclass
 class Args:

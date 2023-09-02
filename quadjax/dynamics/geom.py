@@ -30,3 +30,32 @@ def rotate_with_quat(v: jnp.ndarray, quat: jnp.ndarray) -> jnp.ndarray:
     v = jnp.concatenate([v, jnp.zeros(1)])
     v_rot = multiple_quat(multiple_quat(quat, v), conjugate_quat(quat))
     return v_rot[:3]
+
+# Quaternion functions
+def hat(v: jnp.ndarray) -> jnp.ndarray:
+    return jnp.array([[0, -v[2], v[1]],
+                     [v[2], 0, -v[0]],
+                     [-v[1], v[0], 0]])
+
+def L(q: jnp.ndarray) -> jnp.ndarray:
+    '''
+    L(q) = [s, -v; v^T, sI + hat(v)]
+    left multiplication matrix of a quaternion
+    '''
+    s = q[3]
+    v = q[:3]
+    upper = jnp.hstack((s, -v))
+    lower_left = v.reshape(-1, 1)
+    lower_right = s * jnp.eye(3) + hat(v)
+    lower = jnp.hstack((lower_left, lower_right))
+    return jnp.vstack((upper, lower))
+
+
+def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
+    '''
+    covert a quaternion to a 3x3 rotation matrix
+    '''
+    T = jnp.diag([-1, -1, -1, 1])
+    H = jnp.vstack((jnp.zeros((1, 3)), jnp.eye(3))) # used to convert a 3d vector to 4d vector
+    Lq = L(q)
+    return H.T @ T @ Lq @ T @ Lq @ H
