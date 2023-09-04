@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
 
-from quadjax.quad3d import Quad3D, test_env
+from quadjax.envs import Quad3D
 
 from icecream import install
 
@@ -374,7 +374,7 @@ def main(args: Args):
         pickle.dump(out["runner_state"][0].params, f)
 
     rng = jax.random.PRNGKey(1)
-    env = Quad2D(task=args.task)
+    env = Quad3D(task=args.task)
     apply_fn = out["runner_state"][0].apply_fn
     params = out["runner_state"][0].params
 

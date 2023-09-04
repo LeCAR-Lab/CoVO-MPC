@@ -26,6 +26,8 @@ def get_free_dynamics_3d():
         x_dot = jnp.concatenate([r_dot, q_dot, v_dot, omega_dot])
         return x_dot
 
+    quad_dynamics_rk4 = lambda x, u, params: utils.rk4(quad_dynamics, x, u, params)
+
     # dynamics (params, states) -> states_dot
     def free_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D):
         # dynamics
@@ -33,7 +35,7 @@ def get_free_dynamics_3d():
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega])
 
         # rk4
-        x_new = utils.rk4_step(quad_dynamics, x, u, env_params.dt, env_params)
+        x_new = quad_dynamics_rk4(x, u, env_params) * env_params.dt
         pos = x_new[:3]
         quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
         vel = x_new[7:10]
@@ -63,4 +65,4 @@ def get_free_dynamics_3d():
 
         return env_state
 
-    return free_dynamics_3d
+    return free_dynamics_3d, quad_dynamics_rk4

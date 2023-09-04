@@ -29,11 +29,11 @@ def get_hit_penalty(y: float, z: float) -> float:
     )
     return hit_panelty
 
-def rk4_step(f, x, u, dt, params):
-    k1 = f(x, u, params) * dt
-    k2 = f(x + 0.5 * k1, u, params) * dt
-    k3 = f(x + 0.5 * k2, u, params) * dt
-    k4 = f(x + k3, u, params) * dt
+def rk4(f, x, u, params):
+    k1 = f(x, u, params)
+    k2 = f(x + 0.5 * k1, u, params)
+    k3 = f(x + 0.5 * k2, u, params)
+    k4 = f(x + k3, u, params)
     return x + (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
 
 

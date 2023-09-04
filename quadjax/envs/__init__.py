@@ -1,0 +1,1 @@
+from quadjax.envs.quad3d_free import Quad3D

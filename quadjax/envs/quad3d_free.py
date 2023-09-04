@@ -12,6 +12,7 @@ import tyro
 import pickle
 import time as time_module
 
+from quadjax import controllers
 from quadjax.dynamics import geom
 from quadjax.dynamics import utils
 from quadjax.dynamics.free import get_free_dynamics_3d
@@ -48,10 +49,15 @@ class Quad3D(environment.Environment):
             raise NotImplementedError
         # dynamics function
         if dynamics == 'free':
-            self.dynamics_fn = get_free_dynamics_3d()
+            self.step_fn, self.dynamics_fn = get_free_dynamics_3d()
             self.get_obs = self.get_obs_quadonly
         else:
             raise NotImplementedError
+        # equibrium point
+        self.equib = jnp.array([0.0]*6+[1.0]+[0.0]*6)
+        # RL parameters
+        self.action_dim = 4
+        self.obs_dim = 19 + self.default_params.traj_obs_len * 6 + 12
 
 
     '''
@@ -99,7 +105,7 @@ class Quad3D(environment.Environment):
 
         reward = self.reward_fn(state)
 
-        next_state = self.dynamics_fn(params, state, env_action)
+        next_state = self.step_fn(params, state, env_action)
 
         done = self.is_terminal(state, params)
         return (
@@ -164,6 +170,11 @@ class Quad3D(environment.Environment):
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quadonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
         """Return angle in polar coordinates and change."""
+        # future trajectory observation
+        traj_obs_len = self.default_params.traj_obs_len
+        traj_obs_gap = self.default_params.traj_obs_gap
+        # Generate the indices
+        indices = state.time + 1 + jnp.arange(traj_obs_len) * traj_obs_gap
         obs_elements = [
             # drone
             state.pos,
@@ -173,43 +184,29 @@ class Quad3D(environment.Environment):
             # trajectory
             state.pos_tar,
             state.vel_tar / 4.0,  # 3*2=6
-        ]  # 13+6=19
-        # future trajectory observation
-        # NOTE: use statis default value rather than params for jax limitation
-        traj_obs_len, traj_obs_gap = (
-            self.default_params.traj_obs_len,
-            self.default_params.traj_obs_gap,
-        )
-        # Generate the indices
-        indices = state.time + 1 + jnp.arange(traj_obs_len) * traj_obs_gap
-        obs_pos_elements = state.pos_traj[indices]
-        obs_vel_elements = state.vel_traj[indices] / 4.0
-        obs_elements = jnp.concatenate([obs_pos_elements, obs_vel_elements])
-
-        # parameter observation
-        param_elements = [
+            state.pos_traj[indices], 
+            state.vel_traj[indices] / 4.0, 
+            # parameter observation
             jnp.array(
                 [(params.m - 0.025) / (0.04 - 0.025) * 2.0 - 1.0,]), # 3
             ((params.I - 1.2e-5) / 0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
-        ]  # 1+9=10
+        ]  # 13+6=19
 
-        return jnp.concatenate(obs_elements + param_elements).squeeze()
+        return obs_elements
 
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
         """Check whether state is terminal."""
         # Check number of steps in episode termination condition
-        done = (
+        return (
             (state.time >= params.max_steps_in_episode)
             | (jnp.abs(state.pos) > 2.0).any()
             | (jnp.abs(state.pos_obj) > 2.0).any()
             | (jnp.abs(state.omega) > 100.0).any()
         )
-        return done
 
 
 def test_env(env: Quad3D, policy, repeat_times = 1):
     # running environment
-    t0 = time_module.time()
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
@@ -218,6 +215,8 @@ def test_env(env: Quad3D, policy, repeat_times = 1):
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
     n_dones = 0
+
+    t0 = time_module.time()
     while n_dones < repeat_times:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
@@ -228,6 +227,7 @@ def test_env(env: Quad3D, policy, repeat_times = 1):
             rng, rng_params = jax.random.split(rng)
             env_params = env.sample_params(rng_params)
             n_dones += 1
+
         reward_seq.append(reward)
         obs_seq.append(obs)
         obs = next_obs
@@ -239,7 +239,7 @@ def test_env(env: Quad3D, policy, repeat_times = 1):
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
-    with open("../results/state_seq.pkl", "wb") as f:
+    with open("../../results/state_seq.pkl", "wb") as f:
         pickle.dump(state_seq, f)
 
 '''
@@ -256,61 +256,13 @@ class Args:
 def main(args: Args):
     env = Quad3D(task=args.task, dynamics=args.dynamics)
 
-    def pid_policy(
-        obs: jnp.ndarray,
-        env_state: EnvState3D,
-        env_params: EnvParams3D,
-        rng: jax.random.PRNGKey,
-    ):
-  
-        # get drone target force
-        w0 = 10.0
-        zeta = 0.95
-        kp = env_params.m * (w0**2)
-        kd = env_params.m * 2.0 * zeta * w0
-        target_force = (
-            kp * (pos_tar_quad - env_state.pos)
-            + kd * (vel_tar_quad - env_state.vel)
-            + env_params.m * jnp.array([0.0, 0.0, env_params.g])
-            + target_force_obj
-        )
-        thrust = jnp.linalg.norm(target_force)
-        target_unitvec = target_force / thrust
-        # target_unitvec = jnp.array([jnp.sin(jnp.pi/6), 0.0, jnp.cos(jnp.pi/6)]) # DEBUG
-        target_unitvec_local = geom.rotate_with_quat(
-            target_unitvec, geom.conjugate_quat(env_state.quat)
-        )
-
-        w0 = 10.0
-        zeta = 0.95
-        kp = env_params.I[0] * (w0**2)
-        kd = env_params.I[0] * 2.0 * zeta * w0
-        current_unitvec_local = jnp.array([0.0, 0.0, 1.0])
-        rot_axis = jnp.cross(current_unitvec_local, target_unitvec_local)
-        rot_angle = jnp.arccos(jnp.dot(current_unitvec_local, target_unitvec_local))
-        omega_local = geom.rotate_with_quat(
-            env_state.omega, geom.conjugate_quat(env_state.quat)
-        )
-        torque = kp * rot_angle * rot_axis / jnp.linalg.norm(rot_axis) + kd * (
-            -omega_local
-        )
-
-        # convert into action space
-        thrust_normed = jnp.clip(
-            thrust / env.default_params.max_thrust * 2.0 - 1.0, -1.0, 1.0
-        )
-        tau_normed = jnp.clip(torque / env.default_params.max_torque, -1.0, 1.0)
-        return jnp.array([thrust_normed, tau_normed[0], tau_normed[1], 0.0])
-
-    def random_policy(obs, state, params, rng):
-        return env.action_space(env.default_params).sample(rng)
-
     print("starting test...")
     # enable NaN value detection
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    test_env(env, policy=fixed_policy)
+    controller = controllers.LQRController(env)
+    test_env(env, policy=controllers)
 
 
 if __name__ == "__main__":
