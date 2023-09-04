@@ -263,7 +263,7 @@ def main(args: Args):
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
     # controller = controllers.LQRController(env)
-    policy = lambda obs, state, params, rng: jnp.array([0.0, 1.0, 0.0, 0.0])
+    policy = lambda obs, state, params, rng: jnp.array([0.0, 0.0, 0.0, 0.0])
     test_env(env, policy=policy)
 
 
