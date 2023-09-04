@@ -19,14 +19,14 @@ def get_free_dynamics_3d():
         # dynamics
         r_dot = Q @ v
         q_dot = 0.5 * geom.L(q) @ H @ omega
-        v_dot = Q.T @ jnp.array([[0, 0, -params.g]]) + thrust / params.m * jnp.array([0, 0, 1]) - jnp.cross(omega, v)
+        v_dot = Q.T @ jnp.array([0, 0, -params.g]) + thrust / params.m * jnp.array([0, 0, 1]) - jnp.cross(omega, v)
         omega_dot = jnp.linalg.inv(params.I) @ (torque - jnp.cross(omega, params.I @ omega))
 
         # return
         x_dot = jnp.concatenate([r_dot, q_dot, v_dot, omega_dot])
         return x_dot
 
-    quad_dynamics_rk4 = lambda x, u, params: utils.rk4(quad_dynamics, x, u, params)
+    quad_dynamics_rk4 = lambda x, u, params, dt: utils.rk4(quad_dynamics, x, u, params, dt)
 
     # dynamics (params, states) -> states_dot
     def free_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D):
@@ -35,7 +35,7 @@ def get_free_dynamics_3d():
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega])
 
         # rk4
-        x_new = quad_dynamics_rk4(x, u, env_params) * env_params.dt
+        x_new = quad_dynamics_rk4(x, u, env_params, env_params.dt)
         pos = x_new[:3]
         quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
         vel = x_new[7:10]

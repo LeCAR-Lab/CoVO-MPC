@@ -55,7 +55,7 @@ def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
     '''
     covert a quaternion to a 3x3 rotation matrix
     '''
-    T = jnp.diag([-1, -1, -1, 1])
+    T = jnp.diag(jnp.array([-1, -1, -1, 1]))
     H = jnp.vstack((jnp.zeros((1, 3)), jnp.eye(3))) # used to convert a 3d vector to 4d vector
     Lq = L(q)
     return H.T @ T @ Lq @ T @ Lq @ H

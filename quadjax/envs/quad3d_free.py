@@ -184,25 +184,26 @@ class Quad3D(environment.Environment):
             # trajectory
             state.pos_tar,
             state.vel_tar / 4.0,  # 3*2=6
-            state.pos_traj[indices], 
-            state.vel_traj[indices] / 4.0, 
+            state.pos_traj[indices].flatten(), 
+            state.vel_traj[indices].flatten() / 4.0, 
             # parameter observation
             jnp.array(
                 [(params.m - 0.025) / (0.04 - 0.025) * 2.0 - 1.0,]), # 3
             ((params.I - 1.2e-5) / 0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
         ]  # 13+6=19
+        obs = jnp.concatenate(obs_elements, axis=-1)
 
-        return obs_elements
+        return obs
 
+    @partial(jax.jit, static_argnums=(0,))
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
         """Check whether state is terminal."""
         # Check number of steps in episode termination condition
-        return (
-            (state.time >= params.max_steps_in_episode)
-            | (jnp.abs(state.pos) > 2.0).any()
-            | (jnp.abs(state.pos_obj) > 2.0).any()
+        done = (state.time >= params.max_steps_in_episode) \
+            | (jnp.abs(state.pos) > 2.0).any() \
+            | (jnp.abs(state.pos_obj) > 2.0).any() \
             | (jnp.abs(state.omega) > 100.0).any()
-        )
+        return done
 
 
 def test_env(env: Quad3D, policy, repeat_times = 1):
@@ -261,8 +262,9 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    controller = controllers.LQRController(env)
-    test_env(env, policy=controllers)
+    # controller = controllers.LQRController(env)
+    policy = lambda obs, state, params, rng: jnp.array([0.0, 1.0, 0.0, 0.0])
+    test_env(env, policy=policy)
 
 
 if __name__ == "__main__":
