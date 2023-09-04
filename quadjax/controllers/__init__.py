@@ -1,2 +1,2 @@
 from quadjax.controllers.pid import PIDController
-from quadjax.controllers.lqr import LQRController
+from quadjax.controllers.lqr import LQRController, LQRParams

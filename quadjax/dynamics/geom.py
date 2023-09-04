@@ -50,6 +50,15 @@ def L(q: jnp.ndarray) -> jnp.ndarray:
     lower = jnp.hstack((lower_left, lower_right))
     return jnp.vstack((upper, lower))
 
+def E(q):
+    '''
+    reduced matrix for quadrotor state
+    '''
+    I3 = jnp.eye(3)
+    I6 = jnp.eye(6)
+    H = jnp.vstack((jnp.zeros((1, 3)), jnp.eye(3)))
+    G = L(q) @ H
+    return jax.scipy.linalg.block_diag(I3, G, I6)
 
 def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
     '''
@@ -59,3 +68,9 @@ def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
     H = jnp.vstack((jnp.zeros((1, 3)), jnp.eye(3))) # used to convert a 3d vector to 4d vector
     Lq = L(q)
     return H.T @ T @ Lq @ T @ Lq @ H
+
+def rptoq(phi):
+    return 1/jnp.sqrt(1+jnp.dot(phi, phi))*jnp.concatenate((phi, jnp.array([1])))
+
+def qtorp(q):
+    return q[:3]/q[3]

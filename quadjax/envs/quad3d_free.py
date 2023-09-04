@@ -4,8 +4,6 @@ from jax import lax
 from gymnax.environments import environment, spaces
 from typing import Tuple, Optional
 import chex
-import matplotlib.pyplot as plt
-import numpy as np
 from functools import partial
 from dataclasses import dataclass as pydataclass
 import tyro
@@ -13,7 +11,6 @@ import pickle
 import time as time_module
 
 from quadjax import controllers
-from quadjax.dynamics import geom
 from quadjax.dynamics import utils
 from quadjax.dynamics.free import get_free_dynamics_3d
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
@@ -206,7 +203,7 @@ class Quad3D(environment.Environment):
         return done
 
 
-def test_env(env: Quad3D, policy, repeat_times = 1):
+def test_env(env: Quad3D, controller, control_params, repeat_times = 1):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -215,18 +212,20 @@ def test_env(env: Quad3D, policy, repeat_times = 1):
     state_seq, obs_seq, reward_seq = [], [], []
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
+    control_params = controller.update_params(env_params, control_params)
     n_dones = 0
 
     t0 = time_module.time()
     while n_dones < repeat_times:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action = policy(obs, env_state, env_params, rng_act)
+        action = controller(obs, env_state, env_params, rng_act, control_params)
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
             rng, rng_params = jax.random.split(rng)
             env_params = env.sample_params(rng_params)
+            control_params = controller.update_params(env_params, control_params)
             n_dones += 1
 
         reward_seq.append(reward)
@@ -247,7 +246,6 @@ def test_env(env: Quad3D, policy, repeat_times = 1):
 reward function here. 
 '''
 
-
 @pydataclass
 class Args:
     task: str = "hovering"
@@ -262,9 +260,13 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    # controller = controllers.LQRController(env)
-    policy = lambda obs, state, params, rng: jnp.array([0.0, 0.0, 0.0, 0.0])
-    test_env(env, policy=policy)
+    control_params = controllers.LQRParams(
+        Q = jnp.diag(jnp.ones(12)),
+        R = 0.1 * jnp.diag(jnp.ones(4)),
+        K = jnp.zeros((4, 12)),
+    )
+    controller = controllers.LQRController(env)
+    test_env(env, controller=controller, control_params=control_params)
 
 
 if __name__ == "__main__":
