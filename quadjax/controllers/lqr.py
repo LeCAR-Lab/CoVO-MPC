@@ -57,11 +57,8 @@ class LQRController:
 
         delta_x = jnp.concatenate([delta_pos, delta_phi, delta_v, delta_w])
         u = jnp.array([env_params.m * env_params.g, 0.0, 0.0, 0.0]) - \
-            control_params.K @ delta_x
+                control_params.K @ delta_x
         # normalize u
-        thrust = u[0]
-        torque = u[1:4]
-        thrust_normed = (u[0] / env_params.max_thrust) * 2.0 - 1.0
+        thrust_normed = ((u[0] + env_params.m * env_params.g) / env_params.max_thrust) * 2.0 - 1.0
         torque_normed = u[1:4] / env_params.max_torque
-        u_normed = jnp.concatenate([jnp.array([thrust_normed]), torque_normed])
-        return u_normed
+        return jnp.concatenate([jnp.array([thrust_normed]), torque_normed])
