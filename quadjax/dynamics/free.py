@@ -35,8 +35,7 @@ def get_free_dynamics_3d():
         k2 = f(x + k1 * dt / 2, u, params)
         k3 = f(x + k2 * dt / 2, u, params)
         k4 = f(x + k3 * dt, u, params)
-        # x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6 * dt
-        x_new = x + k1 * dt
+        x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6 * dt
         return x_new.at[3:7].set(x_new[3:7] / jnp.linalg.norm(x_new[3:7]))
 
     @jax.jit
