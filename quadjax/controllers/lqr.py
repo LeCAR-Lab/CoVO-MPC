@@ -28,13 +28,20 @@ class LQRController:
         u = jnp.array([env_params.m * env_params.g, 0.0, 0.0, 0.0])
         A = self.A_func(self.env.equib, u, env_params, env_params.dt)
         B = self.B_func(self.env.equib, u, env_params, env_params.dt)
+        # verify controllability
+        # print(np.linalg.matrix_rank(control.ctrb(np.array(A), np.array(B))))
+
         A_reduced = self.E_q0.T @ A @ self.E_q0
         B_reduced = self.E_q0.T @ B
+        # save A_reduced and B_reduced to csv
+        np.savetxt("../../results/A.csv", A_reduced, delimiter=",")
+        np.savetxt("../../results/B.csv", B_reduced, delimiter=",")
         # solve discrete time LQR to get K
         dlqr_args = (A_reduced, B_reduced, control_params.Q, control_params.R)
         dlqr_args = [np.asarray(item) for item in dlqr_args]
         # verify controllability
-        print(np.linalg.matrix_rank(control.ctrb(*dlqr_args[:2])))
+        # print(np.linalg.matrix_rank(control.ctrb(*dlxqr_args[:2])))
+        # get control parameters
         K, _, _ = control.dlqr(*dlqr_args)
         # update controller parameters
         control_params = control_params.replace(K=K)
@@ -51,4 +58,10 @@ class LQRController:
         delta_x = jnp.concatenate([delta_pos, delta_phi, delta_v, delta_w])
         u = jnp.array([env_params.m * env_params.g, 0.0, 0.0, 0.0]) - \
             control_params.K @ delta_x
-        return u
+        # normalize u
+        thrust = u[0]
+        torque = u[1:4]
+        thrust_normed = (u[0] / env_params.max_thrust) * 2.0 - 1.0
+        torque_normed = u[1:4] / env_params.max_torque
+        u_normed = jnp.concatenate([jnp.array([thrust_normed]), torque_normed])
+        return u_normed

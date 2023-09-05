@@ -29,14 +29,6 @@ def get_hit_penalty(y: float, z: float) -> float:
     )
     return hit_panelty
 
-def rk4(f, x, u, params, dt):
-    k1 = f(x, u, params) * dt
-    k2 = f(x + k1 / 2, u, params) * dt
-    k3 = f(x + k2 / 2, u, params) * dt
-    k4 = f(x + k3, u, params) * dt
-    x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
-    return x_new
-
 
 '''
 trajectory related

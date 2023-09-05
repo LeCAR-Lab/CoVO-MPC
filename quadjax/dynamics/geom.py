@@ -32,45 +32,52 @@ def rotate_with_quat(v: jnp.ndarray, quat: jnp.ndarray) -> jnp.ndarray:
     return v_rot[:3]
 
 # Quaternion functions
+@jax.jit
 def hat(v: jnp.ndarray) -> jnp.ndarray:
     return jnp.array([[0, -v[2], v[1]],
                      [v[2], 0, -v[0]],
                      [-v[1], v[0], 0]])
 
+@jax.jit
 def L(q: jnp.ndarray) -> jnp.ndarray:
     '''
-    L(q) = [s, -v; v^T, sI + hat(v)]
+    L(q) = [sI + hat(v), v; -v^T, s]
     left multiplication matrix of a quaternion
     '''
     s = q[3]
     v = q[:3]
-    upper = jnp.hstack((s, -v))
-    lower_left = v.reshape(-1, 1)
-    lower_right = s * jnp.eye(3) + hat(v)
-    lower = jnp.hstack((lower_left, lower_right))
-    return jnp.vstack((upper, lower))
+    right = jnp.hstack((v, s)).reshape(-1, 1)
+    left_up = s * jnp.eye(3) + hat(v)
+    left_down = -v
+    left = jnp.vstack((left_up, left_down))
+    return jnp.hstack((left, right))
 
-def E(q):
+H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
+
+@jax.jit
+def E(q: jnp.ndarray)->jnp.ndarray:
     '''
     reduced matrix for quadrotor state
     '''
     I3 = jnp.eye(3)
     I6 = jnp.eye(6)
-    H = jnp.vstack((jnp.zeros((1, 3)), jnp.eye(3)))
     G = L(q) @ H
     return jax.scipy.linalg.block_diag(I3, G, I6)
 
+@jax.jit
 def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
     '''
     covert a quaternion to a 3x3 rotation matrix
     '''
     T = jnp.diag(jnp.array([-1, -1, -1, 1]))
-    H = jnp.vstack((jnp.zeros((1, 3)), jnp.eye(3))) # used to convert a 3d vector to 4d vector
+    # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3)))) # used to convert a 3d vector to 4d vector
     Lq = L(q)
     return H.T @ T @ Lq @ T @ Lq @ H
 
-def rptoq(phi):
+@jax.jit
+def rptoq(phi: jnp.ndarray) -> jnp.ndarray:
     return 1/jnp.sqrt(1+jnp.dot(phi, phi))*jnp.concatenate((phi, jnp.array([1])))
 
-def qtorp(q):
+@jax.jit
+def qtorp(q: jnp.ndarray) -> jnp.ndarray:
     return q[:3]/q[3]

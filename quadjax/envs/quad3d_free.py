@@ -26,7 +26,7 @@ class Quad3D(environment.Environment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'free'):
+    def __init__(self, task: str = "hovering", dynamics: str = 'free'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -127,7 +127,7 @@ class Quad3D(environment.Environment):
         zeros3 = jnp.zeros(3)
         state = EnvState3D(
             # drone
-            pos=pos_traj[0],
+            pos=zeros3,
             vel=zeros3,
             omega=zeros3,
             quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
