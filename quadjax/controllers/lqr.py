@@ -34,8 +34,8 @@ class LQRController:
         A_reduced = self.E_q0.T @ A @ self.E_q0
         B_reduced = self.E_q0.T @ B
         # save A_reduced and B_reduced to csv
-        np.savetxt("../../results/A.csv", A_reduced, delimiter=",")
-        np.savetxt("../../results/B.csv", B_reduced, delimiter=",")
+        # np.savetxt("../../results/A.csv", A_reduced, delimiter=",")
+        # np.savetxt("../../results/B.csv", B_reduced, delimiter=",")
         # solve discrete time LQR to get K
         dlqr_args = (A_reduced, B_reduced, control_params.Q, control_params.R)
         dlqr_args = [np.asarray(item) for item in dlqr_args]
