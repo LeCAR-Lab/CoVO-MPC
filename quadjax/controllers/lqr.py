@@ -26,11 +26,10 @@ class LQRController:
 
     # @partial(jax.jit, static_argnums=(0,))
     def update_params(self, env_params: EnvParams3D, control_params: LQRParams) -> LQRParams:
-        thrust_hover = env_params.m * env_params.g
-        thrust_hover_normed = (thrust_hover / env_params.max_thrust) * 2.0 - 1.0
-        u = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
-        A = self.A_func(self.env.equib, u, env_params, env_params.dt)
-        B = self.B_func(self.env.equib, u, env_params, env_params.dt)
+        thrust_hover_normed = (env_params.m * env_params.g / env_params.max_thrust) * 2.0 - 1.0
+        u_hover = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
+        A = self.A_func(self.env.equib, u_hover, env_params, env_params.dt)
+        B = self.B_func(self.env.equib, u_hover, env_params, env_params.dt)
 
         A_reduced = self.E_q0.T @ A @ self.E_q0
         B_reduced = self.E_q0.T @ B
