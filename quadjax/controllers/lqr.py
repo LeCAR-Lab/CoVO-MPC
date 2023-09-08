@@ -35,8 +35,12 @@ class LQRController:
         A_reduced = self.E_q0.T @ A @ self.E_q0
         B_reduced = self.E_q0.T @ B
         # save A_reduced and B_reduced to csv save with 3 decimal places
+        # np.savetxt('../../results/A.csv', A_reduced, delimiter=',')
+        # np.savetxt('../../results/B.csv', B_reduced, delimiter=',')
         # solve discrete time LQR to get K
         K, _, _ = control.dlqr(A_reduced, B_reduced, control_params.Q, control_params.R)
+        # save K to csv
+        # np.savetxt('../../results/K.csv', K, delimiter=',')
         # update controller parameters
         control_params = control_params.replace(K=K)
         return control_params

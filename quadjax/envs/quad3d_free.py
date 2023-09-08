@@ -263,7 +263,7 @@ def main(args: Args):
     # with jax.disable_jit():
     control_params = controllers.LQRParams(
         Q = jnp.diag(jnp.ones(12)),
-        R = 1.0 * jnp.diag(jnp.ones(4)),
+        R = 0.1 * jnp.diag(jnp.ones(4)),
         K = jnp.zeros((4, 12)),
     )
     controller = controllers.LQRController(env)
