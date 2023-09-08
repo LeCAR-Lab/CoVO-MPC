@@ -124,8 +124,6 @@ class Quad3D(environment.Environment):
         traj_key, pos_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
         pos_traj, vel_traj = self.generate_traj(params.dt, traj_key)
-        pos_traj = jnp.zeros_like(pos_traj)
-        pos_traj = pos_traj.at[:, 2].set(jnp.ones_like(pos_traj[:, 2]))
         zeros3 = jnp.zeros(3)
         state = EnvState3D(
             # drone
