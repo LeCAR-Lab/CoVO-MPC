@@ -9,8 +9,9 @@ def get_free_dynamics_3d():
 
     @jax.jit
     def quad_dynamics(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D):
-        thrust = u[0]
-        torque = u[1:4]
+        # NOTE: u is normalized thrust and torque [-1, 1]
+        thrust = (u[0] + 1.0) / 2.0 * params.max_thrust
+        torque = u[1:4] * params.max_torque
 
         r = x[:3] # position in world frame
         q = x[3:7] / jnp.linalg.norm(x[3:7]) # quaternion in world frame
@@ -21,7 +22,7 @@ def get_free_dynamics_3d():
         # dynamics
         r_dot = Q @ v
         q_dot = 0.5 * geom.L(q) @ geom.H @ omega
-        v_dot = Q.T @ jnp.asarray([0, 0, -params.g]) + thrust / params.m * jnp.asarray([0, 0, 1]) - geom.hat(omega) @ v
+        v_dot = Q.T @ jnp.asarray([0, 0, -params.g]) + 1.0 / params.m * jnp.asarray([0, 0, thrust]) - geom.hat(omega) @ v
         omega_dot = jnp.linalg.inv(params.I) @ (torque - geom.hat(omega) @ params.I @ omega)
 
         # return

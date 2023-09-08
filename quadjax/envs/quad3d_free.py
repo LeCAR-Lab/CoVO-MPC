@@ -124,6 +124,8 @@ class Quad3D(environment.Environment):
         traj_key, pos_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
         pos_traj, vel_traj = self.generate_traj(params.dt, traj_key)
+        pos_traj = jnp.zeros_like(pos_traj)
+        pos_traj = pos_traj.at[:, 2].set(jnp.ones_like(pos_traj[:, 2]))
         zeros3 = jnp.zeros(3)
         state = EnvState3D(
             # drone
@@ -208,6 +210,7 @@ def test_env(env: Quad3D, controller, control_params, repeat_times = 1):
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
+    env_params = env.default_params # DEBUG
 
     state_seq, obs_seq, reward_seq = [], [], []
     rng, rng_reset = jax.random.split(rng)
@@ -262,7 +265,7 @@ def main(args: Args):
     # with jax.disable_jit():
     control_params = controllers.LQRParams(
         Q = jnp.diag(jnp.ones(12)),
-        R = 0.01 * jnp.diag(jnp.ones(4)),
+        R = 1.0 * jnp.diag(jnp.ones(4)),
         K = jnp.zeros((4, 12)),
     )
     controller = controllers.LQRController(env)

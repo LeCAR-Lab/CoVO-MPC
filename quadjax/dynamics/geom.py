@@ -61,6 +61,7 @@ def E(q: jnp.ndarray)->jnp.ndarray:
     '''
     I3 = jnp.eye(3)
     I6 = jnp.eye(6)
+    H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
     G = L(q) @ H
     return jax.scipy.linalg.block_diag(I3, G, I6)
 
@@ -70,6 +71,7 @@ def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
     covert a quaternion to a 3x3 rotation matrix
     '''
     T = jnp.diag(jnp.array([-1, -1, -1, 1]))
+    H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
     # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3)))) # used to convert a 3d vector to 4d vector
     Lq = L(q)
     return H.T @ T @ Lq @ T @ Lq @ H
