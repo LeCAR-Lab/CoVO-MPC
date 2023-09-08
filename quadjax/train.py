@@ -162,7 +162,9 @@ def make_train(config):
                 rng_params = jax.random.split(_rng, config["NUM_ENVS"])
                 new_env_params = jax.vmap(env.sample_params)(rng_params)
                 def map_fn(done, x, y):
-                    reshaped_done = jnp.broadcast_to(done, x.shape)
+                    # reshaped_done = jnp.broadcast_to(done, x.shape)
+                    indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
+                    reshaped_done = done[indexes]
                     return reshaped_done * x + (1 - reshaped_done) * y
                 env_params = jax.tree_map(
                     lambda x, y: map_fn(done, x, y), new_env_params, env_params

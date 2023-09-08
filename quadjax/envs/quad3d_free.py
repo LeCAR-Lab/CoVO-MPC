@@ -54,7 +54,7 @@ class Quad3D(environment.Environment):
         self.equib = jnp.array([0.0]*6+[1.0]+[0.0]*6)
         # RL parameters
         self.action_dim = 4
-        self.obs_dim = 19 + self.default_params.traj_obs_len * 6 + 12
+        self.obs_dim = 29 + self.default_params.traj_obs_len * 6
 
 
     '''
