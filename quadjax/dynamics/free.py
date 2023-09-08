@@ -41,8 +41,10 @@ def get_free_dynamics_3d():
 
     @jax.jit
     def free_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D):
-        # dynamics
-        u = jnp.concatenate([jnp.array([env_action.thrust]), env_action.torque])
+        # dynamics NOTE: u is normalized thrust and torque [-1, 1]
+        thrust_normed = (env_action.thrust/env_params.max_thrust + 1.0) / 2.0
+        torque_normed = env_action.torque / env_params.max_torque
+        u = jnp.concatenate([jnp.array([thrust_normed]), torque_normed])
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega])
 
         # rk4
