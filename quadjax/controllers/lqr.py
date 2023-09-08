@@ -20,16 +20,23 @@ class LQRParams:
 class LQRController:
     def __init__(self, env:Quad3D) -> None:
         self.env = env
-        self.A_func = jax.jacfwd(self.env.dynamics_fn, argnums=0)
-        self.B_func = jax.jacfwd(self.env.dynamics_fn, argnums=1)
+        def normed_dynamics_fn(x, u_normed, env_params, dt):
+            '''
+            dynamics for controller (normalization, esitimation etc. )
+            '''
+            thrust = (u_normed[0] + 1.0) / 2.0 * self.env.default_params.max_thrust
+            torque = u_normed[1:4] * self.env.default_params.max_torque
+            return self.env.dynamics_fn(x, jnp.concatenate([jnp.array([thrust]), torque]), env_params, dt)
+        self.A_func = jax.jacfwd(normed_dynamics_fn, argnums=0)
+        self.B_func = jax.jacfwd(normed_dynamics_fn, argnums=1)
         self.E_q0 = geom.E(jnp.array([0.0]*3+[1.0]))
 
     # @partial(jax.jit, static_argnums=(0,))
     def update_params(self, env_params: EnvParams3D, control_params: LQRParams) -> LQRParams:
         thrust_hover_normed = (env_params.m * env_params.g / env_params.max_thrust) * 2.0 - 1.0
-        u_hover = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
-        A = self.A_func(self.env.equib, u_hover, env_params, env_params.dt)
-        B = self.B_func(self.env.equib, u_hover, env_params, env_params.dt)
+        u_hover_normed = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
+        A = self.A_func(self.env.equib, u_hover_normed, env_params, env_params.dt)
+        B = self.B_func(self.env.equib, u_hover_normed, env_params, env_params.dt)
 
         A_reduced = self.E_q0.T @ A @ self.E_q0
         B_reduced = self.E_q0.T @ B

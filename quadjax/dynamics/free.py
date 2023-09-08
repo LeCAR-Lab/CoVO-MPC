@@ -10,8 +10,10 @@ def get_free_dynamics_3d():
     @jax.jit
     def quad_dynamics(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D):
         # NOTE: u is normalized thrust and torque [-1, 1]
-        thrust = (u[0] + 1.0) / 2.0 * params.max_thrust
-        torque = u[1:4] * params.max_torque
+        # thrust = (u[0] + 1.0) / 2.0 * params.max_thrust
+        # torque = u[1:4] * params.max_torque
+        thrust = u[0]
+        torque = u[1:4]
 
         r = x[:3] # position in world frame
         q = x[3:7] / jnp.linalg.norm(x[3:7]) # quaternion in world frame
@@ -42,9 +44,9 @@ def get_free_dynamics_3d():
     @jax.jit
     def free_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D):
         # dynamics NOTE: u is normalized thrust and torque [-1, 1]
-        thrust_normed = env_action.thrust/env_params.max_thrust * 2.0 - 1.0
-        torque_normed = env_action.torque / env_params.max_torque
-        u = jnp.concatenate([jnp.array([thrust_normed]), torque_normed])
+        # thrust_normed = env_action.thrust/env_params.max_thrust * 2.0 - 1.0
+        # torque_normed = env_action.torque / env_params.max_torque
+        u = jnp.concatenate([jnp.array([env_action.thrust]), env_action.torque])
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega])
 
         # rk4
