@@ -267,7 +267,7 @@ def main(args: Args):
         K = jnp.zeros((4, 12)),
     )
     controller = controllers.LQRController(env)
-    test_env(env, controller=controller, control_params=control_params)
+    test_env(env, controller=controller, control_params=control_params, repeat_times=1)
 
 
 if __name__ == "__main__":
