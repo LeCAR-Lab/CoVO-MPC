@@ -4,7 +4,7 @@ import flax.linen as nn
 import numpy as np
 import optax
 from flax.linen.initializers import constant, orthogonal
-from typing import Sequence, NamedTuple, Any
+from typing import Sequence, NamedTuple
 from flax.training.train_state import TrainState
 import distrax
 from gymnax.wrappers.purerl import LogWrapper
@@ -13,11 +13,7 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
 
-from quadjax.envs import Quad3D
-
-from icecream import install
-
-install()
+from quadjax.envs import Quad3D, test_env
 
 class ActorCritic(nn.Module):
     action_dim: Sequence[int]
@@ -123,10 +119,10 @@ def make_train(config):
 
         # INIT NETWORK
         network = ActorCritic(
-            env.action_space(env_params).shape[0], activation=config["ACTIVATION"]
+            env.action_dim, activation=config["ACTIVATION"]
         )
         rng, _rng = jax.random.split(rng)
-        init_x = jnp.zeros(env.observation_space(env_params).shape)
+        init_x = jnp.zeros(env.obs_dim)
         network_params = network.init(_rng, init_x)
         if config["ANNEAL_LR"]:
             tx = optax.chain(

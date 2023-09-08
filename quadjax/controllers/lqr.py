@@ -5,9 +5,8 @@ from jax import numpy as jnp
 from functools import partial
 import control
 from flax import struct
-import scipy
 
-from quadjax.envs import Quad3D
+# from quadjax.envs import Quad3D
 from quadjax.dynamics import EnvParams3D, EnvState3D
 from quadjax.dynamics import geom
 
@@ -18,7 +17,7 @@ class LQRParams:
     K: jnp.ndarray
 
 class LQRController:
-    def __init__(self, env:Quad3D) -> None:
+    def __init__(self, env) -> None:
         self.env = env
         def normed_dynamics_fn(x, u_normed, env_params, dt):
             '''

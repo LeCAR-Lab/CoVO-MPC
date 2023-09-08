@@ -32,7 +32,7 @@ def vis_vector(obj, origin, vec, scale=1.0):
     obj.set_transform(tf.translation_matrix(origin) @ rot_mat)
 
 def vis_traj(traj_x, traj_v):
-    for i in range(300):
+    for i in range(0, 300):
         vis_vector(vis[f'traj{i}'], traj_x[i], traj_v[i], scale=0.5)
 
 def set_frame(i, name, pos, quat):

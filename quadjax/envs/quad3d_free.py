@@ -31,16 +31,16 @@ class Quad3D(environment.Environment):
         self.task = task
         # reference trajectory function
         if task == "tracking":
-            self.generate_traj = partial(utils.generate_lissa_traj, self.default_params.max_steps_in_episode)
+            self.generate_traj = partial(utils.generate_lissa_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
         elif task == "tracking_zigzag":
-            self.generate_traj = partial(utils.generate_zigzag_traj, self.default_params.max_steps_in_episode)
+            self.generate_traj = partial(utils.generate_zigzag_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
         elif task in "jumping":
-            self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode)
+            self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.jumping_reward_fn
         elif task == 'hovering':
-            self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode)
+            self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
         else:
             raise NotImplementedError
@@ -123,7 +123,7 @@ class Quad3D(environment.Environment):
         """Reset environment state by sampling theta, theta_dot."""
         traj_key, pos_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
-        pos_traj, vel_traj = self.generate_traj(params.dt, traj_key)
+        pos_traj, vel_traj = self.generate_traj(traj_key)
         zeros3 = jnp.zeros(3)
         state = EnvState3D(
             # drone
