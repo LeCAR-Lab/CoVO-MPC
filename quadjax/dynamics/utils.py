@@ -55,8 +55,8 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
     ts = jnp.arange(
         0, max_steps + 50, dt
     )  # NOTE: do not use params for jax limitation
-    w1 = 2 * jnp.pi * 0.15
-    w2 = 2 * jnp.pi * 0.3
+    w1 = 2 * jnp.pi * 0.3
+    w2 = 2 * jnp.pi * 0.6
 
     pos_traj = scale * jnp.stack(
         [
