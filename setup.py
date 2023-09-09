@@ -20,6 +20,7 @@ setup(name='quadjax',
         'sympy', 
         'gymnax',
         'jax', 
-        'distrax'
+        'distrax', 
+        'gputil'
         ]
 )

@@ -27,7 +27,7 @@ class Quad3D(environment.Environment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "hovering", dynamics: str = 'free'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'free'):
         super().__init__()
         self.task = task
         # reference trajectory function

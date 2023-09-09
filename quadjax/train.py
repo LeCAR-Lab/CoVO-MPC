@@ -12,6 +12,8 @@ import time
 from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
+import pickle
+import GPUtil
 
 import quadjax
 from quadjax.envs import Quad3D, test_env
@@ -94,7 +96,7 @@ class Transition(NamedTuple):
 
 
 def make_train(config):
-    config["NUM_UPDATES"] = (
+    config["NUM_UPDATES"] = int(
         config["TOTAL_TIMESTEPS"] // config["NUM_STEPS"] // config["NUM_ENVS"]
     )
     config["MINIBATCH_SIZE"] = (
@@ -302,22 +304,23 @@ def make_train(config):
 
         rng, _rng = jax.random.split(rng)
         runner_state = (train_state, env_state, obsv, _rng, env_params)
+        # NOTE not scan here for logging purpose
         # runner_state, metric = jax.lax.scan(
         #     _update_step, runner_state, None, config["NUM_UPDATES"]
         # )
         metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
-        log_num = 100
-        update_per_log = config["NUM_UPDATES"]//log_num
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
-        for i in range(log_num):
-            runner_state, metric_local = jax.lax.scan(_update_step, runner_state, None, update_per_log)
+        for i in range(config["NUM_UPDATES"]):
+            runner_state, metric_local = _update_step(runner_state, None)
             metric_local['step'] = jnp.array([(i+1)*step_per_log])
             print('====================')
-            print(f'log {i+1}/{log_num}')
-            for k, v in metric.items():
+            print(f'update {i+1}/{config["NUM_UPDATES"]}')
+            print(f'gpu utilization: {jax.local_device_count()}')
+            for k in metric.keys():
                 v_mean = metric_local[k].mean()
                 metric[k] = jnp.append(metric[k], v_mean)
                 print(f'{k}: {v_mean:.2e}')
+            GPUtil.showUtilization()
         return runner_state, metric
 
     return train
@@ -374,9 +377,6 @@ def main(args: Args):
     # save
     plt.savefig(f"{quadjax.get_package_path()}/../results/ppo.png")
 
-    # save network params
-    import pickle
-
     with open(f"{quadjax.get_package_path()}/../results/ppo_params.pkl", "wb") as f:
         pickle.dump(runner_state[0].params, f)
 
@@ -385,8 +385,6 @@ def main(args: Args):
     apply_fn = runner_state[0].apply_fn
     params = runner_state[0].params
 
-    # def controller(obs, rng):
-    #     return apply_fn(params, obs)[0].mean()
     controller = NetworkController(apply_fn)
 
     env.reset(rng)
