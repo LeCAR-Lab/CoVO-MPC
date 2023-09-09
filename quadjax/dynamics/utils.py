@@ -52,9 +52,7 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
     )
     # get trajectory
     scale = 0.8
-    ts = jnp.arange(
-        0, max_steps + 50, dt
-    )  # NOTE: do not use params for jax limitation
+    ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
     w1 = 2 * jnp.pi * 0.3
     w2 = 2 * jnp.pi * 0.6
 
@@ -81,7 +79,7 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
 
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
     point_per_seg = 40
-    num_seg = max_steps // point_per_seg + 1
+    num_seg = max_steps // point_per_seg + 2
 
     key_keypoints = jax.random.split(key, num_seg)
     key_angles = jax.random.split(key, num_seg)
@@ -140,11 +138,11 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         update_fn, initial_carry, jnp.arange(1, num_seg)
     )
 
-    point_traj_segs = point_traj_segs - point_traj_segs[0]
+    pos_traj = jnp.concatenate(point_traj_segs, axis=0)
+    pos_traj = pos_traj - pos_traj[0]
+    vel_traj = jnp.concatenate(point_dot_traj_segs, axis=0)
 
-    return jnp.concatenate(point_traj_segs, axis=-1), jnp.concatenate(
-        point_dot_traj_segs, axis=-1
-    )
+    return pos_traj, vel_traj
     
 
 '''
