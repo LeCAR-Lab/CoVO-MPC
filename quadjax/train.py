@@ -335,7 +335,7 @@ def main(args: Args):
         "LR": 3e-4,
         "NUM_ENVS": 4096,
         "NUM_STEPS": 300,
-        "TOTAL_TIMESTEPS": 1.0e8,
+        "TOTAL_TIMESTEPS": 1.6e8,
         "UPDATE_EPOCHS": 2,
         "NUM_MINIBATCHES": 320,
         "GAMMA": 0.99,
