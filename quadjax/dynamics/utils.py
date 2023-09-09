@@ -168,7 +168,14 @@ def hovering_reward_fn(state: EnvState3D):
 def tracking_reward_fn(state: EnvState3D):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    return 1.0 - 0.8 * err_pos - 0.05 * err_vel
+    reward = 0.8 - \
+        0.05 * err_vel - \
+        err_pos * 0.4 - \
+        jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
+        jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
+        jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1
+
+    return reward
 
 '''
 visualization functions

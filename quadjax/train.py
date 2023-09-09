@@ -308,14 +308,14 @@ def make_train(config):
         # runner_state, metric = jax.lax.scan(
         #     _update_step, runner_state, None, config["NUM_UPDATES"]
         # )
-        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
+        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_UPDATES"]):
             runner_state, metric_local = _update_step(runner_state, None)
             metric_local['step'] = jnp.array([(i+1)*step_per_log])
+            metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
             print('====================')
             print(f'update {i+1}/{config["NUM_UPDATES"]}')
-            print(f'gpu utilization: {jax.local_device_count()}')
             for k in metric.keys():
                 v_mean = metric_local[k].mean()
                 metric[k] = jnp.append(metric[k], v_mean)
