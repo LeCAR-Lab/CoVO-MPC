@@ -36,6 +36,8 @@ anim = Animation(default_framerate=50)
 #         vis_vector(vis[f'traj{i}'], traj_x[i], traj_v[i], scale=0.5)
 
 def set_frame(i, name, pos, quat):
+    # convert quat from [x,y,z, w] to [w, x,y,z]
+    quat = np.array([quat[3], quat[0], quat[1], quat[2]])
     transform = tf.translation_matrix(pos) @ tf.quaternion_matrix(quat)
     with anim.at_frame(vis, i) as frame:
         frame[name].set_transform(transform)
@@ -43,6 +45,7 @@ def set_frame(i, name, pos, quat):
 # Add a box to the scene
 box = g.Box([1, 1, 1])
 vis["drone"].set_object(g.StlMeshGeometry.from_file('../assets/crazyflie2.stl'))
+vis["drone_frame"].set_object(g.StlMeshGeometry.from_file('../assets/axes.stl'))
 vis["obj"].set_object(g.Sphere(0.01))
 vis["obj_tar"].set_object(g.Sphere(0.03), material=g.MeshLambertMaterial(color=0xff0000))
 for i in range(0, 300, 5):
@@ -68,6 +71,7 @@ for i, state in enumerate(state_seq):
         for j in range(0, 300, 5):
             set_frame(i, f'traj{j}', state_seq[i].pos_traj[j], np.array([0,0,0,1]))
     set_frame(i, 'drone', state.pos, state.quat)
+    set_frame(i, 'drone_frame', state.pos, state.quat)
     set_frame(i, 'obj', state.pos_obj, np.array([0,0,0,1]))
     set_frame(i, 'obj_tar', state.pos_tar, np.array([0,0,0,1]))
     # update camera position by moving it linearly along a-axis

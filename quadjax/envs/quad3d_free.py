@@ -214,6 +214,10 @@ def test_env(env: Quad3D, controller, control_params, repeat_times = 1):
     state_seq, obs_seq, reward_seq = [], [], []
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
+
+    # DEBUG set iniiial state here
+    # env_state = env_state.replace(quat = jnp.array([jnp.sin(jnp.pi/4), 0.0, 0.0, jnp.cos(jnp.pi/4)]))
+                                  
     control_params = controller.update_params(env_params, control_params)
     n_dones = 0
 
@@ -273,7 +277,7 @@ def main(args: Args):
         controller = controllers.LQRController(env)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
-            u = jnp.array([0.8, 0.0, 0.0, 0.0]),
+            u = jnp.asarray([0.8, 0.0, 0.0, 0.0]),
         )
         controller = controllers.FixedController(env)
     else:
