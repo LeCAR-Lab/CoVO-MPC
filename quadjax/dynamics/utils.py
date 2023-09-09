@@ -66,6 +66,7 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
         ], 
         axis=1
     )
+    pos_traj = pos_traj - pos_traj[0]
 
     vel_traj = scale * jnp.stack(
         [
@@ -138,6 +139,8 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
     _, (point_traj_segs, point_dot_traj_segs) = lax.scan(
         update_fn, initial_carry, jnp.arange(1, num_seg)
     )
+
+    point_traj_segs = point_traj_segs - point_traj_segs[0]
 
     return jnp.concatenate(point_traj_segs, axis=-1), jnp.concatenate(
         point_dot_traj_segs, axis=-1
