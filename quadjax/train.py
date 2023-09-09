@@ -13,7 +13,9 @@ from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
 import tyro
 
+import quadjax
 from quadjax.envs import Quad3D, test_env
+from quadjax.controllers import NetworkController
 
 class ActorCritic(nn.Module):
     action_dim: Sequence[int]
@@ -141,6 +143,7 @@ def make_train(config):
         )
 
         # TRAIN LOOP
+        @jax.jit
         def _update_step(runner_state, unused):
             # COLLECT TRAJECTORIES
             def _env_step(runner_state, unused):
@@ -299,13 +302,25 @@ def make_train(config):
 
         rng, _rng = jax.random.split(rng)
         runner_state = (train_state, env_state, obsv, _rng, env_params)
-        runner_state, metric = jax.lax.scan(
-            _update_step, runner_state, None, config["NUM_UPDATES"]
-        )
-        return {"runner_state": runner_state, "metrics": metric}
+        # runner_state, metric = jax.lax.scan(
+        #     _update_step, runner_state, None, config["NUM_UPDATES"]
+        # )
+        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
+        log_num = 100
+        update_per_log = config["NUM_UPDATES"]//log_num
+        step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
+        for i in range(log_num):
+            runner_state, metric_local = jax.lax.scan(_update_step, runner_state, None, update_per_log)
+            metric_local['step'] = jnp.array([(i+1)*step_per_log])
+            print('====================')
+            print(f'log {i+1}/{log_num}')
+            for k, v in metric.items():
+                v_mean = metric_local[k].mean()
+                metric[k] = jnp.append(metric[k], v_mean)
+                print(f'{k}: {v_mean:.2e}')
+        return runner_state, metric
 
     return train
-
 
 @pydataclass
 class Args:
@@ -332,57 +347,51 @@ def main(args: Args):
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
-    train_jit = jax.jit(make_train(config))
-    print(f"jit time: {time.time() - t0:.2f} s")
+    train_fn = make_train(config)
 
     t0 = time.time()
-    out = jax.block_until_ready(train_jit(rng))
-    print(f"train time: {time.time() - t0:.2f} s")
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+    training_time = time.time() - t0
+    print(f"train time: {training_time:.2f} s")
     # plot in three subplots of returned_episode_returns, err_pos, err_vel
     fig, axs = plt.subplots(3, 1)
-    step = (
-        (np.arange(out["metrics"]["returned_episode_returns"].shape[0]) + 1)
-        * config["NUM_STEPS"]
-        * config["NUM_ENVS"]
-    )
-    returns = out["metrics"]["returned_episode_returns"].mean([-1, -2])
-    err_pos = out["metrics"]["err_pos"].mean([-1, -2])
-    err_vel = out["metrics"]["err_vel"].mean([-1, -2])
-    for i, (ax, data, title) in enumerate(
-        zip(axs, [returns, err_pos, err_vel], ["returns", "err_pos", "err_vel"])
+    for _, (ax, data, title) in enumerate(
+        zip(axs, [metric["returned_episode_returns"], metric["err_pos"], metric["err_vel"]], ["returns", "err_pos", "err_vel"])
     ):
-        ax.plot(step, data)
+        ax.plot(metric['step'], data)
         ax.set_ylabel(title)
         ax.set_xlabel("steps")
         # label out last value in a box
         last_value = data[-1]
         ax.text(
-            step[-1],
+            metric['step'][-1],
             last_value,
             f"{last_value:.2f}",
             bbox=dict(facecolor="red", alpha=0.8),
         )
+    # add training time to title
+    fig.suptitle(f"training_time: {training_time:.2f} s")
     # save
-    plt.savefig("../results/ppo.png")
+    plt.savefig(f"{quadjax.get_package_path()}/../results/ppo.png")
 
     # save network params
     import pickle
 
-    with open("../results/ppo_params.pkl", "wb") as f:
-        pickle.dump(out["runner_state"][0].params, f)
+    with open(f"{quadjax.get_package_path()}/../results/ppo_params.pkl", "wb") as f:
+        pickle.dump(runner_state[0].params, f)
 
     rng = jax.random.PRNGKey(1)
     env = Quad3D(task=args.task)
-    apply_fn = out["runner_state"][0].apply_fn
-    params = out["runner_state"][0].params
+    apply_fn = runner_state[0].apply_fn
+    params = runner_state[0].params
 
-    def policy(obs, rng):
-        return apply_fn(params, obs)[0].mean()
+    # def controller(obs, rng):
+    #     return apply_fn(params, obs)[0].mean()
+    controller = NetworkController(apply_fn)
 
     env.reset(rng)
     # test policy
-    test_env(env, policy=policy, render_video=True)
-
+    test_env(env = env, controller = controller, control_params = params, repeat_times = 3)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

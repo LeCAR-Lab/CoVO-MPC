@@ -4,8 +4,8 @@ from jax import lax
 import chex
 from typing import Tuple
 
+import quadjax
 from quadjax.dynamics.dataclass import EnvState3D
-
 
 
 @jax.jit
@@ -221,4 +221,4 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
             plt.ylabel(name)
 
     plt.xlabel("time")
-    plt.savefig("../../results/plot.png")
+    plt.savefig(f"{quadjax.get_package_path()}/../results/plot.png")

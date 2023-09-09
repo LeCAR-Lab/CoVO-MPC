@@ -10,6 +10,7 @@ import tyro
 import pickle
 import time as time_module
 
+import quadjax
 from quadjax import controllers
 from quadjax.dynamics import utils
 from quadjax.dynamics.free import get_free_dynamics_3d
@@ -240,7 +241,9 @@ def test_env(env: Quad3D, controller, control_params, repeat_times = 1):
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
-    with open("../../results/state_seq.pkl", "wb") as f:
+    # get package quadjax path
+    
+    with open(f"{quadjax.get_package_path()}/../results/state_seq.pkl", "wb") as f:
         pickle.dump(state_seq, f)
 
 '''
