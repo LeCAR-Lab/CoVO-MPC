@@ -9,6 +9,7 @@ from flax import struct
 # from quadjax.envs import Quad3D
 from quadjax.dynamics import EnvParams3D, EnvState3D
 from quadjax.dynamics import geom
+from quadjax import controllers
 
 @struct.dataclass
 class LQRParams:
@@ -16,9 +17,9 @@ class LQRParams:
     R: jnp.ndarray
     K: jnp.ndarray
 
-class LQRController:
+class LQRController(controllers.BaseController):
     def __init__(self, env) -> None:
-        self.env = env
+        super().__init__(env)
         def normed_dynamics_fn(x, u_normed, env_params, dt):
             '''
             dynamics for controller (normalization, esitimation etc. )

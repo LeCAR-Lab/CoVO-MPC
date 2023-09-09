@@ -254,7 +254,7 @@ reward function here.
 class Args:
     task: str = "hovering"
     dynamics: str = 'free'
-
+    controller: str = 'lqr'
 
 def main(args: Args):
     env = Quad3D(task=args.task, dynamics=args.dynamics)
@@ -264,12 +264,20 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    control_params = controllers.LQRParams(
-        Q = jnp.diag(jnp.ones(12)),
-        R = 0.03 * jnp.diag(jnp.ones(4)),
-        K = jnp.zeros((4, 12)),
-    )
-    controller = controllers.LQRController(env)
+    if args.controller == 'lqr':
+        control_params = controllers.LQRParams(
+            Q = jnp.diag(jnp.ones(12)),
+            R = 0.03 * jnp.diag(jnp.ones(4)),
+            K = jnp.zeros((4, 12)),
+        )
+        controller = controllers.LQRController(env)
+    elif args.controller == 'fixed':
+        control_params = controllers.FixedParams(
+            u = jnp.array([0.8, 0.0, 0.0, 0.0]),
+        )
+        controller = controllers.FixedController(env)
+    else:
+        raise NotImplementedError
     test_env(env, controller=controller, control_params=control_params, repeat_times=1)
 
 
