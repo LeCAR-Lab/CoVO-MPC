@@ -92,9 +92,9 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         # Calculate the unit vector pointing to the center
         vec_to_center = -prev_point / jnp.linalg.norm(prev_point)
 
-        # Sample random rotation angles for theta and phi from [-pi/2, pi/2]
+        # Sample random rotation angles for theta and phi from [-pi/3, pi/3]
         delta_theta, delta_phi = jax.random.uniform(
-            key_angle, shape=(2,), minval=-jnp.pi / 2, maxval=jnp.pi / 2
+            key_angle, shape=(2,), minval=-jnp.pi / 3, maxval=jnp.pi / 3
         )
 
         # Calculate new direction
@@ -109,7 +109,7 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         )
 
         # Sample the distance from [1.5, 2.5]
-        distance = jax.random.uniform(key_keypoint, minval=1.5, maxval=2.0)
+        distance = jax.random.uniform(key_keypoint, minval=1.0, maxval=1.5)
 
         # Calculate the new point
         next_point = prev_point + distance * new_direction
