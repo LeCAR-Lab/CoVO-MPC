@@ -78,16 +78,13 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
     return pos_traj, vel_traj
 
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 40
-    num_seg = max_steps // point_per_seg + 2
+    point_per_seg = 30
+    num_seg = max_steps // point_per_seg + 1
 
     key_keypoints = jax.random.split(key, num_seg)
     key_angles = jax.random.split(key, num_seg)
 
-    # sample from 3d -1.5 to 1.5
-    prev_point = jax.random.uniform(
-        key_keypoints[0], shape=(3,), minval=-1.5, maxval=1.5
-    )
+    prev_point = jnp.ones(3) * 0.1
 
     def update_fn(carry, i):
         key_keypoint, key_angle, prev_point = carry
@@ -95,9 +92,9 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         # Calculate the unit vector pointing to the center
         vec_to_center = -prev_point / jnp.linalg.norm(prev_point)
 
-        # Sample random rotation angles for theta and phi from [-pi/3, pi/3]
+        # Sample random rotation angles for theta and phi from [-pi/2, pi/2]
         delta_theta, delta_phi = jax.random.uniform(
-            key_angle, shape=(2,), minval=-jnp.pi / 3, maxval=jnp.pi / 3
+            key_angle, shape=(2,), minval=-jnp.pi / 2, maxval=jnp.pi / 2
         )
 
         # Calculate new direction
@@ -112,7 +109,7 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         )
 
         # Sample the distance from [1.5, 2.5]
-        distance = jax.random.uniform(key_keypoint, minval=1.5, maxval=2.5)
+        distance = jax.random.uniform(key_keypoint, minval=1.5, maxval=2.0)
 
         # Calculate the new point
         next_point = prev_point + distance * new_direction
@@ -134,12 +131,13 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         return carry, (point_traj_seg, point_dot_traj_seg)
 
     initial_carry = (key_keypoints[1], key_angles[1], prev_point)
+    point_traj_segs, point_dot_traj_segs = [], []
     _, (point_traj_segs, point_dot_traj_segs) = lax.scan(
-        update_fn, initial_carry, jnp.arange(1, num_seg)
+        update_fn, initial_carry, jnp.arange(num_seg)
     )
 
     pos_traj = jnp.concatenate(point_traj_segs, axis=0)
-    pos_traj = pos_traj - pos_traj[0]
+    pos_traj = pos_traj - pos_traj[0]   
     vel_traj = jnp.concatenate(point_dot_traj_segs, axis=0)
 
     return pos_traj, vel_traj

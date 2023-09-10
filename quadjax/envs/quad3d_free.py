@@ -198,8 +198,8 @@ class Quad3D(environment.Environment):
         """Check whether state is terminal."""
         # Check number of steps in episode termination condition
         done = (state.time >= params.max_steps_in_episode) \
-            | (jnp.abs(state.pos) > 2.0).any() \
-            | (jnp.abs(state.pos_obj) > 2.0).any() \
+            | (jnp.abs(state.pos) > 3.0).any() \
+            | (jnp.abs(state.pos_obj) > 3.0).any() \
             | (jnp.abs(state.omega) > 100.0).any()
         return done
 
