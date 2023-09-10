@@ -81,10 +81,10 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
     point_per_seg = 30
     num_seg = max_steps // point_per_seg + 1
 
-    key_keypoints = jax.random.split(key, num_seg)
-    key_angles = jax.random.split(key, num_seg)
+    key_keypoints, key = jax.random.split(key, num_seg)
+    key_angles, key = jax.random.split(key, num_seg)
 
-    prev_point = jnp.ones(3) * 0.1
+    prev_point = jax.random.uniform(key_keypoints[0], shape=(3,), minval=-1.0, maxval=1.0)
 
     def update_fn(carry, i):
         key_keypoint, key_angle, prev_point = carry
