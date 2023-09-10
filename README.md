@@ -10,7 +10,8 @@ Smooth trajectory with max acceleration 16m/s^2 and max velocity 5m/s.
 python train.py --task tracking
 ```
 
-![ppo](https://github.com/jc-bao/quadjax/assets/60093981/c0a63dd8-4b4a-49ef-ac1e-d638dc6bac90)
+![ppo](https://github.com/jc-bao/quadjax/assets/60093981/b9890897-9bcf-48d4-ba83-2ea794999218)
+
 
 https://github.com/jc-bao/quadjax/assets/60093981/abb72f44-a227-4b04-a2bf-4d8f46e5a90c
 
