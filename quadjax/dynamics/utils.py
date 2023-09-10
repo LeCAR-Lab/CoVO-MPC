@@ -78,13 +78,15 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
     return pos_traj, vel_traj
 
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 30
+    point_per_seg = 60
     num_seg = max_steps // point_per_seg + 1
 
     key_keypoints = jax.random.split(key, num_seg)
     key_angles = jax.random.split(key, num_seg)
 
+    # generate a 3d unit vector
     prev_point = jax.random.uniform(key_keypoints[0], shape=(3,), minval=-1.0, maxval=1.0)
+    prev_point = prev_point / jnp.linalg.norm(prev_point) * 0.1
 
     def update_fn(carry, i):
         key_keypoint, key_angle, prev_point = carry
