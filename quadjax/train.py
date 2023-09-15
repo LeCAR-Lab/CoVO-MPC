@@ -16,7 +16,6 @@ import pickle
 import GPUtil
 
 import quadjax
-from quadjax.envs import Quad3D, test_env
 from quadjax.controllers import NetworkController
 
 class ActorCritic(nn.Module):
@@ -82,7 +81,7 @@ def make_train(config):
     config["MINIBATCH_SIZE"] = (
         config["NUM_ENVS"] * config["NUM_STEPS"] // config["NUM_MINIBATCHES"]
     )
-    env = Quad3D(config["task"])
+    env = quadjax.envs.dualquad2d.DualQuad2D(config["task"])
     env = LogWrapper(env)
 
     def linear_schedule(count):
@@ -308,16 +307,17 @@ def make_train(config):
 @pydataclass
 class Args:
     task: str = "tracking"
+    test: bool = False
 
 
 def main(args: Args):
     config = {
         "LR": 3e-4,
-        "NUM_ENVS": 4096,
-        "NUM_STEPS": 300,
-        "TOTAL_TIMESTEPS": 1.6e8,
+        "NUM_ENVS": 4096 if not args.test else 1,
+        "NUM_STEPS": 300 if not args.test else 100,
+        "TOTAL_TIMESTEPS": 1.6e8 if not args.test else 1e3,
         "UPDATE_EPOCHS": 2,
-        "NUM_MINIBATCHES": 320,
+        "NUM_MINIBATCHES": 320 if not args.test else 1,
         "GAMMA": 0.99,
         "GAE_LAMBDA": 0.95,
         "CLIP_EPS": 0.2,
@@ -361,7 +361,7 @@ def main(args: Args):
         pickle.dump(runner_state[0].params, f)
 
     rng = jax.random.PRNGKey(1)
-    env = Quad3D(task=args.task)
+    env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
     apply_fn = runner_state[0].apply_fn
     params = runner_state[0].params
 
@@ -369,7 +369,7 @@ def main(args: Args):
 
     env.reset(rng)
     # test policy
-    test_env(env = env, controller = controller, control_params = params, repeat_times = 3)
+    quadjax.envs.dualquad2d.test_env(env = env, controller = controller, control_params = params, repeat_times = 3)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

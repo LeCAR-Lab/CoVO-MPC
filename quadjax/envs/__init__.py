@@ -1,1 +1,1 @@
-from quadjax.envs.quad3d_free import Quad3D, test_env
+from quadjax.envs import dualquad2d, quad3d_free

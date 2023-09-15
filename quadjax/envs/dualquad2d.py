@@ -11,6 +11,7 @@ from functools import partial
 from dataclasses import dataclass as pydataclass
 import tyro
 
+import quadjax
 from quadjax.dynamics import geom, EnvParamsDual2D, EnvStateDual2D, ActionDual2D, get_hit_penalty, get_dual_taut_dynamics_2d
 
 class DualQuad2D(environment.Environment):
@@ -34,6 +35,10 @@ class DualQuad2D(environment.Environment):
         self.taut_dynamics = get_dual_taut_dynamics_2d()
         self.loose_dynamics = None
         self.dynamic_transfer = None
+        # RL parameters
+        self.action_dim = 4
+        self.obs_dim = 39 + self.default_params.traj_obs_len * 4
+
 
     @property
     def default_params(self) -> EnvParamsDual2D:
@@ -281,7 +286,8 @@ class DualQuad2D(environment.Environment):
         )
         return done
 
-def test_env(env: DualQuad2D, policy, render_video=False):
+def test_env(env, controller, control_params = None, repeat_times = 3):
+    render_video = True
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
@@ -294,7 +300,7 @@ def test_env(env: DualQuad2D, policy, render_video=False):
         state_seq.append(env_state)
         param_seq.append(env_params)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action = policy(obs, env_state, env_params, rng_act)
+        action = controller(obs, env_state, env_params, rng_act, control_params)
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params
         )
@@ -383,7 +389,7 @@ def test_env(env: DualQuad2D, policy, render_video=False):
     if render_video:
         plt.figure(figsize=(4, 4))
         anim = FuncAnimation(plt.gcf(), update_plot, frames=len(state_seq), interval=20)
-        anim.save(filename="../../results/anim.gif", writer="imagemagick", fps=int(1.0/env_params.dt))
+        anim.save(filename=f"{quadjax.get_package_path()}/../results/anim.gif", writer="imagemagick", fps=int(1.0/env_params.dt))
 
     num_figs = len(state_seq[0].__dict__) + 2
     time = [s.time * env_params.dt for s in state_seq]
@@ -424,7 +430,7 @@ def test_env(env: DualQuad2D, policy, render_video=False):
         plt.ylabel(name)
 
     plt.xlabel("time")
-    plt.savefig("../../results/plot.png")
+    plt.savefig(f"{quadjax.get_package_path()}/../results/plot.png")
 
 @pydataclass
 class Args:
