@@ -47,23 +47,24 @@ class ActorCritic(nn.Module):
         actor_logtstd = self.param("log_std", nn.initializers.zeros, (self.action_dim,))
         pi = distrax.MultivariateNormalDiag(actor_mean, jnp.exp(actor_logtstd))
 
-        critic = nn.Dense(
-            256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
-        )(x)
-        critic = activation(critic)
-        critic = nn.Dense(
-            256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
-        )(critic)
-        critic = activation(critic)
-        critic = nn.Dense(
-            256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
-        )(critic)
-        critic = activation(critic)
-        critic = nn.Dense(1, kernel_init=orthogonal(1.0), bias_init=constant(0.0))(
-            critic
-        )
+        # critic = nn.Dense(
+        #     256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
+        # )(x)
+        # critic = activation(critic)
+        # critic = nn.Dense(
+        #     256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
+        # )(critic)
+        # critic = activation(critic)
+        # critic = nn.Dense(
+        #     256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0)
+        # )(critic)
+        # critic = activation(critic)
+        # critic = nn.Dense(1, kernel_init=orthogonal(1.0), bias_init=constant(0.0))(
+        #     critic
+        # )
 
-        return pi, jnp.squeeze(critic, axis=-1)
+        return pi, None
+
 
 class Transition(NamedTuple):
     done: jnp.ndarray
@@ -143,7 +144,7 @@ def make_train(config):
                 obsv, env_state, reward, done, info = jax.vmap(env.step)(
                     rng_step, env_state, action, env_params
                 )
-                # resample environment parameters if done TODO wrap this into step function or other env wrapper
+                # resample environment parameters if done
                 rng_params = jax.random.split(_rng, config["NUM_ENVS"])
                 new_env_params = jax.vmap(env.sample_params)(rng_params)
                 def map_fn(done, x, y):
