@@ -94,6 +94,10 @@ class EnvStateDual2D:
     phi1_dot: float
     last_thrust1: float  # Only needed for rendering
     last_tau1: float  # Only needed for rendering
+    y_hook1: float
+    z_hook1: float
+    y_hook1_dot: float
+    z_hook1_dot: float
     f_rope1: float
     f_rope1_y: float
     f_rope1_z: float
