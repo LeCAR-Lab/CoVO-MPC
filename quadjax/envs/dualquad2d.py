@@ -313,7 +313,7 @@ def test_env(env, controller, control_params = None, repeat_times = 3):
             n_dones += 1
         obs = next_obs
         env_state = next_env_state
-        if n_dones >= 1:
+        if n_dones >= repeat_times:
             break
     
     # plot trajectory
