@@ -246,7 +246,8 @@ reward function here.
 class Args:
     task: str = "tracking"
     dynamics: str = 'bodyrate'
-    controller: str = 'lqr'
+    controller: str = 'lqr' # mppi
+    debug: bool = False
 
 def main(args: Args):
     env = Quad2D(task=args.task, dynamics=args.dynamics)
@@ -265,9 +266,30 @@ def main(args: Args):
         controller = controllers.LQRController2D(env)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
-            u = jnp.asarray([0.8, 0.0, 0.0, 0.0]),
+            u = jnp.asarray([0.8, 0.0]),
         )
         controller = controllers.FixedController(env)
+    elif args.controller == 'mppi':
+        H = 40
+        sigma = 0.1
+        thrust_hover = env.default_params.m * env.default_params.g
+        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
+        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
+        a_mean = jnp.tile(a_mean_per_step, (H, 1))
+        a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
+        a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+        control_params = controllers.MPPIParams(
+            lam = 3e-3,
+            H = H,
+            N = 8192 if not args.debug else 8,
+            gamma_mean = 0.0,
+            gamma_sigma = 0.1,
+            discount = 0.9,
+            sample_sigma = sigma,
+            a_mean = a_mean,
+            a_cov = a_cov,
+        )
+        controller = controllers.MPPIController2D(env)
     else:
         raise NotImplementedError
     test_env(env, controller=controller, control_params=control_params, repeat_times=1)
