@@ -210,7 +210,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
     def update_plot(i):
         # i = frame
         plt.gca().clear()
-        pos_array = np.asarray([s.pos for s in state_seq])
+        pos_array = np.asarray([s.pos for s in state_seq[:i]])
         tar_array = np.asarray([s.pos_tar for s in state_seq])
         plt.plot(pos_array[:, 0], pos_array[:, 1], "b", alpha=0.5)
         plt.plot(tar_array[:, 0], tar_array[:, 1], "r--", alpha = 0.3)
