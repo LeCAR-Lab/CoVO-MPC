@@ -7,7 +7,7 @@ import control
 from flax import struct
 
 # from quadjax.envs import Quad3D
-from quadjax.dynamics import EnvParams3D, EnvState3D
+from quadjax.dynamics import EnvParams3D, EnvState3D, EnvParams2D, EnvState2D
 from quadjax.dynamics import geom
 from quadjax import controllers
 
@@ -17,6 +17,44 @@ class LQRParams:
     R: jnp.ndarray
     K: jnp.ndarray
 
+class LQRController2D(controllers.BaseController):
+    def __init__(self, env) -> None:
+        super().__init__(env)
+        def normed_dynamics_fn(x, u_normed, env_params, dt):
+            '''
+            dynamics for controller (normalization, esitimation etc. )
+            '''
+            thrust = (u_normed[0] + 1.0) / 2.0 * self.env.default_params.max_thrust
+            roll_rate = u_normed[1] * self.env.default_params.max_bodyrate
+            return self.env.dynamics_fn(x, jnp.asarray([thrust, roll_rate]), env_params, dt)
+        self.A_func = jax.jacfwd(normed_dynamics_fn, argnums=0)
+        self.B_func = jax.jacfwd(normed_dynamics_fn, argnums=1)
+
+    # @partial(jax.jit, static_argnums=(0,))
+    def update_params(self, env_params: EnvParams2D, control_params: LQRParams) -> LQRParams:
+        thrust_hover_normed = (env_params.m * env_params.g / env_params.max_thrust) * 2.0 - 1.0
+        u_hover_normed = jnp.array([thrust_hover_normed, 0.0])
+        A = self.A_func(self.env.equib, u_hover_normed, env_params, env_params.dt)
+        B = self.B_func(self.env.equib, u_hover_normed, env_params, env_params.dt)
+
+        K, _, _ = control.dlqr(A, B, control_params.Q, control_params.R)
+        # save K to csv
+        control_params = control_params.replace(K=K)
+        return control_params
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def __call__(self, obs:jnp.ndarray, state: EnvState2D, env_params: EnvParams2D, rng_act: chex.PRNGKey, control_params: LQRParams) -> jnp.ndarray:
+        delta_pos = state.pos - state.pos_tar
+        roll_tar = 0.0
+        delta_roll = state.roll - roll_tar
+        delta_v = state.vel - state.vel_tar
+
+        delta_x = jnp.asarray([*delta_pos, delta_roll, *delta_v])
+        thrust_hover = env_params.m * env_params.g
+        thrust_hover_normed = (thrust_hover / env_params.max_thrust) * 2.0 - 1.0
+        u = jnp.asarray([thrust_hover_normed, 0.0]) - control_params.K @ delta_x
+        return u
+    
 class LQRController(controllers.BaseController):
     def __init__(self, env) -> None:
         super().__init__(env)

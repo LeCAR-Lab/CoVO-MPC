@@ -216,7 +216,13 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
             xyz = np.array([getattr(s, name) for s in state_seq])
             xyz_tar = np.array([getattr(s, f"{name[:3]}_tar") for s in state_seq])
-            for i, subplot_name in zip(range(3), ["x", "y", "z"]):
+            if xyz.shape[1] == 3:
+                scan_range = zip(range(3), ["x", "y", "z"])
+            elif xyz.shape[1] == 2:
+                scan_range = zip(range(2), ["y", "z"])
+            else: 
+                raise NotImplementedError
+            for i, subplot_name in scan_range:
                 current_fig += 1
                 plt.subplot(num_rows, 6, current_fig)
                 plt.plot(time, xyz[:, i], label=f"{subplot_name}")

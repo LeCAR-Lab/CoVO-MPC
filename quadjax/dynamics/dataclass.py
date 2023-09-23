@@ -5,63 +5,38 @@ def default_array(array):
     return struct.field(default_factory=lambda: jnp.array(array))
 
 @struct.dataclass
-class EnvState:
-    y: float
-    z: float
-    theta: float # drone orientation
-    phi: float # rope orientation in local frame
-    y_dot: float
-    z_dot: float
-    theta_dot: float
-    phi_dot: float
+class EnvState2D:
+    pos: jnp.ndarray  # (x,y)
+    roll: float # drone orientation
+    vel: jnp.ndarray  # (x,y)
+    roll_dot: float
     last_thrust: float  # Only needed for rendering
-    last_tau: float  # Only needed for rendering
+    last_roll_dot: float  # Only needed for rendering
+    pos_traj: jnp.ndarray
+    vel_traj: jnp.ndarray
+    pos_tar: float
+    vel_tar: float
     time: int
-    y_traj: jnp.ndarray
-    z_traj: jnp.ndarray
-    y_dot_traj: jnp.ndarray
-    z_dot_traj: jnp.ndarray
-    y_tar: float
-    z_tar: float
-    y_dot_tar: float
-    z_dot_tar: float
-    y_hook: float
-    z_hook: float
-    y_hook_dot: float
-    z_hook_dot: float
-    y_obj: float
-    z_obj: float
-    y_obj_dot: float
-    z_obj_dot: float
-    f_rope: float
-    f_rope_y: float
-    f_rope_z: float
-    l_rope: float
 
 
 @struct.dataclass
-class EnvParams:
+class EnvParams2D:
     max_speed: float = 8.0
-    max_torque: float = 0.012
+    max_bodyrate: float = 60.0 # TODO check this value
     max_thrust: float = 0.8
     dt: float = 0.02
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
     I: float = 2.0e-5  # moment of inertia
-    mo: float = 0.005  # mass of the object attached to the rod
-    l: float = 0.3  # length of the rod
-    delta_yh: float = 0.03  # y displacement of the hook from the quadrotor center
-    delta_zh: float = -0.06  # z displacement of the hook from the quadrotor center
-    max_steps_in_episode: int = 300
-    rope_taut_therehold: float = 1e-4
     traj_obs_len: int = 5
     traj_obs_gap: int = 5
+    max_steps_in_episode: int = 300
 
 
 @struct.dataclass
-class Action:
+class Action2D:
     thrust: float
-    tau: float
+    roll_dot: float
 
 @struct.dataclass
 class EnvStateDual2D:
