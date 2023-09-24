@@ -73,7 +73,7 @@ class Quad2D(environment.Environment):
         params: EnvParams2D,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
         thrust = (action[0] + 1.0) / 2.0 * params.max_thrust
-        roll_dot = action[2] * params.max_bodyrate
+        roll_dot = action[1] * params.max_bodyrate
         env_action = Action2D(thrust=thrust, roll_dot=roll_dot)
 
         reward = self.reward_fn(state)
@@ -170,7 +170,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
     env_params = env.sample_params(rng_params)
     env_params = env.default_params # DEBUG
 
-    state_seq, obs_seq, reward_seq = [], [], []
+    state_seq, obs_seq, reward_seq, control_info_seq = [], [], [], []
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
 
@@ -184,7 +184,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
     while n_dones < repeat_times:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action = controller(obs, env_state, env_params, rng_act, control_params)
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
@@ -193,6 +193,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
             control_params = controller.update_params(env_params, control_params)
             n_dones += 1
 
+        control_info_seq.append(control_info)
         reward_seq.append(reward)
         obs_seq.append(obs)
         obs = next_obs
@@ -203,14 +204,10 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
     utils.plot_states(state_seq, obs_seq, reward_seq, env_params)
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
-    # save state_seq (which is a list of EnvState2D:flax.struct.dataclass)
-    # get package quadjax path
-
     # plot animation
     def update_plot(i):
-        # i = frame
         plt.gca().clear()
-        pos_array = np.asarray([s.pos for s in state_seq[:i]])
+        pos_array = np.asarray([s.pos for s in state_seq[:i+1]])
         tar_array = np.asarray([s.pos_tar for s in state_seq])
         plt.plot(pos_array[:, 0], pos_array[:, 1], "b", alpha=0.5)
         plt.plot(tar_array[:, 0], tar_array[:, 1], "r--", alpha = 0.3)
@@ -224,6 +221,11 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
             width=0.01,
             color="g",
         )
+        # plot the 95% confidence interval of the future control sequence
+        if control_info_seq[i] is not None:
+            pos_mean = control_info_seq[i]['pos_mean']
+            pos_std = control_info_seq[i]['pos_std']
+            plt.fill_between(pos_mean[:, 0], pos_mean[:, 1] - pos_std[:, 1], pos_mean[:, 1] + pos_std[:, 1], alpha=0.2, color='g')
         # plot y_tar and z_tar with red dot
         plt.plot(state_seq[i].pos_tar[0], state_seq[i].pos_tar[1], "ro")
         plt.xlabel("y")
@@ -270,8 +272,10 @@ def main(args: Args):
         )
         controller = controllers.FixedController(env)
     elif args.controller == 'mppi':
+        N = 8192 if not args.debug else 8
         H = 40
         sigma = 0.1
+        lam = 3e-3
         thrust_hover = env.default_params.m * env.default_params.g
         thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
         a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
@@ -279,17 +283,14 @@ def main(args: Args):
         a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
         a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
         control_params = controllers.MPPIParams(
-            lam = 3e-3,
-            H = H,
-            N = 8192 if not args.debug else 8,
-            gamma_mean = 0.0,
-            gamma_sigma = 0.1,
+            gamma_mean = 0.9,
+            gamma_sigma = 0.01,
             discount = 0.9,
             sample_sigma = sigma,
             a_mean = a_mean,
             a_cov = a_cov,
         )
-        controller = controllers.MPPIController2D(env)
+        controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     test_env(env, controller=controller, control_params=control_params, repeat_times=1)
