@@ -57,6 +57,7 @@ class Quad2D(environment.Environment):
             self.init_control_params = None
         elif 'mppi' in lower_controller:
             H = 40
+            N = 8
             sigma = 0.1
             # setup mppi control parameters
             thrust_hover = self.default_params.m * self.default_params.g
@@ -73,7 +74,7 @@ class Quad2D(environment.Environment):
                 a_mean = a_mean,
                 a_cov = a_cov,
             )
-            mppi_controller = controllers.MPPIController2D(env=self, N=8, H=H, lam=3e-3)
+            mppi_controller = controllers.MPPIController2D(env=self, N=N, H=H, lam=3e-3)
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
@@ -344,7 +345,7 @@ def main(args: Args):
         control_params = None
         controller = controllers.RandomController(env)
     elif args.controller == 'mppi':
-        N = 8192 if not args.debug else 16
+        N = 8192 if not args.debug else 8
         H = 40
         sigma = 0.1
         lam = 3e-3

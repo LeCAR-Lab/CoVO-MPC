@@ -307,6 +307,7 @@ def make_train(config):
 @pydataclass
 class Args:
     task: str = "tracking"
+    lower_controller: str = "base"
     test: bool = False
 
 
