@@ -238,6 +238,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1, determin
     env_params = env.default_params # DEBUG
 
     state_seq, obs_seq, reward_seq, control_info_seq = [], [], [], []
+    action_seq = []
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
 
@@ -265,6 +266,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1, determin
         control_info_seq.append(control_info)
         reward_seq.append(reward)
         obs_seq.append(obs)
+        action_seq.append(action)
         obs = next_obs
         env_state = next_env_state
     print(f"env running time: {time_module.time()-t0:.2f}s")
@@ -281,6 +283,11 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1, determin
         plt.plot(pos_array[:, 0], pos_array[:, 1], "b", alpha=0.5)
         plt.plot(tar_array[:, 0], tar_array[:, 1], "r--", alpha = 0.3)
 
+        # plot action with horizontal line in different colors at the top-left corner of the figure with large width
+        # the line start around at [0.5, y] and end at [0.5 + action*0.5, y], where y is different for each action
+        action_array = np.asarray(action_seq[i])
+        for j, a in enumerate(action_array):
+            plt.plot([0.5, 0.5 + a*0.5], [4.0 - j, 4.0 - j], color = 'C'+str(j), linewidth = 10)
         # quadrotor 0 with blue arrow
         plt.arrow(
             state_seq[i].pos[0],
