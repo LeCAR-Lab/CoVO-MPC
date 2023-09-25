@@ -18,6 +18,9 @@ class MPPIParams:
     a_mean: jnp.ndarray # mean of action
     a_cov: jnp.ndarray # covariance matrix of action
 
+    # adaptive parameters
+    mppi_mean_residue: jnp.ndarray # residue of mppi mean
+    mppi_cov_scale: jnp.ndarray # scale of mppi covariance
 
 class MPPIController2D(controllers.BaseController):
     def __init__(self, env, N: int, H: int, lam: float) -> None:
@@ -25,7 +28,6 @@ class MPPIController2D(controllers.BaseController):
         self.N = N # NOTE: N is the number of samples, set here as a static number
         self.H = H
         self.lam = lam
-
 
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, state: EnvState2D, env_params: EnvParams2D, rng_act: chex.PRNGKey, control_params: MPPIParams) -> jnp.ndarray:
@@ -48,7 +50,7 @@ class MPPIController2D(controllers.BaseController):
         rng_act, step_key = jax.random.split(rng_act)
         def rollout_fn(carry, action):
             state, params, reward_before, done_before = carry
-            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p))(state, action, params)
+            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env_wocontroller(step_key, s, a, p))(state, action, params)
             reward = jnp.where(done_before, reward_before, reward)
             return (state, params, reward, done | done_before), (reward, state.pos)
         # repeat state each element to match the sample size N
@@ -69,8 +71,10 @@ class MPPIController2D(controllers.BaseController):
 
         # update trajectory mean and covariance with weight
         a_mean = jnp.sum(weight[:, None, None] * a_sampled, axis=0) * control_params.gamma_mean + control_params.a_mean * (1 - control_params.gamma_mean)
+        a_mean_compensated = a_mean + control_params.mppi_mean_residue
         a_cov = jnp.sum(weight[:, None, None, None] * ((a_sampled - a_mean)[..., None] * (a_sampled - a_mean)[:, :, None, :]), axis=0) * control_params.gamma_sigma + control_params.a_cov * (1 - control_params.gamma_sigma)
-        control_params = control_params.replace(a_mean=a_mean, a_cov=a_cov)
+        a_cov_scaled = (control_params.mppi_cov_scale[:, None] @ control_params.mppi_cov_scale[None, :]) * a_cov
+        control_params = control_params.replace(a_mean=a_mean_compensated, a_cov=a_cov_scaled)
 
         # get action
         u = control_params.a_mean[0]

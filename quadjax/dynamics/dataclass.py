@@ -1,5 +1,6 @@
 from flax import struct
 from jax import numpy as jnp
+from typing import Optional
 
 def default_array(array):
     return struct.field(default_factory=lambda: jnp.array(array))
@@ -18,6 +19,7 @@ class EnvState2D:
     vel_tar: float
     time: int
 
+    control_params: Optional[struct.dataclass] = None
 
 @struct.dataclass
 class EnvParams2D:

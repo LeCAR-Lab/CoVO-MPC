@@ -17,4 +17,4 @@ class FixedController(controllers.BaseController):
         return control_params
     
     def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
-        return control_params.u
+        return control_params.u, control_params, None

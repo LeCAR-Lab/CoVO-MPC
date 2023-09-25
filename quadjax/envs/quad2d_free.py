@@ -5,6 +5,7 @@ from gymnax.environments import environment, spaces
 from typing import Tuple, Optional
 import chex
 from functools import partial
+from flax import struct
 from dataclasses import dataclass as pydataclass
 import tyro
 import pickle
@@ -29,7 +30,7 @@ class Quad2D(environment.Environment):
     JAX Compatible version of Quad2D-v0 OpenAI gym environment. 
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'bodyrate'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'bodyrate', lower_controller: str = 'base'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -47,12 +48,64 @@ class Quad2D(environment.Environment):
             self.get_obs = self.get_obs_quadonly
         else:
             raise NotImplementedError
+        # controller function
+        if lower_controller == 'base':
+            def base_controller_fn(obs, state, env_params, rng_act, input_action):
+                return input_action, state.control_params, None
+            self.control_fn = base_controller_fn
+            self.action_dim = 2
+            self.init_control_params = None
+        elif lower_controller == 'mppi':
+            H = 40
+            sigma = 0.1
+            # setup mppi control parameters
+            thrust_hover = self.default_params.m * self.default_params.g
+            thrust_hover_normed = (thrust_hover / self.default_params.max_thrust) * 2.0 - 1.0
+            a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
+            a_mean = jnp.tile(a_mean_per_step, (H, 1))
+            a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
+            a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+            self.init_control_params = controllers.MPPIParams(
+                gamma_mean = 1.0,
+                gamma_sigma = 0.01,
+                discount = 0.9,
+                sample_sigma = sigma,
+                a_mean = a_mean,
+                a_cov = a_cov,
+                # adaptive parameters
+                mppi_cov_scale=jnp.ones(2),
+                mppi_mean_residue=jnp.zeros(2),
+            )
+            mppi_controller = controllers.MPPIController2D(env=self, N=8, H=H, lam=3e-3)
+            def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
+                control_params = state.control_params
+                # convert action to control parameters
+                prior_mean_residue = input_action[:2] * 0.1 # [-0.1, 0.1]
+                prior_cov_scale = input_action[2:4] * 0.1 + 1.0 # [0.9, 1.1]
+                mppi_mean_residue = input_action[4:6] * 0.1 # [-0.1, 0.1]
+                mppi_cov_scale = input_action[6:8] * 0.1 + 1.0 # [0.9, 1.1]
+
+                a_mean = control_params.a_mean + prior_mean_residue
+                a_cov = (prior_cov_scale[:, None] @ prior_cov_scale[None, :]) * control_params.a_cov
+                control_params = control_params.replace(
+                    a_mean=a_mean,
+                    a_cov=a_cov,
+                    mppi_mean_residue=mppi_mean_residue,
+                    mppi_cov_scale=mppi_cov_scale,
+                )
+
+                # update control parameters
+                action, control_params, control_info = mppi_controller(
+                    obs, state, env_params, rng_act, control_params)
+                return action, control_params, control_info
+            self.control_fn = mppi_controller_fn
+            self.action_dim = 8
+        else:
+            raise NotImplementedError
         # equibrium point
         self.equib = jnp.zeros(5)
         # RL parameters
-        self.action_dim = 2
         self.obs_dim = 29 + self.default_params.traj_obs_len * 4
-
 
     '''
     environment properties
@@ -72,14 +125,26 @@ class Quad2D(environment.Environment):
         action: jnp.ndarray,
         params: EnvParams2D,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
-        thrust = (action[0] + 1.0) / 2.0 * params.max_thrust
-        roll_dot = action[1] * params.max_bodyrate
+        # call controller to get sub_action and new_control_params
+        sub_action, new_control_params, control_info = self.control_fn(None, state, params, key, action)
+        state = state.replace(control_params = new_control_params)
+        # call substep_env to get next_obs, next_state, reward, done, info
+        return self.step_env_wocontroller(key, state, sub_action, params)
+
+    def step_env_wocontroller(
+        self,
+        key: chex.PRNGKey,
+        state: EnvState2D,
+        sub_action: jnp.ndarray,
+        params: EnvParams2D,
+    ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
+        thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
+        roll_dot = sub_action[1] * params.max_bodyrate
         env_action = Action2D(thrust=thrust, roll_dot=roll_dot)
 
         reward = self.reward_fn(state)
 
         next_state = self.step_fn(params, state, env_action)
-
         done = self.is_terminal(state, params)
         return (
             lax.stop_gradient(self.get_obs(next_state, params)),
@@ -114,6 +179,8 @@ class Quad2D(environment.Environment):
             last_thrust=0.0,last_roll_dot=0.0,
             # step
             time=0,
+            # control parameters
+            control_params=self.init_control_params,
         )
         return self.get_obs(state, params), state
 
@@ -182,7 +249,7 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
 
     t0 = time_module.time()
     while n_dones < repeat_times:
-        state_seq.append(env_state)
+        state_seq.append(env_state.replace(control_params=0.0))
         rng, rng_act, rng_step = jax.random.split(rng, 3)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
         next_obs, next_env_state, reward, done, info = env.step(
@@ -249,10 +316,11 @@ class Args:
     task: str = "tracking"
     dynamics: str = 'bodyrate'
     controller: str = 'lqr' # mppi
+    lower_controller: str = 'base' # mppi
     debug: bool = False
 
 def main(args: Args):
-    env = Quad2D(task=args.task, dynamics=args.dynamics)
+    env = Quad2D(task=args.task, dynamics=args.dynamics, lower_controller=args.lower_controller)
 
     print("starting test...")
     # enable NaN value detection
@@ -268,7 +336,7 @@ def main(args: Args):
         controller = controllers.LQRController2D(env)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
-            u = jnp.asarray([0.8, 0.0]),
+            u = jnp.zeros(env.action_dim)
         )
         controller = controllers.FixedController(env)
     elif args.controller == 'mppi':
@@ -283,12 +351,15 @@ def main(args: Args):
         a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
         a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
         control_params = controllers.MPPIParams(
-            gamma_mean = 0.9,
+            gamma_mean = 1.0,
             gamma_sigma = 0.01,
             discount = 0.9,
             sample_sigma = sigma,
             a_mean = a_mean,
             a_cov = a_cov,
+            # adaptive parameters
+            mppi_cov_scale=jnp.ones(2),
+            mppi_mean_residue=jnp.zeros(2),
         )
         controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
