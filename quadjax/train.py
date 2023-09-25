@@ -309,7 +309,7 @@ class Args:
     task: str = "tracking_zigzag"
     env: str = "quad2d_free"
     lower_controller: str = "base"
-    debuf: bool = False
+    debug: bool = False
 
 
 def main(args: Args):
