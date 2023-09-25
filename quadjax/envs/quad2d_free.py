@@ -125,6 +125,7 @@ class Quad2D(environment.Environment):
         action: jnp.ndarray,
         params: EnvParams2D,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
+        action = jnp.clip(action, -1.0, 1.0)
         # call controller to get sub_action and new_control_params
         sub_action, new_control_params, control_info = self.control_fn(None, state, params, key, action)
         state = state.replace(control_params = new_control_params)
