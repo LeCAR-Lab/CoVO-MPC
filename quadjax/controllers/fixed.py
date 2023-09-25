@@ -17,4 +17,4 @@ class FixedController(controllers.BaseController):
         return control_params
     
     def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
-        return jax.random.normal(rng_act, shape=(2,)) * 0.5, control_params, None
+        return control_params.u, control_params, None

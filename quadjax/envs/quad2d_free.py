@@ -55,7 +55,7 @@ class Quad2D(environment.Environment):
             self.control_fn = base_controller_fn
             self.action_dim = 2
             self.init_control_params = None
-        elif 'mppi' in lower_controller:
+        elif lower_controller == 'mppi':
             H = 40
             N = 8
             sigma = 0.1
@@ -93,10 +93,9 @@ class Quad2D(environment.Environment):
                 a_mean_compensated = control_params.a_mean[0] + mppi_mean_residue
                 a_cov_scaled = (mppi_cov_scale[:, None] @ mppi_cov_scale[None, :]) * control_params.a_cov[0]
                 a_sampled = jax.random.multivariate_normal(rng_act, a_mean_compensated, a_cov_scaled)
-                if 'eval' in lower_controller:
-                    action = a_mean_compensated
-                else:
-                    action = a_sampled
+                action = a_sampled
+                control_info['a_mean'] = a_mean_compensated
+                control_info['a_cov'] = a_cov_scaled
 
                 return action, control_params, control_info
             self.control_fn = mppi_controller_fn
@@ -253,6 +252,8 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1, determin
         state_seq.append(env_state.replace(control_params=0.0))
         rng, rng_act, rng_step = jax.random.split(rng, 3)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+        if 'a_mean' in control_info:
+            action = control_info['a_mean'] # evaluation only
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:

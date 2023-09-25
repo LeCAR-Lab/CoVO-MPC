@@ -306,7 +306,8 @@ def make_train(config):
 
 @pydataclass
 class Args:
-    task: str = "tracking"
+    task: str = "tracking_zigzag"
+    env: str = "quad2d_free"
     lower_controller: str = "base"
     test: bool = False
 
@@ -362,7 +363,13 @@ def main(args: Args):
         pickle.dump(runner_state[0].params, f)
 
     rng = jax.random.PRNGKey(1)
-    env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
+    
+    if args.env == 'dualquad2d':
+        env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
+        test_fn = quadjax.envs.dualquad2d.test_env
+    elif args.env == 'quad2d_free':
+        env = quadjax.envs.quad2d_free.Quad2D(task=args.task, lower_controller=args.lower_controller)
+        test_fn = quadjax.envs.quad2d_free.test_env
     apply_fn = runner_state[0].apply_fn
     params = runner_state[0].params
 
@@ -370,7 +377,7 @@ def main(args: Args):
 
     env.reset(rng)
     # test policy
-    quadjax.envs.dualquad2d.test_env(env = env, controller = controller, control_params = params, repeat_times = 3)
+    test_fn(env = env, controller = controller, control_params = params, repeat_times = 3)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))
