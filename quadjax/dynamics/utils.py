@@ -183,7 +183,7 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
 
 
 def generate_zigzag_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 50
+    point_per_seg = 20
     num_seg = max_steps // point_per_seg + 1
 
     key_keypoints = jax.random.split(key, num_seg)
