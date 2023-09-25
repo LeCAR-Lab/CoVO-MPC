@@ -229,7 +229,7 @@ class Quad2D(environment.Environment):
         return done
 
 
-def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
+def test_env(env: Quad2D, controller, control_params, repeat_times = 1, filename = ''):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -315,9 +315,9 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
 
     plt.figure(figsize=(4, 4))
     anim = FuncAnimation(plt.gcf(), update_plot, frames=len(state_seq), interval=1)
-    anim.save(filename=f"{quadjax.get_package_path()}/../results/anim.gif", writer="imagemagick", fps=int(1.0/env_params.dt))
+    anim.save(filename=f"{quadjax.get_package_path()}/../results/anim_{filename}.gif", writer="imagemagick", fps=int(1.0/env_params.dt))
     
-    with open(f"{quadjax.get_package_path()}/../results/state_seq.pkl", "wb") as f:
+    with open(f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb") as f:
         pickle.dump(state_seq, f)
 
 '''

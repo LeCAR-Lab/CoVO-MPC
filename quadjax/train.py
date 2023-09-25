@@ -362,9 +362,10 @@ def main(args: Args):
     # add training time to title
     fig.suptitle(f"training_time: {training_time:.2f} s")
     # save
-    plt.savefig(f"{quadjax.get_package_path()}/../results/ppo.png")
+    filename = f"{args.env}_{args.task}_{args.lower_controller}"
+    plt.savefig(f"{quadjax.get_package_path()}/../results/ppo_{filename}.png")
 
-    with open(f"{quadjax.get_package_path()}/../results/ppo_params.pkl", "wb") as f:
+    with open(f"{quadjax.get_package_path()}/../results/ppo_params_{filename}.pkl", "wb") as f:
         pickle.dump(runner_state[0].params, f)
 
     apply_fn = runner_state[0].apply_fn
@@ -373,7 +374,7 @@ def main(args: Args):
     controller = NetworkController(apply_fn)
 
     # test policy
-    test_fn(env = env, controller = controller, control_params = params, repeat_times = 3)
+    test_fn(env = env, controller = controller, control_params = params, repeat_times = 3, filename=filename)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))
