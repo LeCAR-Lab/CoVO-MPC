@@ -253,8 +253,9 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1, determin
         state_seq.append(env_state.replace(control_params=0.0))
         rng, rng_act, rng_step = jax.random.split(rng, 3)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
-        if 'a_mean' in control_info:
-            action = control_info['a_mean'] # evaluation only
+        if control_info is not None:
+            if 'a_mean' in control_info:
+                action = control_info['a_mean'] # evaluation only
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
@@ -284,10 +285,14 @@ def test_env(env: Quad2D, controller, control_params, repeat_times = 1, determin
         plt.plot(tar_array[:, 0], tar_array[:, 1], "r--", alpha = 0.3)
 
         # plot action with horizontal line in different colors at the top-left corner of the figure with large width
-        # the line start around at [0.5, y] and end at [0.5 + action*0.5, y], where y is different for each action
         action_array = np.asarray(action_seq[i])
+        # plot cube with conors at -2.0-> -1.0, 2.0-0.05*num_actions -> 2.0
+        plt.plot([-2.0, -1.0, -1.0, -2.0, -2.0], [2.0, 2.0, 2.0 - 0.05*len(action_array), 2.0 - 0.05*len(action_array), 2.0], color = 'k', linewidth = 1)
+        # the line start around at [0.5, y] and end at [0.5 + action*0.5, y], where y is different for each action
         for j, a in enumerate(action_array):
-            plt.plot([0.5, 0.5 + a*0.5], [4.0 - j, 4.0 - j], color = 'C'+str(j), linewidth = 10)
+            plt.plot([-1.5, -1.5 + a*0.5], [2.0 - j*0.05, 2.0 - j*0.05], color = 'C'+str(j), linewidth = 3)
+        # plot vertical line at x=-1.5, y from 2.0 to 2.0-0.05*num_actions
+        plt.plot([-1.5, -1.5], [2.0, 2.0 - 0.05*len(action_array)], color = 'k', linewidth = 1)
         # quadrotor 0 with blue arrow
         plt.arrow(
             state_seq[i].pos[0],
@@ -378,7 +383,7 @@ def main(args: Args):
         controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
-    test_env(env, controller=controller, control_params=control_params, repeat_times=3, deterministic=args.deterministic)
+    test_env(env, controller=controller, control_params=control_params, repeat_times=1, deterministic=args.deterministic)
 
 
 if __name__ == "__main__":
