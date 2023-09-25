@@ -74,14 +74,13 @@ class Transition(NamedTuple):
     info: jnp.ndarray
 
 
-def make_train(config):
+def make_train(env, config):
     config["NUM_UPDATES"] = int(
         config["TOTAL_TIMESTEPS"] // config["NUM_STEPS"] // config["NUM_ENVS"]
     )
     config["MINIBATCH_SIZE"] = (
         config["NUM_ENVS"] * config["NUM_STEPS"] // config["NUM_MINIBATCHES"]
     )
-    env = quadjax.envs.dualquad2d.DualQuad2D(config["task"])
     env = LogWrapper(env)
 
     def linear_schedule(count):
@@ -332,7 +331,13 @@ def main(args: Args):
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
-    train_fn = make_train(config)
+    if args.env == 'dualquad2d':
+        env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
+        test_fn = quadjax.envs.dualquad2d.test_env
+    elif args.env == 'quad2d_free':
+        env = quadjax.envs.quad2d_free.Quad2D(task=args.task, lower_controller=args.lower_controller)
+        test_fn = quadjax.envs.quad2d_free.test_env
+    train_fn = make_train(env, config)
 
     t0 = time.time()
     runner_state, metric = jax.block_until_ready(train_fn(rng))
@@ -362,20 +367,11 @@ def main(args: Args):
     with open(f"{quadjax.get_package_path()}/../results/ppo_params.pkl", "wb") as f:
         pickle.dump(runner_state[0].params, f)
 
-    rng = jax.random.PRNGKey(1)
-    
-    if args.env == 'dualquad2d':
-        env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
-        test_fn = quadjax.envs.dualquad2d.test_env
-    elif args.env == 'quad2d_free':
-        env = quadjax.envs.quad2d_free.Quad2D(task=args.task, lower_controller=args.lower_controller)
-        test_fn = quadjax.envs.quad2d_free.test_env
     apply_fn = runner_state[0].apply_fn
     params = runner_state[0].params
 
     controller = NetworkController(apply_fn)
 
-    env.reset(rng)
     # test policy
     test_fn(env = env, controller = controller, control_params = params, repeat_times = 3)
 

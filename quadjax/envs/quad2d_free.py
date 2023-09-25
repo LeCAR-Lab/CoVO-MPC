@@ -105,7 +105,7 @@ class Quad2D(environment.Environment):
         # equibrium point
         self.equib = jnp.zeros(5)
         # RL parameters
-        self.obs_dim = 29 + self.default_params.traj_obs_len * 4
+        self.obs_dim = 10 + self.default_params.traj_obs_len * 4
 
     '''
     environment properties
@@ -165,8 +165,6 @@ class Quad2D(environment.Environment):
         traj_key, pos_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
         pos_traj, vel_traj = self.generate_traj(traj_key)
-        pos_traj = pos_traj[..., :2]
-        vel_traj = vel_traj[..., :2]
         zeros2 = jnp.zeros(2)
         state = EnvState2D(
             # drone
@@ -230,7 +228,7 @@ class Quad2D(environment.Environment):
         return done
 
 
-def test_env(env: Quad2D, controller, control_params, repeat_times = 1, deterministic = False):
+def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -332,7 +330,6 @@ class Args:
     controller: str = 'lqr' # mppi
     lower_controller: str = 'base' # mppi
     debug: bool = False
-    deterministic: bool = False
 
 def main(args: Args):
     env = Quad2D(task=args.task, dynamics=args.dynamics, lower_controller=args.lower_controller)
@@ -383,7 +380,7 @@ def main(args: Args):
         controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
-    test_env(env, controller=controller, control_params=control_params, repeat_times=1, deterministic=args.deterministic)
+    test_env(env, controller=controller, control_params=control_params, repeat_times=1)
 
 
 if __name__ == "__main__":
