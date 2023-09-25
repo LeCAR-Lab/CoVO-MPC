@@ -5,11 +5,7 @@ from flax import struct
 
 from quadjax import controllers
 
-@struct.dataclass
-class FixedParams:
-    u: jnp.ndarray
-
-class FixedController(controllers.BaseController):
+class RandomController(controllers.BaseController):
     def __init__(self, env) -> None:
         super().__init__(env)
 
@@ -17,4 +13,4 @@ class FixedController(controllers.BaseController):
         return control_params
     
     def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
-        return jax.random.normal(rng_act, shape=(2,)) * 0.5, control_params, None
+        return jax.random.normal(rng_act, (self.env.action_dim,))*0.3, control_params, None

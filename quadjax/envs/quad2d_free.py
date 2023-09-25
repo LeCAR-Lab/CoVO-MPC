@@ -35,10 +35,10 @@ class Quad2D(environment.Environment):
         self.task = task
         # reference trajectory function
         if task == "tracking":
-            self.generate_traj = partial(utils.generate_lissa_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.generate_traj = partial(utils.generate_lissa_traj_2d, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
         elif task == "tracking_zigzag":
-            self.generate_traj = partial(utils.generate_zigzag_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.generate_traj = partial(utils.generate_zigzag_traj_2d, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
         else:
             raise NotImplementedError
@@ -55,7 +55,7 @@ class Quad2D(environment.Environment):
             self.control_fn = base_controller_fn
             self.action_dim = 2
             self.init_control_params = None
-        elif lower_controller == 'mppi':
+        elif 'mppi' in lower_controller:
             H = 40
             sigma = 0.1
             # setup mppi control parameters
@@ -72,31 +72,31 @@ class Quad2D(environment.Environment):
                 sample_sigma = sigma,
                 a_mean = a_mean,
                 a_cov = a_cov,
-                # adaptive parameters
-                mppi_cov_scale=jnp.ones(2),
-                mppi_mean_residue=jnp.zeros(2),
             )
             mppi_controller = controllers.MPPIController2D(env=self, N=8, H=H, lam=3e-3)
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
-                prior_mean_residue = input_action[:2] * 0.1 # [-0.1, 0.1]
-                prior_cov_scale = input_action[2:4] * 0.1 + 1.0 # [0.9, 1.1]
+                prior_mean_residue = input_action[:2] * 0.2 # [-0.1, 0.1]
+                prior_cov_scale = input_action[2:4] * 0.2 + 1.0 # [0.9, 1.1]
                 mppi_mean_residue = input_action[4:6] * 0.1 # [-0.1, 0.1]
                 mppi_cov_scale = input_action[6:8] * 0.1 + 1.0 # [0.9, 1.1]
-
                 a_mean = control_params.a_mean + prior_mean_residue
                 a_cov = (prior_cov_scale[:, None] @ prior_cov_scale[None, :]) * control_params.a_cov
-                control_params = control_params.replace(
-                    a_mean=a_mean,
-                    a_cov=a_cov,
-                    mppi_mean_residue=mppi_mean_residue,
-                    mppi_cov_scale=mppi_cov_scale,
-                )
+                control_params = control_params.replace(a_mean=a_mean,a_cov=a_cov)
 
                 # update control parameters
-                action, control_params, control_info = mppi_controller(
+                _, control_params, control_info = mppi_controller(
                     obs, state, env_params, rng_act, control_params)
+                
+                a_mean_compensated = control_params.a_mean[0] + mppi_mean_residue
+                a_cov_scaled = (mppi_cov_scale[:, None] @ mppi_cov_scale[None, :]) * control_params.a_cov[0]
+                a_sampled = jax.random.multivariate_normal(rng_act, a_mean_compensated, a_cov_scaled)
+                if 'eval' in lower_controller:
+                    action = a_mean_compensated
+                else:
+                    action = a_sampled
+
                 return action, control_params, control_info
             self.control_fn = mppi_controller_fn
             self.action_dim = 8
@@ -230,7 +230,7 @@ class Quad2D(environment.Environment):
         return done
 
 
-def test_env(env: Quad2D, controller, control_params, repeat_times = 1):
+def test_env(env: Quad2D, controller, control_params, repeat_times = 1, deterministic = False):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -318,6 +318,7 @@ class Args:
     controller: str = 'lqr' # mppi
     lower_controller: str = 'base' # mppi
     debug: bool = False
+    deterministic: bool = False
 
 def main(args: Args):
     env = Quad2D(task=args.task, dynamics=args.dynamics, lower_controller=args.lower_controller)
@@ -339,17 +340,24 @@ def main(args: Args):
             u = jnp.zeros(env.action_dim)
         )
         controller = controllers.FixedController(env)
+    elif args.controller == 'random':
+        control_params = None
+        controller = controllers.RandomController(env)
     elif args.controller == 'mppi':
-        N = 8192 if not args.debug else 8
+        N = 8192 if not args.debug else 16
         H = 40
         sigma = 0.1
         lam = 3e-3
-        thrust_hover = env.default_params.m * env.default_params.g
-        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
-        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
-        a_mean = jnp.tile(a_mean_per_step, (H, 1))
-        a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
-        a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+        if args.lower_controller == 'base':
+            thrust_hover = env.default_params.m * env.default_params.g
+            thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
+            a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
+            a_mean = jnp.tile(a_mean_per_step, (H, 1))
+            a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
+            a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+        elif args.lower_controller == 'mppi':
+            a_mean = jnp.zeros((H, env.action_dim))
+            a_cov = jnp.tile(jnp.diag(jnp.ones(env.action_dim)*(sigma**2)), (H, 1, 1))
         control_params = controllers.MPPIParams(
             gamma_mean = 1.0,
             gamma_sigma = 0.01,
@@ -357,14 +365,11 @@ def main(args: Args):
             sample_sigma = sigma,
             a_mean = a_mean,
             a_cov = a_cov,
-            # adaptive parameters
-            mppi_cov_scale=jnp.ones(2),
-            mppi_mean_residue=jnp.zeros(2),
         )
         controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
-    test_env(env, controller=controller, control_params=control_params, repeat_times=1)
+    test_env(env, controller=controller, control_params=control_params, repeat_times=3, deterministic=args.deterministic)
 
 
 if __name__ == "__main__":

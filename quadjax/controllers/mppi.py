@@ -18,10 +18,6 @@ class MPPIParams:
     a_mean: jnp.ndarray # mean of action
     a_cov: jnp.ndarray # covariance matrix of action
 
-    # adaptive parameters
-    mppi_mean_residue: jnp.ndarray # residue of mppi mean
-    mppi_cov_scale: jnp.ndarray # scale of mppi covariance
-
 class MPPIController2D(controllers.BaseController):
     def __init__(self, env, N: int, H: int, lam: float) -> None:
         super().__init__(env)
@@ -71,10 +67,8 @@ class MPPIController2D(controllers.BaseController):
 
         # update trajectory mean and covariance with weight
         a_mean = jnp.sum(weight[:, None, None] * a_sampled, axis=0) * control_params.gamma_mean + control_params.a_mean * (1 - control_params.gamma_mean)
-        a_mean_compensated = a_mean + control_params.mppi_mean_residue
         a_cov = jnp.sum(weight[:, None, None, None] * ((a_sampled - a_mean)[..., None] * (a_sampled - a_mean)[:, :, None, :]), axis=0) * control_params.gamma_sigma + control_params.a_cov * (1 - control_params.gamma_sigma)
-        a_cov_scaled = (control_params.mppi_cov_scale[:, None] @ control_params.mppi_cov_scale[None, :]) * a_cov
-        control_params = control_params.replace(a_mean=a_mean_compensated, a_cov=a_cov_scaled)
+        control_params = control_params.replace(a_mean=a_mean, a_cov=a_cov)
 
         # get action
         u = control_params.a_mean[0]
