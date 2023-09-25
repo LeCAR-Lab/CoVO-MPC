@@ -309,17 +309,17 @@ class Args:
     task: str = "tracking_zigzag"
     env: str = "quad2d_free"
     lower_controller: str = "base"
-    test: bool = False
+    debuf: bool = False
 
 
 def main(args: Args):
     config = {
         "LR": 3e-4,
-        "NUM_ENVS": 4096 if not args.test else 1,
-        "NUM_STEPS": 300 if not args.test else 100,
-        "TOTAL_TIMESTEPS": 1.6e8 if not args.test else 1e3,
+        "NUM_ENVS": 4096 if not args.debug else 1,
+        "NUM_STEPS": 300 if not args.debug else 100,
+        "TOTAL_TIMESTEPS": 1.6e8 if not args.debug else 1e3,
         "UPDATE_EPOCHS": 2,
-        "NUM_MINIBATCHES": 320 if not args.test else 1,
+        "NUM_MINIBATCHES": 320 if not args.debug else 1,
         "GAMMA": 0.99,
         "GAE_LAMBDA": 0.95,
         "CLIP_EPS": 0.2,
