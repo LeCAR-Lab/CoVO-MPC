@@ -4,8 +4,11 @@ from flax import struct
 from functools import partial
 from jax import lax
 from jax import numpy as jnp
+import pickle
 
 from quadjax import controllers
+from quadjax.dynamics import EnvParams2D, EnvState2D, geom
+from quadjax.train import ActorCritic
 
 @struct.dataclass
 class MPPIParams:
@@ -23,6 +26,11 @@ class MPPIController2D(controllers.BaseController):
         self.N = N # NOTE: N is the number of samples, set here as a static number
         self.H = H
         self.lam = lam
+        # network = ActorCritic(2, activation='tanh')
+        # self.apply_fn = network.apply
+        # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
+        #     self.network_params = pickle.load(f)
+
 
 
     @partial(jax.jit, static_argnums=(0,))
