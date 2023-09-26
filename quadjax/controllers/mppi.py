@@ -17,7 +17,7 @@ class MPPIParams:
     a_mean: jnp.ndarray # mean of action
     a_cov: jnp.ndarray # covariance matrix of action
 
-class MPPIController(controllers.BaseController):
+class MPPIController2D(controllers.BaseController):
     def __init__(self, env, control_params, N: int, H: int, lam: float) -> None:
         super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of samples, set here as a static number

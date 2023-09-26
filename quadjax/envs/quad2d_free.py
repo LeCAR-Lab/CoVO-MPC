@@ -57,7 +57,7 @@ class Quad2D(environment.Environment):
             self.init_control_params = None
         elif lower_controller == 'mppi':
             H = 32
-            N = 32
+            N = 128
             sigma = 0.1
             # setup mppi control parameters
             thrust_hover = self.default_params.m * self.default_params.g
@@ -407,13 +407,11 @@ def main(args: Args):
         if args.controller_params == '':
             N = 128
             H = 32
-            lam = 3e-3
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(args.controller_params.split('_')[0][1:])
             H = int(args.controller_params.split('_')[1][1:])
-            lam = float(args.controller_params.split('_')[2][3:])
-            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}')
+            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}')
         if args.debug:
             N  = 8
             print('[DEBUG] N = 8')
@@ -435,13 +433,13 @@ def main(args: Args):
             a_mean = a_mean,
             a_cov = a_cov,
         )
-        controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
+        controller = controllers.MPPIController2D(env=env, control_params=control_params, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     
     filename = f'{args.controller}_{args.controller_params}'
     if args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=2, filename=filename)
     elif args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
     else:
