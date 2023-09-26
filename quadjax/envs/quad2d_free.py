@@ -391,6 +391,9 @@ def main(args: Args):
         controller = controllers.LQRController2D(env, control_params)
         control_params = controller.update_params(env.default_params, control_params)
         controller.init_control_params = control_params
+        # print control_params.K with , delimiter
+        # np.savetxt(f"{quadjax.get_package_path()}/../results/K_{args.controller_params}.csv", control_params.K, delimiter=",")
+        # exit()
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
             u = jnp.zeros(env.action_dim)

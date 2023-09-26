@@ -4,9 +4,11 @@ from flax import struct
 from functools import partial
 from jax import lax
 from jax import numpy as jnp
+import pickle
 
 from quadjax import controllers
-from quadjax.dynamics import EnvParams2D, EnvState2D
+from quadjax.dynamics import EnvParams2D, EnvState2D, geom
+from quadjax.train import ActorCritic
 
 @struct.dataclass
 class MPPIParams:
@@ -24,14 +26,32 @@ class MPPIController2D(controllers.BaseController):
         self.N = N # NOTE: N is the number of samples, set here as a static number
         self.H = H
         self.lam = lam
+        # network = ActorCritic(2, activation='tanh')
+        # self.apply_fn = network.apply
+        # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
+        #     self.network_params = pickle.load(f)
+
 
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, state: EnvState2D, env_params: EnvParams2D, rng_act: chex.PRNGKey, control_params: MPPIParams) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov
+
         control_params = control_params.replace(a_mean=jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]]),
                                                  a_cov=jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]]))
+        
+        # # rollout with given controller to get action mean
+        # rng_act, step_key = jax.random.split(rng_act)
+        # def reference_rollout_fn(carry, action):
+        #     obs, state, params = carry
+        #     action = self.apply_fn(self.network_params, obs)[0].mean()
+        #     obs, state, _, _, _ = self.env.step_env_wocontroller(step_key, state, action, params)
+        #     return (obs, state, params), action
+        # _, a_mean = lax.scan(reference_rollout_fn, (obs, state, env_params), None, length=self.H)
+        # control_params = control_params.replace(a_mean=a_mean,
+        #                                          a_cov=jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]]))
+
 
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)
