@@ -19,8 +19,8 @@ class MPPIParams:
     a_cov: jnp.ndarray # covariance matrix of action
 
 class MPPIController2D(controllers.BaseController):
-    def __init__(self, env, N: int, H: int, lam: float) -> None:
-        super().__init__(env)
+    def __init__(self, env, control_params, N: int, H: int, lam: float) -> None:
+        super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of samples, set here as a static number
         self.H = H
         self.lam = lam

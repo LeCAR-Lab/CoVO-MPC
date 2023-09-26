@@ -56,8 +56,8 @@ class Quad2D(environment.Environment):
             self.action_dim = 2
             self.init_control_params = None
         elif lower_controller == 'mppi':
-            H = 40
-            N = 8
+            H = 32
+            N = 128
             sigma = 0.1
             # setup mppi control parameters
             thrust_hover = self.default_params.m * self.default_params.g
@@ -241,13 +241,19 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
 
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params = carry
-        rng, rng_act, rng_step = jax.random.split(rng, 3)
+        rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
         if control_info is not None:
             if 'a_mean' in control_info:
                 action = control_info['a_mean']
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
+        # if done, reset controller parameters, aviod use if, use lax.cond instead
+        new_control_params = controller.reset()
+        # new_control_params = new_control_params.replace(
+        #     a_mean = jax.random.uniform(rng_control, shape=control_params.a_mean.shape, minval=-1.0, maxval=1.0),
+        # )
+        control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
         return (next_obs, next_env_state, rng, env_params, control_params), info['err_pos']
     
     t0 = time_module.time()
@@ -257,7 +263,7 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
 
     # save data
     with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
-        pickle.dump(err_pos, f)
+        pickle.dump(np.array(err_pos), f)
 
 def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filename = ''):
     # running environment
@@ -290,6 +296,7 @@ def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filena
         if done:
             rng, rng_params = jax.random.split(rng)
             env_params = env.sample_params(rng_params)
+            control_params = controller.reset()
             control_params = controller.update_params(env_params, control_params)
             n_dones += 1
 
@@ -392,12 +399,13 @@ def main(args: Args):
         sigma = 0.1
         lam = 3e-3
         if args.controller_params == '':
-            N = 8192
-            H = 40
+            N = 128
+            H = 32
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(args.controller_params.split('_')[0][1:])
             H = int(args.controller_params.split('_')[1][1:])
+            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}')
         if args.debug:
             N  = 8
             print('[DEBUG] N = 8')
@@ -419,13 +427,13 @@ def main(args: Args):
             a_mean = a_mean,
             a_cov = a_cov,
         )
-        controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
+        controller = controllers.MPPIController2D(env=env, control_params=control_params, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     
     filename = f'{args.controller}_{args.controller_params}'
     if args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=2, filename=filename)
     elif args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
     else:
