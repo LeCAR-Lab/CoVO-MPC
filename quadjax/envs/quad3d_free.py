@@ -204,7 +204,7 @@ class Quad3D(environment.Environment):
         return done
 
 
-def test_env(env: Quad3D, controller, control_params, repeat_times = 1):
+def render_env(env: Quad3D, controller, control_params, repeat_times = 1):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -282,7 +282,7 @@ def main(args: Args):
         controller = controllers.FixedController(env)
     else:
         raise NotImplementedError
-    test_env(env, controller=controller, control_params=control_params, repeat_times=1)
+    render_env(env, controller=controller, control_params=control_params, repeat_times=1)
 
 
 if __name__ == "__main__":

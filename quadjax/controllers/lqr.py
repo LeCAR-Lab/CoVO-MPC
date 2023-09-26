@@ -53,7 +53,7 @@ class LQRController2D(controllers.BaseController):
         thrust_hover = env_params.m * env_params.g
         thrust_hover_normed = (thrust_hover / env_params.max_thrust) * 2.0 - 1.0
         u = jnp.asarray([thrust_hover_normed, 0.0]) - control_params.K @ delta_x
-        return u, control_params
+        return u, control_params, None
     
 class LQRController(controllers.BaseController):
     def __init__(self, env) -> None:
@@ -102,4 +102,4 @@ class LQRController(controllers.BaseController):
         thrust_hover = env_params.m * env_params.g
         thrust_hover_normed = (thrust_hover / env_params.max_thrust) * 2.0 - 1.0
         u = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0]) - control_params.K @ delta_x
-        return u, control_params
+        return u, control_params, None

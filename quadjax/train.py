@@ -333,10 +333,10 @@ def main(args: Args):
     t0 = time.time()
     if args.env == 'dualquad2d':
         env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
-        test_fn = quadjax.envs.dualquad2d.test_env
+        test_fn = quadjax.envs.dualquad2d.render_env
     elif args.env == 'quad2d_free':
         env = quadjax.envs.quad2d_free.Quad2D(task=args.task, lower_controller=args.lower_controller)
-        test_fn = quadjax.envs.quad2d_free.test_env
+        test_fn = quadjax.envs.quad2d_free.render_env
     train_fn = make_train(env, config)
 
     t0 = time.time()

@@ -370,7 +370,7 @@ class Quad3D(environment.Environment):
         )
 
 
-def test_env(env: Quad3D, policy):
+def render_env(env: Quad3D, policy):
     # running environment
     t0 = time_module.time()
     rng = jax.random.PRNGKey(1)
@@ -561,7 +561,7 @@ def main(args: Args):
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    test_env(env, policy=fixed_policy)
+    render_env(env, policy=fixed_policy)
 
 
 if __name__ == "__main__":

@@ -370,7 +370,7 @@ class Quad2D(environment.Environment):
             }
         )
 
-def test_env(env: Quad2D, policy, render_video=False):
+def render_env(env: Quad2D, policy, render_video=False):
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
@@ -567,7 +567,7 @@ def main(args: Args):
 
     print('starting test...')
     # with jax.disable_jit():
-    test_env(env, policy=pid_policy, render_video=args.render)
+    render_env(env, policy=pid_policy, render_video=args.render)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

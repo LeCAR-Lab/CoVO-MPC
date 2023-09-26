@@ -16,7 +16,7 @@ import pickle
 import GPUtil
 
 import quadjax
-from quadjax.envs import Quad3D, test_env
+from quadjax.envs import Quad3D, render_env
 from quadjax.controllers import NetworkController
 
 class ActorCritic(nn.Module):
@@ -369,7 +369,7 @@ def main(args: Args):
 
     env.reset(rng)
     # test policy
-    test_env(env = env, controller = controller, control_params = params, repeat_times = 3)
+    render_env(env = env, controller = controller, control_params = params, repeat_times = 3)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

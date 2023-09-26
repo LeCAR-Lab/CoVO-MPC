@@ -286,7 +286,7 @@ class DualQuad2D(environment.Environment):
         )
         return done
 
-def test_env(env, controller, control_params = None, repeat_times = 3):
+def render_env(env, controller, control_params = None, repeat_times = 3):
     render_video = True
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -478,7 +478,7 @@ def main(args: Args):
 
     print('starting test...')
     # with jax.disable_jit():
-    test_env(env, policy=pid_policy, render_video=args.render)
+    render_env(env, policy=pid_policy, render_video=args.render)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

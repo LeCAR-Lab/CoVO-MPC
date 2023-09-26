@@ -229,7 +229,7 @@ class Quad2D(environment.Environment):
         return done
 
 
-def test_env(env: Quad2D, controller, control_params, repeat_times = 1, filename = ''):
+def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filename = ''):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -381,7 +381,7 @@ def main(args: Args):
         controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
-    test_env(env, controller=controller, control_params=control_params, repeat_times=1)
+    render_env(env, controller=controller, control_params=control_params, repeat_times=1)
 
 
 if __name__ == "__main__":
