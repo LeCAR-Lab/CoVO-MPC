@@ -228,6 +228,36 @@ class Quad2D(environment.Environment):
             | (jnp.abs(state.pos) > 3.0).any()
         return done
 
+def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filename = ''):
+    # running environment
+    rng = jax.random.PRNGKey(1)
+    rng, rng_params = jax.random.split(rng)
+    env_params = env.default_params
+
+    rng, rng_reset = jax.random.split(rng)
+    obs, env_state = env.reset(rng_reset, env_params)
+
+    control_params = controller.update_params(env_params, control_params)
+
+    def run_one_step(carry, _):
+        obs, env_state, rng, env_params, control_params = carry
+        rng, rng_act, rng_step = jax.random.split(rng, 3)
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+        if control_info is not None:
+            if 'a_mean' in control_info:
+                action = control_info['a_mean']
+        next_obs, next_env_state, reward, done, info = env.step(
+            rng_step, env_state, action, env_params)
+        return (next_obs, next_env_state, rng, env_params, control_params), info['err_pos']
+    
+    t0 = time_module.time()
+    (obs, env_state, rng, env_params, control_params), err_pos = lax.scan(
+        run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))
+    print(f"env running time: {time_module.time()-t0:.2f}s")
+
+    # save data
+    with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
+        pickle.dump(err_pos, f)
 
 def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filename = ''):
     # running environment
@@ -326,9 +356,12 @@ reward function here.
 
 @pydataclass
 class Args:
-    task: str = "tracking"
+    mode: str = "render"
+    task: str = "tracking_zigzag"
     dynamics: str = 'bodyrate'
     controller: str = 'lqr' # mppi
+    # controller parameter, character + number + character + number + ...
+    controller_params: str = ''
     lower_controller: str = 'base' # mppi
     debug: bool = False
 
@@ -356,10 +389,18 @@ def main(args: Args):
         control_params = None
         controller = controllers.RandomController(env)
     elif args.controller == 'mppi':
-        N = 8192 if not args.debug else 8
-        H = 40
         sigma = 0.1
         lam = 3e-3
+        if args.controller_params == '':
+            N = 8192
+            H = 40
+        else:
+            # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
+            N = int(args.controller_params.split('_')[0][1:])
+            H = int(args.controller_params.split('_')[1][1:])
+        if args.debug:
+            N  = 8
+            print('[DEBUG] N = 8')
         if args.lower_controller == 'base':
             thrust_hover = env.default_params.m * env.default_params.g
             thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
@@ -381,7 +422,14 @@ def main(args: Args):
         controller = controllers.MPPIController2D(env=env, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
-    render_env(env, controller=controller, control_params=control_params, repeat_times=1)
+    
+    filename = f'{args.controller}_{args.controller_params}'
+    if args.mode == 'render':
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
+    elif args.mode == 'eval':
+        eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
+    else:
+        raise NotImplementedError
 
 
 if __name__ == "__main__":
