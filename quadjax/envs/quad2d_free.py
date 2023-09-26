@@ -435,7 +435,7 @@ def main(args: Args):
     
     filename = f'{args.controller}_{args.controller_params}'
     if args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=2, filename=filename)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
     elif args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
     else:

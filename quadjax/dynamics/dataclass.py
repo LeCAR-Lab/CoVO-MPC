@@ -30,8 +30,8 @@ class EnvParams2D:
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
     I: float = 2.0e-5  # moment of inertia
-    traj_obs_len: int = 5
-    traj_obs_gap: int = 5
+    traj_obs_len: int = 8
+    traj_obs_gap: int = 2
     max_steps_in_episode: int = 300
 
 
