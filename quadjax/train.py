@@ -333,10 +333,11 @@ def main(args: Args):
     t0 = time.time()
     if args.env == 'dualquad2d':
         env = quadjax.envs.dualquad2d.DualQuad2D(task=args.task)
-        test_fn = quadjax.envs.dualquad2d.render_env
+        render_fn = quadjax.envs.dualquad2d.render_env
     elif args.env == 'quad2d_free':
         env = quadjax.envs.quad2d_free.Quad2D(task=args.task, lower_controller=args.lower_controller)
-        test_fn = quadjax.envs.quad2d_free.render_env
+        render_fn = quadjax.envs.quad2d_free.render_env
+        eval_fn = quadjax.envs.quad2d_free.eval_env
     train_fn = make_train(env, config)
 
     t0 = time.time()
@@ -371,10 +372,11 @@ def main(args: Args):
     apply_fn = runner_state[0].apply_fn
     params = runner_state[0].params
 
-    controller = NetworkController(apply_fn)
+    controller = NetworkController(apply_fn, env, control_params=params)
 
     # test policy
-    test_fn(env = env, controller = controller, control_params = params, repeat_times = 3, filename=filename)
+    eval_fn(env = env, controller = controller, control_params = params, total_steps=3e4, filename=filename)
+    render_fn(env = env, controller = controller, control_params = params, repeat_times = 3, filename=filename)
 
 if __name__ == "__main__":
     main(tyro.cli(Args))

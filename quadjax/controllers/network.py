@@ -5,7 +5,8 @@ from functools import partial
 from quadjax import controllers
 
 class NetworkController(controllers.BaseController):
-    def __init__(self, apply_fn) -> None:
+    def __init__(self, apply_fn, env, control_params) -> None:
+        super().__init__(env, control_params)
         self.apply_fn = apply_fn
 
     # @partial(jax.jit, static_argnums=(0,))

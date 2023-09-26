@@ -57,7 +57,7 @@ class Quad2D(environment.Environment):
             self.init_control_params = None
         elif lower_controller == 'mppi':
             H = 32
-            N = 128
+            N = 32
             sigma = 0.1
             # setup mppi control parameters
             thrust_hover = self.default_params.m * self.default_params.g
@@ -78,10 +78,11 @@ class Quad2D(environment.Environment):
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
-                prior_mean_residue = input_action[:2] * 0.2 # [-0.1, 0.1]
-                prior_cov_scale = input_action[2:4] * 0.2 + 1.0 # [0.9, 1.1]
-                mppi_mean_residue = input_action[4:6] * 0.1 # [-0.1, 0.1]
-                mppi_cov_scale = input_action[6:8] * 0.1 + 1.0 # [0.9, 1.1]
+                prior_mean_residue = input_action[:2] * 0.4 # [-0.1, 0.1]
+                prior_cov_scale = input_action[2:4] * 0.4 + 1.0 # [0.9, 1.1]
+                mppi_mean_residue = input_action[4:6] * 1.0 # [-0.1, 0.1]
+                mppi_cov_scale = input_action[6:8] * 0.45 + 0.55 # [0.9, 1.1]
+
                 a_mean = control_params.a_mean + prior_mean_residue
                 a_cov = (prior_cov_scale[:, None] @ prior_cov_scale[None, :]) * control_params.a_cov
                 control_params = control_params.replace(a_mean=a_mean,a_cov=a_cov)
@@ -139,6 +140,7 @@ class Quad2D(environment.Environment):
         sub_action: jnp.ndarray,
         params: EnvParams2D,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
+        sub_action = jnp.clip(sub_action, -1.0, 1.0)
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
         roll_dot = sub_action[1] * params.max_bodyrate
         env_action = Action2D(thrust=thrust, roll_dot=roll_dot)
