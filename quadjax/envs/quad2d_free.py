@@ -57,7 +57,7 @@ class Quad2D(environment.Environment):
             self.init_control_params = None
         elif lower_controller == 'mppi':
             H = 32
-            N = 128
+            N = 32
             sigma = 0.1
             # setup mppi control parameters
             thrust_hover = self.default_params.m * self.default_params.g
