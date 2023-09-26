@@ -18,8 +18,8 @@ class LQRParams:
     K: jnp.ndarray
 
 class LQRController2D(controllers.BaseController):
-    def __init__(self, env) -> None:
-        super().__init__(env)
+    def __init__(self, env, control_params) -> None:
+        super().__init__(env, control_params)
         def normed_dynamics_fn(x, u_normed, env_params, dt):
             '''
             dynamics for controller (normalization, esitimation etc. )

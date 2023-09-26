@@ -10,8 +10,8 @@ class FixedParams:
     u: jnp.ndarray
 
 class FixedController(controllers.BaseController):
-    def __init__(self, env) -> None:
-        super().__init__(env)
+    def __init__(self, env, control_params) -> None:
+        super().__init__(env, control_params)
 
     def update_params(self, env_params, control_params):
         return control_params

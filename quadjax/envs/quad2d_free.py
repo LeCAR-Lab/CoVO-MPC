@@ -74,7 +74,7 @@ class Quad2D(environment.Environment):
                 a_mean = a_mean,
                 a_cov = a_cov,
             )
-            mppi_controller = controllers.MPPIController2D(env=self, N=N, H=H, lam=3e-3)
+            mppi_controller = controllers.MPPIController2D(env=self, control_params=self.init_control_params, N=N, H=H, lam=3e-3)
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
@@ -386,15 +386,17 @@ def main(args: Args):
             R = 0.03 * jnp.diag(jnp.ones(2)),
             K = jnp.zeros((2, 5)),
         )
-        controller = controllers.LQRController2D(env)
+        controller = controllers.LQRController2D(env, control_params)
+        control_params = controller.update_params(env.default_params, control_params)
+        controller.init_control_params = control_params
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
             u = jnp.zeros(env.action_dim)
         )
-        controller = controllers.FixedController(env)
+        controller = controllers.FixedController(env, control_params)
     elif args.controller == 'random':
         control_params = None
-        controller = controllers.RandomController(env)
+        controller = controllers.RandomController(env, control_params)
     elif args.controller == 'mppi':
         sigma = 0.1
         lam = 3e-3

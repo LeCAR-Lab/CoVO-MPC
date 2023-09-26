@@ -6,8 +6,8 @@ from flax import struct
 from quadjax import controllers
 
 class RandomController(controllers.BaseController):
-    def __init__(self, env) -> None:
-        super().__init__(env)
+    def __init__(self, env, control_params) -> None:
+        super().__init__(env, control_params)
 
     def update_params(self, env_params, control_params):
         return control_params
