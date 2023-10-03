@@ -74,6 +74,7 @@ class MPPIController2D(controllers.BaseController):
         env_params_repeat = jax.tree_map(lambda x: jnp.repeat(x[None, ...], self.N, axis=0), env_params)
         done_repeat = jnp.full(self.N, False)
         reward_repeat = jnp.full(self.N, 0.0)
+
         _, (rewards, poses) = lax.scan(rollout_fn, (state_repeat, env_params_repeat, reward_repeat, done_repeat), a_sampled.transpose(1,0,2), length=self.H)
         # get discounted reward sum over horizon (axis=1)
         rewards = rewards.transpose(1,0) # (H, N) -> (N, H)
@@ -83,6 +84,7 @@ class MPPIController2D(controllers.BaseController):
 
         # get trajectory weight
         cost_exp = jnp.exp(-(cost-jnp.min(cost)) / self.lam)
+
         weight = cost_exp / jnp.sum(cost_exp)
 
         # update trajectory mean and covariance with weight

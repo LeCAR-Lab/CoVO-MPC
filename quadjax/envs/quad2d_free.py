@@ -404,15 +404,16 @@ def main(args: Args):
         controller = controllers.RandomController(env, control_params)
     elif args.controller == 'mppi':
         sigma = 0.1
-        lam = 3e-3
         if args.controller_params == '':
             N = 128
             H = 32
+            lam = 3e-3
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(args.controller_params.split('_')[0][1:])
             H = int(args.controller_params.split('_')[1][1:])
-            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}')
+            lam = float(args.controller_params.split('_')[2][3:])
+            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}')
         if args.debug:
             N  = 8
             print('[DEBUG] N = 8')
