@@ -46,8 +46,8 @@ def set_frame(i, name, pos, quat):
 box = g.Box([1, 1, 1])
 vis["drone"].set_object(g.StlMeshGeometry.from_file('../assets/crazyflie2.stl'))
 vis["drone_frame"].set_object(g.StlMeshGeometry.from_file('../assets/axes.stl'))
-vis["obj"].set_object(g.Sphere(0.01))
-vis["obj_tar"].set_object(g.Sphere(0.03), material=g.MeshLambertMaterial(color=0xff0000))
+vis["obj"].set_object(g.Sphere(0.03), material=g.MeshLambertMaterial(color=0x0000ff))
+vis["obj_tar"].set_object(g.Sphere(0.01), material=g.MeshLambertMaterial(color=0xff0000))
 for i in range(0, 300, 5):
     # vis[f"traj{i}"].set_object(g.StlMeshGeometry.from_file(
     #     '../assets/arrow.stl'), material=g.MeshLambertMaterial(color=0xf000ff))
