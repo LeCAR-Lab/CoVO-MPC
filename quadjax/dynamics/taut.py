@@ -493,6 +493,7 @@ def get_taut_dynamics_3d():
         new_quat = geom.integrate_quat(env_state.quat, new_omega, env_params.dt)
         new_zeta_dot = env_state.zeta_dot + zeta_ddot * env_params.dt
         new_zeta = env_state.zeta + new_zeta_dot * env_params.dt
+        new_zeta = new_zeta / jnp.linalg.norm(new_zeta)
 
         # Update states list
         states_new = [

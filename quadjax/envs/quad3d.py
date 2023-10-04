@@ -424,8 +424,7 @@ def main(args: Args):
     # run env
     filename = f'{args.controller}_{args.controller_params}'
     if args.mode == 'render':
-        with jax.disable_jit():
-            render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
     elif args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
     else:
