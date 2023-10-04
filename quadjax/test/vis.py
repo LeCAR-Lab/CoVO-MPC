@@ -46,9 +46,9 @@ def set_frame(i, name, pos, quat):
 box = g.Box([1, 1, 1])
 vis["drone"].set_object(g.StlMeshGeometry.from_file('../assets/crazyflie2.stl'))
 vis["drone_frame"].set_object(g.StlMeshGeometry.from_file('../assets/axes.stl'))
-vis["obj"].set_object(g.Sphere(0.03), material=g.MeshLambertMaterial(color=0x0000ff))
-vis["obj_tar"].set_object(g.Sphere(0.01), material=g.MeshLambertMaterial(color=0xff0000))
-for i in range(0, 300, 5):
+vis["obj"].set_object(g.Sphere(0.02), material=g.MeshLambertMaterial(color=0x0000ff))
+vis["obj_tar"].set_object(g.Sphere(0.02), material=g.MeshLambertMaterial(color=0xff0000))
+for i in range(0, 300, 2):
     # vis[f"traj{i}"].set_object(g.StlMeshGeometry.from_file(
     #     '../assets/arrow.stl'), material=g.MeshLambertMaterial(color=0xf000ff))
     vis[f"traj{i}"].set_object(g.Sphere(0.01), material=g.MeshLambertMaterial(color=0x00ff00))
@@ -68,7 +68,7 @@ with open(file_path, "rb") as f:
 for i, state in enumerate(state_seq):
     if i % 20 == 0:
         # plot the trajectory by connecting the points in traj_x with lines
-        for j in range(0, 300, 5):
+        for j in range(0, 300, 2):
             set_frame(i, f'traj{j}', state_seq[i].pos_traj[j], np.array([0,0,0,1]))
     set_frame(i, 'drone', state.pos, state.quat)
     set_frame(i, 'drone_frame', state.pos, state.quat)

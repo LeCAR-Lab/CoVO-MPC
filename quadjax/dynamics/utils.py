@@ -114,7 +114,7 @@ def generate_lissa_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex
 
 
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 20
+    point_per_seg = 40
     num_seg = max_steps // point_per_seg + 1
 
     key_keypoints = jax.random.split(key, num_seg)
