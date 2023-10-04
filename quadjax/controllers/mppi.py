@@ -4,11 +4,8 @@ from flax import struct
 from functools import partial
 from jax import lax
 from jax import numpy as jnp
-import pickle
 
 from quadjax import controllers
-from quadjax.dynamics import EnvParams2D, EnvState2D, geom
-from quadjax.train import ActorCritic
 
 @struct.dataclass
 class MPPIParams:
@@ -20,20 +17,16 @@ class MPPIParams:
     a_mean: jnp.ndarray # mean of action
     a_cov: jnp.ndarray # covariance matrix of action
 
-class MPPIController2D(controllers.BaseController):
+class MPPIController(controllers.BaseController):
     def __init__(self, env, control_params, N: int, H: int, lam: float) -> None:
         super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of samples, set here as a static number
         self.H = H
         self.lam = lam
-        # network = ActorCritic(2, activation='tanh')
-        # self.apply_fn = network.apply
-        # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
-        #     self.network_params = pickle.load(f)
 
 
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs:jnp.ndarray, state: EnvState2D, env_params: EnvParams2D, rng_act: chex.PRNGKey, control_params: MPPIParams) -> jnp.ndarray:
+    def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov
@@ -59,7 +52,7 @@ class MPPIController2D(controllers.BaseController):
         def single_sample(key, traj_mean, traj_cov):
             return jax.vmap(lambda mean, cov: jax.random.multivariate_normal(key, mean, cov))(traj_mean, traj_cov)
         # repeat single_sample N times to get N samples
-        act_keys = jax.random.split(rng_act, self.N)
+        act_keys = jax.random.split(act_key, self.N)
         a_sampled = jax.vmap(single_sample, in_axes=(0, None, None))(act_keys, control_params.a_mean, control_params.a_cov)
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
         # rollout to get reward with lax.scan
@@ -70,8 +63,8 @@ class MPPIController2D(controllers.BaseController):
             reward = jnp.where(done_before, reward_before, reward)
             return (state, params, reward, done | done_before), (reward, state.pos)
         # repeat state each element to match the sample size N
-        state_repeat = jax.tree_map(lambda x: jnp.repeat(x[None, ...], self.N, axis=0), state)
-        env_params_repeat = jax.tree_map(lambda x: jnp.repeat(x[None, ...], self.N, axis=0), env_params)
+        state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), state)
+        env_params_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_params)
         done_repeat = jnp.full(self.N, False)
         reward_repeat = jnp.full(self.N, 0.0)
 

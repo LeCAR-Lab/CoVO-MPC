@@ -1,14 +1,14 @@
 from jax import numpy as jnp
 
 from quadjax.dynamics.utils import angle_normalize
-from quadjax.dynamics.dataclass import EnvParams, EnvState, Action, EnvParams3D, EnvState3D, Action3D
+from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.dynamics import geom
 
 
 def get_loose_dynamics():
 
     # dynamics (params, states) -> states_dot
-    def loose_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Action):
+    def loose_dynamics(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D):
         params = [env_params.m, env_params.I, env_params.g, env_params.l,
                   env_params.mo, env_params.delta_yh, env_params.delta_zh]
         states = [env_state.y, env_state.z, env_state.theta, env_state.phi,

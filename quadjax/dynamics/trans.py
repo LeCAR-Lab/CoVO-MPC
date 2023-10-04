@@ -1,8 +1,9 @@
 import sympy as sp
+import jax
 from jax import numpy as jnp
 
 from quadjax.dynamics.utils import angle_normalize
-from quadjax.dynamics.dataclass import EnvParams, EnvState, Action, EnvParams3D, EnvState3D, Action3D
+from quadjax.dynamics.dataclass import EnvParams2D, EnvState2D, Action2D, EnvParams3D, EnvState3D, Action3D
 
 
 def get_dynamic_transfer():
@@ -58,7 +59,7 @@ def get_dynamic_transfer():
     btrans_func = sp.lambdify(params+loose_state, btrans, modules='jax')
 
     # Define the function to compute A^-1 (x-b)
-    def loose2taut_transfer(env_params: EnvParams, loose_state: EnvState, loose2taut: bool):
+    def loose2taut_transfer(env_params: EnvParams2D, loose_state: EnvState2D, loose2taut: bool):
         params = [env_params.I, env_params.m, env_params.l,
                   env_params.mo, env_params.delta_yh, env_params.delta_zh]
         loose_state_values = [loose_state.theta, loose_state.phi, loose_state.y, loose_state.z, loose_state.y_dot,
@@ -89,7 +90,7 @@ def get_dynamic_transfer():
 
         return loose_state
 
-    def dynamic_transfer(env_params: EnvParams, loose_state: EnvState, taut_state: EnvState, old_loose_state: bool):
+    def dynamic_transfer(env_params: EnvParams2D, loose_state: EnvState2D, taut_state: EnvState2D, old_loose_state: bool):
         new_loose_state = loose_state.l_rope < (
             env_params.l - env_params.rope_taut_therehold)
         taut2loose = (taut_state.f_rope < 0.0) & (~old_loose_state)
@@ -281,6 +282,11 @@ def get_dynamic_transfer_3d():
         # use loose_state when old_loose_state is True, else use taut_state
         new_state = {}
         for k in loose_state.__dict__.keys():
+            # jax.debug.print('[DEBUG] {x}',x=old_loose_state)
+            # jax.debug.print('[DEBUG] {k} loose {x.shape}', k=k, x=jnp.asarray(loose_state.__dict__[
+            #                          k]))
+            # jax.debug.print('[DEBUG] {k} taut {x.shape}', k=k, x=jnp.asarray(taut_state.__dict__[
+            #                             k]))
             new_state[k] = jnp.where(old_loose_state, loose_state.__dict__[
                                      k], taut_state.__dict__[k])
 

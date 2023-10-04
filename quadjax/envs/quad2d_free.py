@@ -74,7 +74,7 @@ class Quad2D(environment.Environment):
                 a_mean = a_mean,
                 a_cov = a_cov,
             )
-            mppi_controller = controllers.MPPIController2D(env=self, control_params=self.init_control_params, N=N, H=H, lam=3e-3)
+            mppi_controller = controllers.MPPIController(env=self, control_params=self.init_control_params, N=N, H=H, lam=3e-3)
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
@@ -435,7 +435,7 @@ def main(args: Args):
             a_mean = a_mean,
             a_cov = a_cov,
         )
-        controller = controllers.MPPIController2D(env=env, control_params=control_params, N=N, H=H, lam=lam)
+        controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     

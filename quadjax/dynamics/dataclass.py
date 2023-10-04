@@ -157,11 +157,14 @@ class EnvState3D:
     last_torque: jnp.ndarray  # torque in the local frame
     time: int
 
+    control_params: float = 0.0
+
 
 @struct.dataclass
 class EnvParams3D:
     max_speed: float = 8.0
-    max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
+    # max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
+    max_torque: jnp.ndarray = default_array([2e-3, 2e-3, 0.5e-3])
     max_thrust: float = 0.8
     dt: float = 0.02
     g: float = 9.81  # gravity

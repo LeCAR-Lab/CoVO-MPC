@@ -42,17 +42,17 @@ class Quad2D(environment.Environment):
         # controllers
 
     @property
-    def default_params(self) -> EnvParams:
+    def default_params(self) -> EnvParams2D:
         """Default environment parameters for Quad2D-v0."""
-        return EnvParams()
+        return EnvParams2D()
     
     def step_env(
         self,
         key: chex.PRNGKey,
-        state: EnvState,
+        state: EnvState2D,
         action: float,
-        params: EnvParams,
-    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        params: EnvParams2D,
+    ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
         thrust = (action[0] + 1.0) / 2.0 * params.max_thrust
         tau = action[1] * params.max_torque
         err_pos = jnp.sqrt((state.y_tar - state.y_obj) ** 2 + (state.z_tar - state.z_obj) ** 2)
@@ -67,7 +67,7 @@ class Quad2D(environment.Environment):
         else:
             reward = 1.0 - 0.8 * err_pos - 0.05 * err_vel
         reward = reward.squeeze()
-        env_action = Action(thrust=thrust, tau=tau)
+        env_action = Action2D(thrust=thrust, tau=tau)
 
         old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
         taut_state = self.taut_dynamics(params, state, env_action)
@@ -88,8 +88,8 @@ class Quad2D(environment.Environment):
         )
 
     def reset_env(
-        self, key: chex.PRNGKey, params: EnvParams
-    ) -> Tuple[chex.Array, EnvState]:
+        self, key: chex.PRNGKey, params: EnvParams2D
+    ) -> Tuple[chex.Array, EnvState2D]:
         """Reset environment state by sampling theta, theta_dot."""
         # generate reference trajectory by adding a few sinusoids together
         y_traj, z_traj, y_dot_traj, z_dot_traj = self.generate_traj(key)
@@ -101,7 +101,7 @@ class Quad2D(environment.Environment):
             y, z, theta = jax.random.uniform(key, shape=(3,), minval=-high, maxval=high)
         y_hook = y + params.delta_yh * jnp.cos(theta) - params.delta_zh * jnp.sin(theta) 
         z_hook = z + params.delta_yh * jnp.sin(theta) + params.delta_zh * jnp.cos(theta)
-        state = EnvState(
+        state = EnvState2D(
             y=y, z=z, theta=theta, 
             y_dot=0.0, z_dot=0.0, theta_dot=0.0,last_thrust=0.0,last_tau=0.0,time=0,
             y_traj=y_traj,z_traj=z_traj,y_dot_traj=y_dot_traj,z_dot_traj=z_dot_traj,y_tar=y_traj[0],z_tar=z_traj[0],y_dot_tar=y_dot_traj[0],z_dot_tar=z_dot_traj[0],
@@ -113,7 +113,7 @@ class Quad2D(environment.Environment):
         return self.get_obs(state, params), state
     
     @partial(jax.jit, static_argnums=(0,))
-    def sample_params(self, key: chex.PRNGKey) -> EnvParams:
+    def sample_params(self, key: chex.PRNGKey) -> EnvParams2D:
         """Sample environment parameters."""
         
         key, key1, key2, key3, key4, key5, key6 = jax.random.split(key, 7)
@@ -125,7 +125,7 @@ class Quad2D(environment.Environment):
         delta_yh = jax.random.uniform(key5, shape=(), minval=-0.04, maxval=0.04)
         delta_zh = jax.random.uniform(key6, shape=(), minval=-0.06, maxval=0.00)
         
-        return EnvParams(m=m, I=I, mo=mo, l=l, delta_yh=delta_yh, delta_zh=delta_zh)
+        return EnvParams2D(m=m, I=I, mo=mo, l=l, delta_yh=delta_yh, delta_zh=delta_zh)
     
     @partial(jax.jit, static_argnums=(0,))
     def generate_fixed_traj(self, key: chex.PRNGKey) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
@@ -224,7 +224,7 @@ class Quad2D(environment.Environment):
         return y_traj, z_traj, y_dot_traj, z_dot_traj
 
 
-    def get_obs(self, state: EnvState, params: EnvParams) -> chex.Array:
+    def get_obs(self, state: EnvState2D, params: EnvParams2D) -> chex.Array:
         """Return angle in polar coordinates and change."""
         
         obs_elements = [
@@ -276,7 +276,7 @@ class Quad2D(environment.Environment):
 
         return jnp.array(obs_elements+param_elements).squeeze()
 
-    def is_terminal(self, state: EnvState, params: EnvParams) -> bool:
+    def is_terminal(self, state: EnvState2D, params: EnvParams2D) -> bool:
         """Check whether state is terminal."""
         # Check number of steps in episode termination condition
         done = (
@@ -298,8 +298,8 @@ class Quad2D(environment.Environment):
         """Number of actions possible in environment."""
         return 2
 
-    def action_space(self, params: Optional[EnvParams] = None) -> spaces.Box:
-        """Action space of the environment."""
+    def action_space(self, params: Optional[EnvParams2D] = None) -> spaces.Box:
+        """Action2D space of the environment."""
         if params is None:
             params = self.default_params
         return spaces.Box(
@@ -309,12 +309,12 @@ class Quad2D(environment.Environment):
             dtype=jnp.float32,
         )
 
-    def observation_space(self, params: EnvParams) -> spaces.Box:
+    def observation_space(self, params: EnvParams2D) -> spaces.Box:
         """Observation space of the environment."""
         # NOTE: use default params for jax limitation
         return spaces.Box(-1.0, 1.0, shape=(24+self.default_params.traj_obs_len*4+6,), dtype=jnp.float32)
 
-    def state_space(self, params: EnvParams) -> spaces.Dict:
+    def state_space(self, params: EnvParams2D) -> spaces.Dict:
         """State space of the environment."""
         return spaces.Dict(
             {

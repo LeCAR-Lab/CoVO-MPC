@@ -13,9 +13,9 @@ from functools import partial
 from quadjax.dynamics.utils import angle_normalize
 from quadjax.dynamics import geom
 from quadjax.dynamics.dataclass import (
-    EnvParams,
-    EnvState,
-    Action,
+    EnvParams2D,
+    EnvState2D,
+    Action2D,
     EnvParams3D,
     EnvState3D,
     Action3D,
@@ -174,7 +174,7 @@ def get_taut_dynamics():
     z_hook_dot_func = sp.lambdify(params + states_val, obs_eqs[7], "jax")
 
     # dynamics (params, states) -> states_dot
-    def taut_dynamics(env_params: EnvParams, env_state: EnvState, env_action: Action):
+    def taut_dynamics(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D):
         params = [
             env_params.m,
             env_params.I,

@@ -51,7 +51,7 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
         key_phase, shape=(3, 2), minval=-jnp.pi, maxval=jnp.pi
     )
     # get trajectory
-    scale = 0.8
+    scale = 1.0
     ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
     w1 = 2 * jnp.pi * 0.3
     w2 = 2 * jnp.pi * 0.6
@@ -261,13 +261,42 @@ def hovering_reward_fn(state: EnvState3D):
 def tracking_reward_fn(state: EnvState3D):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    reward = 0.9 - \
+    reward = 1.0 - \
         0.05 * err_vel - \
         err_pos * 0.4 - \
         jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
         jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
         jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
         jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1
+    return reward
+    
+@jax.jit
+def tracking_penyaw_reward_fn(state: EnvState3D):
+    err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
+    err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
+    reward = 1.0 - \
+        0.05 * err_vel - \
+        err_pos * 0.4 - \
+        jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
+        jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
+        jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
+        jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
+        jnp.abs(state.omega[2]) * 0.05
+
+    return reward
+
+@jax.jit
+def tracking_penyaw_obj_reward_fn(state: EnvState3D):
+    err_pos = jnp.linalg.norm(state.pos_tar - state.pos_obj)
+    err_vel = jnp.linalg.norm(state.vel_tar - state.vel_obj)
+    reward = 1.5 - \
+        0.05 * err_vel - \
+        err_pos * 0.4 - \
+        jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
+        jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
+        jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
+        jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
+        jnp.abs(state.omega[2]) * 0.05
 
     return reward
 
