@@ -53,8 +53,8 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
     # get trajectory
     scale = 1.0
     ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
-    w1 = 2 * jnp.pi * 0.3
-    w2 = 2 * jnp.pi * 0.6
+    w1 = 2 * jnp.pi * 0.2
+    w2 = 2 * jnp.pi * 0.4
 
     pos_traj = scale * jnp.stack(
         [
@@ -114,7 +114,7 @@ def generate_lissa_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex
 
 
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 40
+    point_per_seg = 50
     num_seg = max_steps // point_per_seg + 1
 
     key_keypoints = jax.random.split(key, num_seg)

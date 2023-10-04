@@ -168,19 +168,12 @@ class Quad3D(environment.Environment):
         param_key = jax.random.split(key)[0]
         rand_val = jax.random.uniform(param_key, shape=(9,), minval=0.0, maxval=1.0)
 
-        # m = 0.025 + 0.015 * rand_val[0]
-        # I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.5e-5 * rand_val[1:4]
-        # I = jnp.diag(I)
-        # mo = 0.01 + 0.01 * rand_val[4]
-        # l = 0.2 + 0.2 * rand_val[5]
-        # hook_offset = rand_val[6:9] * 0.04
-
-        m = 0.025
-        I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5])
+        m = 0.025 + 0.015 * rand_val[0]
+        I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.5e-5 * rand_val[1:4]
         I = jnp.diag(I)
-        mo = 0.01
-        l = 0.2
-        hook_offset = jnp.zeros(3)
+        mo = 0.01 + 0.01 * rand_val[4]
+        l = 0.2 + 0.2 * rand_val[5]
+        hook_offset =jnp.array([-0.02, -0.02, -0.04]) + rand_val[6:9] * 0.04
 
         return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset)
 
