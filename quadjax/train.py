@@ -339,7 +339,7 @@ def main(args: Args):
         render_fn = quadjax.envs.quad2d_free.render_env
         eval_fn = quadjax.envs.quad2d_free.eval_env
     elif args.env == 'quad3d':
-        env = quadjax.envs.quad3d.Quad3D(task=args.task)
+        env = quadjax.envs.quad3d.Quad3D(task=args.task, lower_controller=args.lower_controller)
         render_fn = quadjax.envs.quad3d.render_env
         eval_fn = quadjax.envs.quad3d.eval_env
     train_fn = make_train(env, config)

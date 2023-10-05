@@ -222,7 +222,6 @@ class Quad3D(environment.Environment):
         mo = 0.01 + 0.01 * rand_val[4]
         l = 0.2 + 0.2 * rand_val[5]
         hook_offset =jnp.array([-0.02, -0.02, -0.04]) + rand_val[6:9] * 0.04
-        hook_offset = hook_offset * jnp.array([0.0, 0.0, 1.0])
 
         return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset)
 
