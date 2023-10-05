@@ -1,6 +1,6 @@
 from flax import struct
 from jax import numpy as jnp
-from typing import Optional
+from typing import Optional, Union
 
 def default_array(array):
     return struct.field(default_factory=lambda: jnp.array(array))
@@ -135,6 +135,7 @@ class EnvState3D:
     vel: jnp.ndarray  # (x,y,z)
     quat: jnp.ndarray  # quaternion (x,y,z,w)
     omega: jnp.ndarray  # angular velocity (x,y,z)
+    omega_tar: jnp.ndarray  # angular velocity (x,y,z)
     zeta: jnp.ndarray  # S^2 unit vector (x,y,z)
     zeta_dot: jnp.ndarray  # S^2 (x,y,z)
     # target trajectory
@@ -157,14 +158,16 @@ class EnvState3D:
     last_torque: jnp.ndarray  # torque in the local frame
     time: int
 
-    control_params: float = 0.0
+    # control params is float or dataclass
+    control_params:  Union[float, struct.dataclass] = 0.0
 
 
 @struct.dataclass
 class EnvParams3D:
     max_speed: float = 8.0
-    # max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
-    max_torque: jnp.ndarray = default_array([2e-3, 2e-3, 0.5e-3])
+    max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
+    # max_torque: jnp.ndarray = default_array([2e-3, 2e-3, 0.5e-3])
+    max_omega: jnp.ndarray = default_array([60.0, 60.0, 10.0])
     max_thrust: float = 0.8
     dt: float = 0.02
     g: float = 9.81  # gravity

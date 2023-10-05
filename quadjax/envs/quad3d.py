@@ -32,7 +32,7 @@ class Quad3D(environment.Environment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking"):
+    def __init__(self, task: str = "tracking", lower_controller: str = 'base'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -63,9 +63,37 @@ class Quad3D(environment.Environment):
             # return loose_dynamics(params, state, env_action)
         self.step_fn = step_fn
         # lower-level controller
-        def base_controller_fn(obs, state, env_params, rng_act, input_action):
-            return input_action, state.control_params, None
-        self.control_fn = base_controller_fn
+        if lower_controller == 'base':
+            self.default_control_params = 0.0
+            def base_controller_fn(obs, state, env_params, rng_act, input_action):
+                return input_action, None, state
+            self.control_fn = base_controller_fn
+            self.substeps=1
+        elif lower_controller == 'pid':
+            self.default_control_params = controllers.PIDParams(
+                kp=jnp.array([30.0, 30.0, 30.0]),
+                ki=jnp.array([10.0, 10.0, 10.0])/self.default_params.dt,
+                kd=jnp.array([0.0, 0.0, 0.0]),
+                last_error=jnp.zeros(3),
+                integral=jnp.zeros(3),
+            )
+            controller = controllers.PIDControllerBodyrate(self, self.default_control_params)
+            def pid_controller_fn(obs, state, env_params, rng_act, input_action):
+                thrust_normed = input_action[:1]
+                omega_tar = input_action[1:] * self.default_params.max_omega
+                state = state.replace(omega_tar = omega_tar)
+
+                u, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params)
+
+                state = state.replace(control_params = control_params)
+                torque = self.default_params.I @ u + jnp.cross(state.omega, self.default_params.I @ state.omega)
+                torque_normed = torque / self.default_params.max_torque
+                action = jnp.concatenate([thrust_normed, torque_normed])
+                return action, None, state
+            self.control_fn = pid_controller_fn
+            self.substeps=5
+        else:
+            raise NotImplementedError
         # rl parameters
         self.obs_dim = 42 + self.default_params.traj_obs_len * 6 + 15
         self.action_dim = 4
@@ -85,11 +113,15 @@ class Quad3D(environment.Environment):
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
-        # call controller to get sub_action and new_control_params
-        sub_action, new_control_params, control_info = self.control_fn(None, state, params, key, action)
-        state = state.replace(control_params = new_control_params)
-        # call substep_env to get next_obs, next_state, reward, done, info
-        return self.step_env_wocontroller(key, state, sub_action, params)
+        def step_once(carried, _):
+            key, state, action, params = carried
+            # call controller to get sub_action and new_control_params
+            sub_action, _, state = self.control_fn(None, state, params, key, action)
+            next_state = self.raw_step(state, sub_action, params)
+            return (key, next_state, action, params), None
+        # call lax.scan to get next_state
+        (_, next_state, _, params), _ = lax.scan(step_once, (key, state, action, params), jnp.arange(self.substeps))
+        return self.get_obs_state_reward_done_info(state, next_state, params)
 
     def step_env_wocontroller(
         self,
@@ -98,26 +130,39 @@ class Quad3D(environment.Environment):
         sub_action: jnp.ndarray,
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+        next_state = self.raw_step(state, sub_action, params)
+        return self.get_obs_state_reward_done_info(state, next_state, params)
+    
+    def raw_step(
+        self,
+        state: EnvState3D,
+        sub_action: jnp.ndarray,
+        params: EnvParams3D,
+    ) -> EnvState3D:
         sub_action = jnp.clip(sub_action, -1.0, 1.0)
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
         torque = sub_action[1:] * params.max_torque
         env_action = Action3D(thrust=thrust, torque=torque)
-
-        reward = self.reward_fn(state)
-
-        next_state = self.step_fn(params, state, env_action)
-        done = self.is_terminal(state, params)
+        return self.step_fn(params, state, env_action)
+    
+    def get_obs_state_reward_done_info(
+        self,
+        state: EnvState3D,
+        next_state: EnvState3D, 
+        params: EnvParams3D,
+    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         return (
             lax.stop_gradient(self.get_obs(next_state, params)),
             lax.stop_gradient(next_state),
-            reward,
-            done,
+            self.reward_fn(state),
+            self.is_terminal(state, params),
             {
                 "discount": self.discount(next_state, params),
                 "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
                 "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
             },
         )
+        
 
     def reset_env(
         self, key: chex.PRNGKey, params: EnvParams3D
@@ -135,6 +180,7 @@ class Quad3D(environment.Environment):
             pos=pos,
             vel=zeros3,
             omega=zeros3,
+            omega_tar = zeros3,
             quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
             # object
             pos_obj=zeros3,
@@ -158,6 +204,8 @@ class Quad3D(environment.Environment):
             last_torque=zeros3,
             # step
             time=0,
+            # control_params
+            control_params=self.default_control_params,
         )
         return self.get_obs(state, params), state
 
@@ -174,6 +222,7 @@ class Quad3D(environment.Environment):
         mo = 0.01 + 0.01 * rand_val[4]
         l = 0.2 + 0.2 * rand_val[5]
         hook_offset =jnp.array([-0.02, -0.02, -0.04]) + rand_val[6:9] * 0.04
+        hook_offset = hook_offset * jnp.array([0.0, 0.0, 1.0])
 
         return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset)
 
@@ -329,11 +378,17 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
         plt.legend(fontsize=6, ncol=2)
     # plot state
     for i, (name, value) in enumerate(state_seq[0].__dict__.items()):
-        if name in ["pos_traj", "vel_traj"]:
+        if name in ["pos_traj", "vel_traj", "control_params"]:
             continue
-        elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
+        elif (("pos_obj" in name) or ("vel_obj" in name) or ("omega" in name)) and ("tar" not in name):
             xyz = np.array([getattr(s, name) for s in state_seq])
-            xyz_tar = np.array([getattr(s, name[:3] + "_tar") for s in state_seq])
+            if "pos_obj" in name:
+                tar_name = 'pos_tar'
+            elif "vel_obj" in name:
+                tar_name = 'vel_tar'
+            elif "omega" in name:
+                tar_name = 'omega_tar'
+            xyz_tar = np.array([getattr(s, tar_name) for s in state_seq])
             for i, subplot_name in zip(range(3), ["x", "y", "z"]):
                 current_fig += 1
                 plt.subplot(num_rows, 6, current_fig)
@@ -361,11 +416,12 @@ class Args:
     task: str = "tracking"
     controller: str = "mppi"
     controller_params: str = ""
+    lower_controller: str = "base"
     debug: bool = False
 
 
 def main(args: Args):
-    env = Quad3D(task=args.task)
+    env = Quad3D(task=args.task, lower_controller=args.lower_controller)
 
     # setup controllers
     if args.controller == 'mppi':

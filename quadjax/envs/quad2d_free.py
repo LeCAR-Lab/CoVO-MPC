@@ -235,7 +235,7 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.default_params
-
+    
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)
 

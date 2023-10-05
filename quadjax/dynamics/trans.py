@@ -281,7 +281,10 @@ def get_dynamic_transfer_3d():
 
         # use loose_state when old_loose_state is True, else use taut_state
         new_state = {}
-        for k in loose_state.__dict__.keys():
+        keys = loose_state.__dict__.keys()
+        # exclude control_params
+        keys = [k for k in keys if k != 'control_params']
+        for k in keys:
             # jax.debug.print('[DEBUG] {x}',x=old_loose_state)
             # jax.debug.print('[DEBUG] {k} loose {x.shape}', k=k, x=jnp.asarray(loose_state.__dict__[
             #                          k]))
