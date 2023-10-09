@@ -415,7 +415,7 @@ class Args:
     task: str = "tracking"
     controller: str = "mppi"
     controller_params: str = ""
-    lower_controller: str = "base"
+    lower_controller: str = "base" # pid or base
     debug: bool = False
 
 

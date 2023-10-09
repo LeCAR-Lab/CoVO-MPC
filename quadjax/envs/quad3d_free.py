@@ -9,6 +9,7 @@ from dataclasses import dataclass as pydataclass
 import tyro
 import pickle
 import time as time_module
+import numpy as np
 
 import quadjax
 from quadjax import controllers
@@ -131,6 +132,7 @@ class Quad3D(environment.Environment):
             pos=zeros3,
             vel=zeros3,
             omega=zeros3,
+            omega_tar=zeros3,
             quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
             # object
             pos_obj=zeros3,vel_obj=zeros3,
@@ -203,8 +205,41 @@ class Quad3D(environment.Environment):
             | (jnp.abs(state.omega) > 100.0).any()
         return done
 
+def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filename = ''):
+    # running environment
+    rng = jax.random.PRNGKey(1)
+    rng, rng_params = jax.random.split(rng)
+    env_params = env.default_params
 
-def render_env(env: Quad3D, controller, control_params, repeat_times = 1):
+    rng, rng_reset = jax.random.split(rng)
+    obs, env_state = env.reset(rng_reset, env_params)
+
+    control_params = controller.update_params(env_params, control_params)
+
+    def run_one_step(carry, _):
+        obs, env_state, rng, env_params, control_params = carry
+        rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+        if control_info is not None:
+            if 'a_mean' in control_info:
+                action = control_info['a_mean']
+        next_obs, next_env_state, reward, done, info = env.step(
+            rng_step, env_state, action, env_params)
+        # if done, reset controller parameters, aviod use if, use lax.cond instead
+        new_control_params = controller.reset()
+        control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
+        return (next_obs, next_env_state, rng, env_params, control_params), info['err_pos']
+    
+    t0 = time_module.time()
+    (obs, env_state, rng, env_params, control_params), err_pos = lax.scan(
+        run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))
+    print(f"env running time: {time_module.time()-t0:.2f}s")
+
+    # save data
+    with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
+        pickle.dump(np.array(err_pos), f)
+
+def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filename = ''):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -225,7 +260,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1):
     while n_dones < repeat_times:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action = controller(obs, env_state, env_params, rng_act, control_params)
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
@@ -247,7 +282,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1):
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
     # get package quadjax path
     
-    with open(f"{quadjax.get_package_path()}/../results/state_seq.pkl", "wb") as f:
+    with open(f"{quadjax.get_package_path()}/../results/{filename}_state_seq.pkl", "wb") as f:
         pickle.dump(state_seq, f)
 
 '''
@@ -274,7 +309,7 @@ def main(args: Args):
             R = 0.03 * jnp.diag(jnp.ones(4)),
             K = jnp.zeros((4, 12)),
         )
-        controller = controllers.LQRController(env)
+        controller = controllers.LQRController(env, control_params = control_params)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
             u = jnp.asarray([0.8, 0.0, 0.0, 0.0]),

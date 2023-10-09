@@ -338,6 +338,10 @@ def main(args: Args):
         env = quadjax.envs.quad2d_free.Quad2D(task=args.task, lower_controller=args.lower_controller)
         render_fn = quadjax.envs.quad2d_free.render_env
         eval_fn = quadjax.envs.quad2d_free.eval_env
+    elif args.env == 'quad3d_free':
+        env = quadjax.envs.quad3d_free.Quad3D(task=args.task)
+        render_fn = quadjax.envs.quad3d_free.render_env
+        eval_fn = quadjax.envs.quad3d_free.eval_env
     elif args.env == 'quad3d':
         env = quadjax.envs.quad3d.Quad3D(task=args.task, lower_controller=args.lower_controller)
         render_fn = quadjax.envs.quad3d.render_env
