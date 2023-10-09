@@ -34,10 +34,10 @@ class Quad3D(environment.Environment):
         # reference trajectory function
         if task == "tracking":
             self.generate_traj = partial(utils.generate_lissa_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.tracking_reward_fn
+            self.reward_fn = utils.tracking_penyaw_reward_fn
         elif task == "tracking_zigzag":
             self.generate_traj = partial(utils.generate_zigzag_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.tracking_reward_fn
+            self.reward_fn = utils.tracking_penyaw_reward_fn
         elif task in "jumping":
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.jumping_reward_fn
@@ -282,7 +282,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
     # get package quadjax path
     
-    with open(f"{quadjax.get_package_path()}/../results/{filename}_state_seq.pkl", "wb") as f:
+    with open(f"{quadjax.get_package_path()}/../results/state_seq.pkl", "wb") as f:
         pickle.dump(state_seq, f)
 
 '''
