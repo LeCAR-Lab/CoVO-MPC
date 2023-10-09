@@ -1,28 +1,47 @@
 # Learning-based Quadrotor Simulator and Controller in Jax
 
-## Results
+## Code snips
 
-### 2D Quadrotor Tracking
+### Quadrotor
 
-Smooth trajectory with max acceleration 16m/s^2 and max velocity 5m/s.
+Play with the environment
+
+```python
+cd quadjax/envs
+python quad3d_free.py --controller base --task hovering
+```
+
+This will generate tested state sequence `state_seq.pkl` and plot figure `plot.png`.
+
+Visualize 3d environment:
+
+```python
+cd quadjax/test
+python vis.py # please make sure you have state_seq.pkl inside the results. 
+```
+
+Trajectory tracking with max velocity 2m/s with 3d quadrotor environment.
 
 ```
-python train.py --task tracking
-```
+# tracking zigzag
+python train.py --env quad3d_free --task tracking_zigzag
 
-![ppo](https://github.com/jc-bao/quadjax/assets/60093981/b9890897-9bcf-48d4-ba83-2ea794999218)
-
-
-https://github.com/jc-bao/quadjax/assets/60093981/abb72f44-a227-4b04-a2bf-4d8f46e5a90c
-
-
-Zig-zag trajectory with max velocity 2m/s.
-
-```
-python train.py --task tracking_zigzag
+# tracking smoooth trajectory
+python train.py --env quad3d_free --task tracking
 ```
 
 ![ppo](https://github.com/jc-bao/quadjax/assets/60093981/48220814-8775-4539-b9bc-85f6236b077b)
 
 https://github.com/jc-bao/quadjax/assets/60093981/6f06ab1a-df00-4d8b-8aa1-56008298f0ab
 
+Training debug
+
+```
+python train.py --env quad3d_free --debug
+```
+
+### modify environment
+
+**add disturbance**
+
+all the environment dynamics is inside `quadjax/dynamics` folder. For `Quad3D` quadrotor only environment, the dynamics is `free.py` with function `get_free_dynamics_3d()`. Please note the coordinate system is in the quadrotor local frame. 

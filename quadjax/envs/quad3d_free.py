@@ -291,9 +291,9 @@ reward function here.
 
 @pydataclass
 class Args:
-    task: str = "hovering"
+    task: str = "hovering" # tracking, tracking_zigzag, hovering
     dynamics: str = 'free'
-    controller: str = 'lqr'
+    controller: str = 'lqr' # fixed
 
 def main(args: Args):
     env = Quad3D(task=args.task, dynamics=args.dynamics)

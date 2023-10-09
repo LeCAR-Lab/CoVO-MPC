@@ -305,9 +305,9 @@ def make_train(env, config):
 
 @pydataclass
 class Args:
-    task: str = "tracking_zigzag"
-    env: str = "quad2d_free"
-    lower_controller: str = "base"
+    task: str = "tracking_zigzag" # tracking, tracking_zigzag, 
+    env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
+    lower_controller: str = "base" # bodyrate, base
     debug: bool = False
 
 
