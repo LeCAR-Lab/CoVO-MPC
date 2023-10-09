@@ -112,7 +112,6 @@ def generate_lissa_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex
     
     return pos_traj, vel_traj
 
-
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
     point_per_seg = 40
     num_seg = max_steps // point_per_seg + 1
