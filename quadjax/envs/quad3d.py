@@ -65,7 +65,7 @@ class Quad3D(environment.Environment):
             loose_state = loose_dynamics(params, state, env_action)
             return dynamic_transfer(
                 params, loose_state, taut_state, old_loose_state)
-            # return loose_dynamics(params, state, env_action)
+            return loose_dynamics(params, state, env_action)
         self.step_fn = step_fn
         # lower-level controller
         if lower_controller == 'base':
