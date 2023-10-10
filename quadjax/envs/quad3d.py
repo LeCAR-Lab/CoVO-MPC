@@ -43,13 +43,18 @@ class Quad3D(environment.Environment):
             self.generate_traj = partial(utils.generate_zigzag_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_penyaw_obj_reward_fn
         elif task in "jumping":
-            self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.jumping_reward_fn
+            self.generate_traj = partial(utils.generate_jumping_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.reward_fn = utils.jumping_obj_reward_fn
         elif task == 'hovering':
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
         else:
             raise NotImplementedError
+        # initial position
+        if task == "jumping":
+            self.obj_init_pos = jnp.array([-1.0, 0.0, 0.0])
+        else:
+            self.obj_init_pos = jnp.array([0.0, 0.0, 0.0])
         # dynamics
         taut_dynamics = get_taut_dynamics_3d()
         loose_dynamics = get_loose_dynamics_3d()
@@ -72,7 +77,7 @@ class Quad3D(environment.Environment):
         elif lower_controller == 'pid':
             self.default_control_params = controllers.PIDParams(
                 kp=jnp.array([30.0, 30.0, 30.0]),
-                ki=jnp.array([10.0, 10.0, 10.0])/self.default_params.dt,
+                ki=jnp.array([3.0, 3.0, 3.0])/self.default_params.dt,
                 kd=jnp.array([0.0, 0.0, 0.0]),
                 last_error=jnp.zeros(3),
                 integral=jnp.zeros(3),
@@ -151,11 +156,14 @@ class Quad3D(environment.Environment):
         next_state: EnvState3D, 
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+        reward = self.reward_fn(state, params)
+        state = state.replace(reward = reward)
+        done = self.is_terminal(state, params)
         return (
             lax.stop_gradient(self.get_obs(next_state, params)),
             lax.stop_gradient(next_state),
-            self.reward_fn(state),
-            self.is_terminal(state, params),
+            reward,
+            done,
             {
                 "discount": self.discount(next_state, params),
                 "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
@@ -173,7 +181,7 @@ class Quad3D(environment.Environment):
         pos_traj, vel_traj = self.generate_traj(traj_key)
 
         zeros3 = jnp.zeros(3)
-        pos_hook = jnp.array([0.0, 0.0, params.l])
+        pos_hook = jnp.array([0.0, 0.0, params.l]) + self.obj_init_pos
         pos = pos_hook - params.hook_offset
         state = EnvState3D(
             # drone
@@ -183,7 +191,7 @@ class Quad3D(environment.Environment):
             omega_tar = zeros3,
             quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
             # object
-            pos_obj=zeros3,
+            pos_obj=self.obj_init_pos,
             vel_obj=zeros3,
             # hook
             pos_hook=pos_hook,
@@ -204,6 +212,7 @@ class Quad3D(environment.Environment):
             last_torque=zeros3,
             # step
             time=0,
+            reward=0.0,
             # control_params
             control_params=self.default_control_params,
         )
@@ -216,11 +225,11 @@ class Quad3D(environment.Environment):
         param_key = jax.random.split(key)[0]
         rand_val = jax.random.uniform(param_key, shape=(9,), minval=0.0, maxval=1.0)
 
-        m = 0.025 + 0.015 * rand_val[0]
-        I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.5e-5 * rand_val[1:4]
+        m = 0.02 + 0.01 * rand_val[0]
+        I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.2e-5 * rand_val[1:4]
         I = jnp.diag(I)
-        mo = 0.01 + 0.01 * rand_val[4]
-        l = 0.2 + 0.2 * rand_val[5]
+        mo = 0.01 + 0.003 * rand_val[4]
+        l = 0.2 + 0.05 * rand_val[5]
         hook_offset =jnp.array([-0.02, -0.02, -0.04]) + rand_val[6:9] * 0.04
 
         return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset)
@@ -277,7 +286,8 @@ class Quad3D(environment.Environment):
             (state.time >= params.max_steps_in_episode)
             | (jnp.abs(state.pos) > 3.0).any()
             | (jnp.abs(state.omega) > 100.0).any()
-            | (state.quat[3] < jnp.cos(jnp.pi / 4.0))
+            | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) 
+            | (state.reward < -0.5)
         )
         return done
 
@@ -415,7 +425,7 @@ class Args:
     task: str = "tracking"
     controller: str = "mppi"
     controller_params: str = ""
-    lower_controller: str = "base" # pid or base
+    lower_controller: str = "pid" # pid or base
     debug: bool = False
 
 

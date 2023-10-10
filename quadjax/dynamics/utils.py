@@ -5,7 +5,7 @@ import chex
 from typing import Tuple
 
 import quadjax
-from quadjax.dynamics.dataclass import EnvState3D
+from quadjax.dynamics.dataclass import EnvState3D, EnvParams3D
 
 
 @jax.jit
@@ -39,6 +39,27 @@ def generate_fixed_traj(
     zeros = jnp.zeros((max_steps, 3))
     key_pos = jax.random.split(key)[0]
     pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
+    pos_traj = zeros + pos
+    vel_traj = zeros
+    return pos_traj, vel_traj
+
+def generate_jumping_fixed_traj(
+    max_steps: int, dt:float, key: chex.PRNGKey
+) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
+    zeros = jnp.zeros((max_steps, 3))
+    key_pos = jax.random.split(key)[0]
+    pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
+    # for pos[0]>0 add 0.3 to x, else add -0.3 to x
+    # pos = jnp.where(pos[0]>0, pos + jnp.array([0.3, 0.0, 0.0]), pos + jnp.array([-0.3, 0.0, 0.0]))
+    pos = pos.at[0].set(jnp.abs(pos[0]) + 0.3)
+    pos_traj = zeros + pos
+    vel_traj = zeros
+    return pos_traj, vel_traj
+
+def generate_given_fixed_traj(
+    pos: jnp.ndarray, max_steps: int, dt:float, key: chex.PRNGKey
+) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
+    zeros = jnp.zeros((max_steps, 3))
     pos_traj = zeros + pos
     vel_traj = zeros
     return pos_traj, vel_traj
@@ -257,7 +278,24 @@ def hovering_reward_fn(state: EnvState3D):
     return 1.0 - 0.6 * err_pos - 0.1 * err_vel
 
 @jax.jit
-def tracking_reward_fn(state: EnvState3D):
+def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
+    err_pos = jnp.linalg.norm(state.pos_tar - state.pos_obj)
+    small_pos_err = err_pos < 0.2
+    err_vel = jnp.linalg.norm(state.vel_tar - state.vel_obj)
+    def get_hit_reward(pos):
+        r = 3.0
+        gap_size = params.curri_params*0.5 + 0.1
+        a = r - gap_size/2.0
+        b = 0.1
+        YZ = jnp.sqrt((pos[1])**2 + (pos[2])**2) - r
+        l = jnp.sqrt(((pos[0])/b)**2 + (YZ/a)**2)
+        return -jnp.clip(jnp.log(1.0+8.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 2.0)
+    drone_hit_rew = get_hit_reward(state.pos)
+    obj_hit_rew = get_hit_reward(state.pos_obj)
+    return 1.0 - 0.6 * err_pos + small_pos_err * (1.0-jnp.clip(0.2*err_vel, 0, 1)) + (drone_hit_rew + obj_hit_rew)
+
+@jax.jit
+def tracking_reward_fn(state: EnvState3D, params = None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
     reward = 1.0 - \
@@ -270,7 +308,7 @@ def tracking_reward_fn(state: EnvState3D):
     return reward
     
 @jax.jit
-def tracking_penyaw_reward_fn(state: EnvState3D):
+def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
     reward = 1.0 - \
@@ -285,7 +323,7 @@ def tracking_penyaw_reward_fn(state: EnvState3D):
     return reward
 
 @jax.jit
-def tracking_penyaw_obj_reward_fn(state: EnvState3D):
+def tracking_penyaw_obj_reward_fn(state: EnvState3D, params):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos_obj)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel_obj)
     reward = 1.5 - \
@@ -298,6 +336,8 @@ def tracking_penyaw_obj_reward_fn(state: EnvState3D):
         jnp.abs(state.omega[2]) * 0.05
 
     return reward
+
+
 
 '''
 visualization functions
