@@ -100,6 +100,9 @@ def make_train(env, config):
         if config['enable_curri']:
             curri_params = 0.0
             env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
+        if config['enable_curri']:
+            curri_params = 0.0
+            env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
         obsv, env_state = jax.vmap(env.reset)(reset_rng, env_params)
 
 
@@ -323,6 +326,7 @@ class Args:
     env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
     lower_controller: str = "base" # bodyrate, base
     debug: bool = False
+    curri: bool = False
     dynamics: str = "free"
     curri: bool = False
 

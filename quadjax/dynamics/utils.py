@@ -70,6 +70,27 @@ def generate_given_fixed_traj(
     vel_traj = zeros
     return pos_traj, vel_traj
 
+def generate_jumping_fixed_traj(
+    max_steps: int, dt:float, key: chex.PRNGKey
+) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
+    zeros = jnp.zeros((max_steps, 3))
+    key_pos = jax.random.split(key)[0]
+    pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
+    # for pos[0]>0 add 0.3 to x, else add -0.3 to x
+    # pos = jnp.where(pos[0]>0, pos + jnp.array([0.3, 0.0, 0.0]), pos + jnp.array([-0.3, 0.0, 0.0]))
+    pos = pos.at[0].set(jnp.abs(pos[0]) + 0.3)
+    pos_traj = zeros + pos
+    vel_traj = zeros
+    return pos_traj, vel_traj
+
+def generate_given_fixed_traj(
+    pos: jnp.ndarray, max_steps: int, dt:float, key: chex.PRNGKey
+) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
+    zeros = jnp.zeros((max_steps, 3))
+    pos_traj = zeros + pos
+    vel_traj = zeros
+    return pos_traj, vel_traj
+
 def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
     # get random amplitude and phase
     key_amp, key_phase = jax.random.split(key, 2)

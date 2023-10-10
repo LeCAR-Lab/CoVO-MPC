@@ -45,6 +45,8 @@ class Quad3D(environment.Environment):
         elif task in "jumping":
             self.generate_traj = partial(utils.generate_jumping_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.jumping_obj_reward_fn
+            self.generate_traj = partial(utils.generate_jumping_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.reward_fn = utils.jumping_obj_reward_fn
         elif task == 'hovering':
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
@@ -88,7 +90,7 @@ class Quad3D(environment.Environment):
         elif lower_controller == 'pid':
             self.default_control_params = controllers.PIDParams(
                 kp=jnp.array([30.0, 30.0, 30.0]),
-                ki=jnp.array([10.0, 10.0, 10.0])/self.default_params.dt,
+                ki=jnp.array([3.0, 3.0, 3.0])/self.default_params.dt,
                 kd=jnp.array([0.0, 0.0, 0.0]),
                 last_error=jnp.zeros(3),
                 integral=jnp.zeros(3),
