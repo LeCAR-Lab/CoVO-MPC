@@ -302,9 +302,9 @@ def make_train(env, config):
             # curriculum learning
             if config['enable_curri']: 
                 (train_state, env_state, obsv, rng, env_params) = runner_state
-                if (metric_local['mean_episode_returns'].mean() > 0.3):
-                    curri_params = jnp.clip(curri_params + 0.1, 0.0, 1.0)
-                    print('curri_params: ', curri_params)
+                if (metric_local['err_pos'].mean() < 0.2):
+                    curri_params = jnp.clip(curri_params + 0.05, 0.0, 1.0)
+                print('curri_params: ', curri_params)
                                          
             print('====================')
             print(f'update {i+1}/{config["NUM_UPDATES"]}')
