@@ -177,8 +177,8 @@ def get_free_dynamics_3d_disturbance(d_func):
         # dynamics
         r_dot = Q @ v
         q_dot = 0.5 * geom.L(q) @ geom.H @ omega
-        v_dot = Q.T @ jnp.asarray([0, 0, -params.g]) + 1.0 / params.m * jnp.asarray([0, 0, thrust]) - geom.hat(omega) @ v
-        omega_dot = jnp.linalg.inv(params.I) @ (torque - geom.hat(omega) @ params.I @ omega)
+        v_dot = Q.T @ jnp.asarray([0, 0, -params.g]) + 1.0 / params.m * jnp.asarray([0, 0, thrust]) - geom.hat(omega) @ v + d_f
+        omega_dot = jnp.linalg.inv(params.I) @ (torque - geom.hat(omega) @ params.I @ omega) + d_t
 
         # return
         x_dot = jnp.concatenate([r_dot, q_dot, v_dot, omega_dot])
