@@ -29,6 +29,12 @@ def get_hit_penalty(y: float, z: float) -> float:
     )
     return hit_panelty
 
+'''
+disturbance related
+'''
+@jax.jit
+def constant_disturbance(x:jnp.ndarray, u:jnp.ndarray, params:EnvParams3D):
+    return params.d_offset
 
 '''
 trajectory related

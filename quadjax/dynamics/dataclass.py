@@ -184,6 +184,7 @@ class EnvParams3D:
     rope_taut_therehold: float = 1e-4
     traj_obs_len: int = 5
     traj_obs_gap: int = 5
+    d_offset: jnp.ndarray = default_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
     # curriculum related parameters
     curri_params: float = 1.0

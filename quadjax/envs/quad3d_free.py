@@ -14,7 +14,7 @@ import numpy as np
 import quadjax
 from quadjax import controllers
 from quadjax.dynamics import utils
-from quadjax.dynamics.free import get_free_dynamics_3d
+from quadjax.dynamics.free import get_free_dynamics_3d, get_free_dynamics_3d_disturbance
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 
 # for debug purpose
@@ -49,6 +49,9 @@ class Quad3D(environment.Environment):
         # dynamics function
         if dynamics == 'free':
             self.step_fn, self.dynamics_fn = get_free_dynamics_3d()
+            self.get_obs = self.get_obs_quadonly
+        elif dynamics == 'dist_constant':
+            self.step_fn, self.dynamics_fn = get_free_dynamics_3d_disturbance(utils.constant_disturbance)
             self.get_obs = self.get_obs_quadonly
         else:
             raise NotImplementedError
@@ -164,8 +167,11 @@ class Quad3D(environment.Environment):
         mo = 0.01 + 0.01 * rand_val[4]
         l = 0.2 + 0.2 * rand_val[5]
         hook_offset = rand_val[6:9] * 0.04
+        
+        d_key = jax.random.split(key)[0]
+        d_offset = jax.random.uniform(d_key, shape=(6,), minval=-1.0, maxval=1.0) * jnp.concatenate([jnp.array([0.2, 0.2, 0.2]), jnp.array([0.2e-3, 0.2e-3, 0.2e-3])])
 
-        return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset)
+        return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset, d_offset=d_offset)
     
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quadonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
