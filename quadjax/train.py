@@ -97,7 +97,11 @@ def make_train(env, config):
         reset_rng = jax.random.split(rng1, config["NUM_ENVS"])
         param_rng = jax.random.split(rng2, config["NUM_ENVS"])
         env_params = jax.vmap(env.sample_params)(param_rng)
+        if config['enable_curri']:
+            curri_params = 0.0
+            env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
         obsv, env_state = jax.vmap(env.reset)(reset_rng, env_params)
+
 
         # INIT NETWORK
         network = ActorCritic(
@@ -144,6 +148,8 @@ def make_train(env, config):
                 # resample environment parameters if done TODO wrap this into step function or other env wrapper
                 rng_params = jax.random.split(_rng, config["NUM_ENVS"])
                 new_env_params = jax.vmap(env.sample_params)(rng_params)
+                if config['enable_curri']:
+                    new_env_params = new_env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])* curri_params)
                 def map_fn(done, x, y):
                     # reshaped_done = jnp.broadcast_to(done, x.shape)
                     indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
@@ -162,7 +168,7 @@ def make_train(env, config):
             runner_state, traj_batch = jax.lax.scan(
                 _env_step, runner_state, None, config["NUM_STEPS"]
             )
-
+            
             # CALCULATE ADVANTAGE
             train_state, env_state, last_obs, rng, env_params = runner_state
             _, last_val = network.apply(train_state.params, last_obs)
@@ -292,6 +298,14 @@ def make_train(env, config):
             runner_state, metric_local = _update_step(runner_state, None)
             metric_local['step'] = jnp.array([(i+1)*step_per_log])
             metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
+
+            # curriculum learning
+            if config['enable_curri']: 
+                (train_state, env_state, obsv, rng, env_params) = runner_state
+                if (metric_local['err_pos'].mean() < 0.2):
+                    curri_params = jnp.clip(curri_params + 0.05, 0.0, 1.0)
+                print('curri_params: ', curri_params)
+                                         
             print('====================')
             print(f'update {i+1}/{config["NUM_UPDATES"]}')
             for k in metric.keys():
@@ -310,6 +324,7 @@ class Args:
     lower_controller: str = "base" # bodyrate, base
     debug: bool = False
     dynamics: str = "free"
+    curri: bool = False
 
 
 def main(args: Args):
@@ -329,7 +344,6 @@ def main(args: Args):
         "ACTIVATION": "tanh",
         "ANNEAL_LR": False,
         "task": args.task,
-        "dynamics": args.dynamics
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()

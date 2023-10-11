@@ -78,10 +78,10 @@ class Quad2D(environment.Environment):
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
-                prior_mean_residue = input_action[:2] * 0.4 # [-0.1, 0.1]
-                prior_cov_scale = input_action[2:4] * 0.4 + 1.0 # [0.9, 1.1]
-                mppi_mean_residue = input_action[4:6] * 1.0 # [-0.1, 0.1]
-                mppi_cov_scale = input_action[6:8] * 0.45 + 0.55 # [0.9, 1.1]
+                prior_mean_residue = input_action[:2] * 1.0
+                prior_cov_scale = input_action[2:4] * 0.4 + 1.0
+                mppi_mean_residue = input_action[4:6] * 1.0 
+                mppi_cov_scale = input_action[6:8] * 0.9 + 1.0
 
                 a_mean = control_params.a_mean + prior_mean_residue
                 a_cov = (prior_cov_scale[:, None] @ prior_cov_scale[None, :]) * control_params.a_cov
@@ -435,13 +435,13 @@ def main(args: Args):
             a_mean = a_mean,
             a_cov = a_cov,
         )
-        controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
+        controller = controllers.MPPIController2D(env=env, control_params=control_params, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     
     filename = f'{args.controller}_{args.controller_params}'
     if args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=2, filename=filename)
     elif args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
     else:

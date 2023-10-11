@@ -157,16 +157,17 @@ class EnvState3D:
     last_thrust: float
     last_torque: jnp.ndarray  # torque in the local frame
     time: int
+    reward: float
 
     # control params is float or dataclass
-    control_params:  Union[float, struct.dataclass] = 0.0
+    control_params:  Union[float, struct.dataclass] = 0.0    
 
 
 @struct.dataclass
 class EnvParams3D:
     max_speed: float = 8.0
-    # max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
-    max_torque: jnp.ndarray = default_array([2e-3, 2e-3, 0.5e-3])
+    max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
+    # max_torque: jnp.ndarray = default_array([2e-3, 2e-3, 0.5e-3])
     max_omega: jnp.ndarray = default_array([20.0, 20.0, 3.0])
     max_thrust: float = 0.8
     dt: float = 0.02
@@ -184,6 +185,9 @@ class EnvParams3D:
     traj_obs_len: int = 5
     traj_obs_gap: int = 5
     d_offset: jnp.ndarray = default_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    # curriculum related parameters
+    curri_params: float = 1.0
 
 
 @struct.dataclass
