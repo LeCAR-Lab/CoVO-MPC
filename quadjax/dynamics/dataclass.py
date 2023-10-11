@@ -157,7 +157,6 @@ class EnvState3D:
     last_thrust: float
     last_torque: jnp.ndarray  # torque in the local frame
     time: int
-    reward: float
 
     # control params is float or dataclass
     control_params:  Union[float, struct.dataclass] = 0.0    

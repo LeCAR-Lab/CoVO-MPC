@@ -348,6 +348,7 @@ def main(args: Args):
         "ACTIVATION": "tanh",
         "ANNEAL_LR": False,
         "task": args.task,
+        "enable_curri": args.curri,
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
