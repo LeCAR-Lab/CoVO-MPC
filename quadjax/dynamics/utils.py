@@ -5,7 +5,7 @@ import chex
 from typing import Tuple
 
 import quadjax
-from quadjax.dynamics.dataclass import EnvState3D
+from quadjax.dynamics.dataclass import EnvState3D, EnvParams3D
 
 
 @jax.jit
@@ -29,6 +29,12 @@ def get_hit_penalty(y: float, z: float) -> float:
     )
     return hit_panelty
 
+'''
+disturbance related
+'''
+@jax.jit
+def constant_disturbance(x:jnp.ndarray, u:jnp.ndarray, params:EnvParams3D):
+    return params.d_offset
 
 '''
 trajectory related

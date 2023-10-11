@@ -309,6 +309,7 @@ class Args:
     env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
     lower_controller: str = "base" # bodyrate, base
     debug: bool = False
+    dynamics: str = "free"
 
 
 def main(args: Args):
@@ -328,6 +329,7 @@ def main(args: Args):
         "ACTIVATION": "tanh",
         "ANNEAL_LR": False,
         "task": args.task,
+        "dynamics": args.dynamics
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
@@ -339,7 +341,7 @@ def main(args: Args):
         render_fn = quadjax.envs.quad2d_free.render_env
         eval_fn = quadjax.envs.quad2d_free.eval_env
     elif args.env == 'quad3d_free':
-        env = quadjax.envs.quad3d_free.Quad3D(task=args.task)
+        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics)
         render_fn = quadjax.envs.quad3d_free.render_env
         eval_fn = quadjax.envs.quad3d_free.eval_env
     elif args.env == 'quad3d':
