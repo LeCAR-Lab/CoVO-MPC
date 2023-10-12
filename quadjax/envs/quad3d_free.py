@@ -14,7 +14,7 @@ import numpy as np
 import quadjax
 from quadjax import controllers
 from quadjax.dynamics import utils
-from quadjax.dynamics.free import get_free_dynamics_3d, get_free_dynamics_3d_disturbance
+from quadjax.dynamics import free
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 
 # for debug purpose
@@ -48,10 +48,13 @@ class Quad3D(environment.Environment):
             raise NotImplementedError
         # dynamics function
         if dynamics == 'free':
-            self.step_fn, self.dynamics_fn = get_free_dynamics_3d()
+            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d()
             self.get_obs = self.get_obs_quadonly
         elif dynamics == 'dist_constant':
-            self.step_fn, self.dynamics_fn = get_free_dynamics_3d_disturbance(utils.constant_disturbance)
+            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
+            self.get_obs = self.get_obs_quadonly
+        elif dynamics == 'bodyrate':
+            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_bodyrate()
             self.get_obs = self.get_obs_quadonly
         else:
             raise NotImplementedError
@@ -59,7 +62,7 @@ class Quad3D(environment.Environment):
         self.equib = jnp.array([0.0]*6+[1.0]+[0.0]*6)
         # RL parameters
         self.action_dim = 4
-        self.obs_dim = 29 + self.default_params.traj_obs_len * 6
+        self.obs_dim = 28 + self.default_params.traj_obs_len * 6
 
 
     '''
@@ -107,7 +110,7 @@ class Quad3D(environment.Environment):
 
         reward = self.reward_fn(state)
 
-        next_state = self.step_fn(params, state, env_action)
+        next_state = self.step_fn(params, state, env_action, key)
 
         done = self.is_terminal(state, params)
         return (
@@ -126,7 +129,7 @@ class Quad3D(environment.Environment):
         self, key: chex.PRNGKey, params: EnvParams3D
     ) -> Tuple[chex.Array, EnvState3D]:
         """Reset environment state by sampling theta, theta_dot."""
-        traj_key, pos_key, key = jax.random.split(key, 3)
+        traj_key, disturb_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
         pos_traj, vel_traj = self.generate_traj(traj_key)
         zeros3 = jnp.zeros(3)
@@ -151,6 +154,8 @@ class Quad3D(environment.Environment):
             last_thrust=0.0,last_torque=zeros3,
             # step
             time=0,
+            # disturbance
+            f_disturb=jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale),
         )
         return self.get_obs(state, params), state
 
@@ -159,19 +164,16 @@ class Quad3D(environment.Environment):
         """Sample environment parameters."""
 
         param_key = jax.random.split(key)[0]
-        rand_val = jax.random.uniform(param_key, shape=(9,), minval=0.0, maxval=1.0)
+        rand_val = jax.random.uniform(param_key, shape=(11,), minval=-1.0, maxval=1.0)
 
-        m = 0.025 + 0.015 * rand_val[0]
-        I = jnp.array([1.2e-5, 1.2e-5, 2.0e-5]) + 0.5e-5 * rand_val[1:4]
-        I = jnp.diag(I)
-        mo = 0.01 + 0.01 * rand_val[4]
-        l = 0.2 + 0.2 * rand_val[5]
-        hook_offset = rand_val[6:9] * 0.04
-        
-        d_key = jax.random.split(key)[0]
-        d_offset = jax.random.uniform(d_key, shape=(6,), minval=-1.0, maxval=1.0) * jnp.concatenate([jnp.array([0.2, 0.2, 0.2]), jnp.array([0.2e-3, 0.2e-3, 0.2e-3])])
+        params = self.default_params
+        m = params.m_mean + rand_val[0] * params.m_std
+        I_diag = params.I_diag_mean + rand_val[1:4] * params.I_diag_std
+        I = jnp.diag(I_diag)
+        action_scale = params.action_scale_mean + rand_val[4] * params.action_scale_std
+        alpha_bodyrate = params.alpha_bodyrate_mean + rand_val[5] * params.alpha_bodyrate_std
 
-        return EnvParams3D(m=m, I=I, mo=mo, l=l, hook_offset=hook_offset, d_offset=d_offset)
+        return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate)
     
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quadonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -184,18 +186,29 @@ class Quad3D(environment.Environment):
         obs_elements = [
             # drone
             state.pos,
-            state.vel / 4.0,
+            state.vel,
             state.quat,
-            state.omega / 40.0,  # 3*3+4=13
+            state.omega,  # 3*3+4=13
             # trajectory
             state.pos_tar,
-            state.vel_tar / 4.0,  # 3*2=6
+            state.vel_tar,  # 3*2=6
             state.pos_traj[indices].flatten(), 
-            state.vel_traj[indices].flatten() / 4.0, 
+            state.vel_traj[indices].flatten(), 
             # parameter observation
+            # I
+            (params.I.diagonal()- params.I_diag_mean)/params.I_diag_std,
+            # disturbance
+            (state.f_disturb)/params.disturb_scale,
             jnp.array(
-                [(params.m - 0.025) / (0.04 - 0.025) * 2.0 - 1.0,]), # 3
-            ((params.I - 1.2e-5) / 0.5e-5 * 2.0 - 1.0).flatten(),  # 3x3
+                [
+                    # mass
+                    (params.m - params.m_mean)/params.m_std,
+                    # action_scale
+                    (params.action_scale - params.action_scale_mean)/params.action_scale_std,
+                    # 1st order alpha
+                    (params.alpha_bodyrate - params.alpha_bodyrate_mean)/params.alpha_bodyrate_std,
+                ]
+            )
         ]  # 13+6=19
         obs = jnp.concatenate(obs_elements, axis=-1)
 

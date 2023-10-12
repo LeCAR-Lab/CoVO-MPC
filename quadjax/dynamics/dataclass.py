@@ -157,6 +157,7 @@ class EnvState3D:
     last_thrust: float
     last_torque: jnp.ndarray  # torque in the local frame
     time: int
+    f_disturb: jnp.ndarray
 
     # control params is float or dataclass
     control_params:  Union[float, struct.dataclass] = 0.0    
@@ -166,24 +167,52 @@ class EnvState3D:
 class EnvParams3D:
     max_speed: float = 8.0
     max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
-    # max_torque: jnp.ndarray = default_array([2e-3, 2e-3, 0.5e-3])
-    max_omega: jnp.ndarray = default_array([20.0, 20.0, 3.0])
+    max_omega: jnp.ndarray = default_array([5.0, 5.0, 3.0])
     max_thrust: float = 0.8
     dt: float = 0.02
     g: float = 9.81  # gravity
+
     m: float = 0.03  # mass
+    m_mean: float = 0.03  # mass
+    m_std: float = 0.003  # mass
+
     I: jnp.ndarray = default_array([
         [1.7e-5, 0.0, 0.00], 
         [0.0, 1.7e-5, 0.0], 
         [0.0, 0.0, 3.0e-5]])  # moment of inertia
+    I_diag_mean: jnp.ndarray = default_array([1.7e-5, 1.7e-5, 3.0e-5])  # moment of inertia
+    I_diag_std: jnp.ndarray = default_array([0.2e-5, 0.2e-5, 0.3e-5])  # moment of inertia
+
     mo: float = 0.01  # mass of the object attached to the rod
+    mo_mean: float = 0.01
+    mo_std: float = 0.003
+
     l: float = 0.3  # length of the rod
-    hook_offset: jnp.ndarray = default_array([0.03, 0.02, -0.06])
+    l_mean: float = 0.3
+    l_std: float = 0.1
+
+    hook_offset: jnp.ndarray = default_array([0.0, 0.0, -0.01])
+    hook_offset_mean: jnp.ndarray = default_array([0.0, 0.0, -0.02])
+    hook_offset_std: jnp.ndarray = default_array([0.01, 0.01, 0.01])
+
+    action_scale: float = 1.0
+    action_scale_mean: float = 1.0
+    action_scale_std: float = 0.1
+
+    # 1st order dynamics
+    alpha_bodyrate: float = 0.5
+    alpha_bodyrate_mean: float = 0.5
+    alpha_bodyrate_std: float = 0.1
+
     max_steps_in_episode: int = 300
     rope_taut_therehold: float = 1e-4
     traj_obs_len: int = 5
     traj_obs_gap: int = 5
+
+    # disturbance related parameters
     d_offset: jnp.ndarray = default_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    disturb_period: int = 50
+    disturb_scale: float = 0.2
 
     # curriculum related parameters
     curri_params: float = 1.0

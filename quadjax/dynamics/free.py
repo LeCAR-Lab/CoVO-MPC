@@ -1,4 +1,5 @@
 import jax
+import chex
 from jax import numpy as jnp
 from functools import partial
 
@@ -152,6 +153,92 @@ def get_free_dynamics_3d():
         return env_state
 
     return free_dynamics_3d, quad_dynamics_rk4
+
+def get_free_dynamics_3d_bodyrate():
+    # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
+
+    @jax.jit
+    def quad_dynamics_bodyrate(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D, dt: float):
+        # x: state [r, q, v, omega]
+        # NOTE: u is normalized thrust and torque [-1, 1]
+        # thrust = (u[0] + 1.0) / 2.0 * params.max_thrust
+        # torque = u[1:4] * params.max_torque
+        u = u * params.action_scale
+
+        thrust = u[0]
+        omega_tar = u[1:4]
+
+        r = x[:3] # position in world frame
+        q = x[3:7] / jnp.linalg.norm(x[3:7]) # quaternion in world frame
+        v = x[7:10] # velocity in world frame
+        omega = x[10:13] # angular velocity in body frame
+        f_disturb = x[13:16] # disturbance in world frame
+        Q = geom.qtoQ(q) # quaternion to rotation matrix
+
+        # dynamics
+        r_dot = v
+        q_dot = 0.5 * geom.L(q) @ geom.H @ omega
+        v_dot = jnp.asarray([0, 0, -params.g]) + 1.0 / params.m * (Q @ jnp.asarray([0, 0, thrust]) + f_disturb)
+
+        # integrate
+        r_new = r + r_dot * dt
+        q_new = q + q_dot * dt
+        v_new = v + v_dot * dt
+        omega_new = params.alpha_bodyrate * (omega) + (1-params.alpha_bodyrate) * omega_tar
+        f_disturb_new = f_disturb
+
+        # return
+        x_new = jnp.concatenate([r_new, q_new, v_new, omega_new, f_disturb_new])
+        return x_new
+
+    @jax.jit
+    def free_dynamics_3d_bodyrate(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D, key:chex.PRNGKey):
+        # dynamics NOTE: u is normalized thrust and torque [-1, 1]
+        # thrust_normed = env_action.thrust/env_params.max_thrust * 2.0 - 1.0
+        # torque_normed = env_action.torque / env_params.max_torque
+        # NOTE hack here, just convert torque to omega
+        omega_tar = env_action.torque / env_params.max_torque * env_params.max_omega
+        u = jnp.concatenate([jnp.array([env_action.thrust]), omega_tar])
+        x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega, env_state.f_disturb])
+
+        x_new = quad_dynamics_bodyrate(x, u, env_params, env_params.dt)
+        pos = x_new[:3]
+        quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
+        vel = x_new[7:10]
+        omega = x_new[10:13]
+
+        # step
+        time = env_state.time + 1
+
+        # update disturbance
+        disturb_key, key = jax.random.split(key)
+        f_disturb = jnp.where(time % env_params.disturb_period == 0, jax.random.uniform(disturb_key, shape=(3,), minval=-env_params.disturb_scale, maxval=env_params.disturb_scale)
+                            , env_state.f_disturb)
+
+        # trajectory
+        pos_tar = env_state.pos_traj[time]
+        vel_tar = env_state.vel_traj[time]
+
+        # debug value
+        last_thrust = env_action.thrust
+        last_torque = env_action.torque
+
+        env_state = env_state.replace(
+            # drone
+            pos=pos, vel=vel, omega=omega, quat=quat,
+            # trajectory
+            pos_tar=pos_tar, vel_tar=vel_tar,
+            # debug value
+            last_thrust=last_thrust, last_torque=last_torque,
+            # step
+            time=time,  
+            # disturbance
+            f_disturb=f_disturb,
+        )
+
+        return env_state
+
+    return free_dynamics_3d_bodyrate, quad_dynamics_bodyrate
 
 def get_free_dynamics_3d_disturbance(d_func):
     # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))

@@ -49,9 +49,9 @@ vis["drone_frame"].set_object(g.StlMeshGeometry.from_file('../assets/axes.stl'))
 vis["obj"].set_object(g.Sphere(0.02), material=g.MeshLambertMaterial(color=0x0000ff))
 vis["obj_tar"].set_object(g.Sphere(0.02), material=g.MeshLambertMaterial(color=0xff0000))
 # create a circle with small capacity
-vis["circle"].set_object(g.Cylinder(0.1, 0.2), material=g.MeshLambertMaterial(color=0x0000ff))
+# vis["circle"].set_object(g.Cylinder(0.1, 0.2), material=g.MeshLambertMaterial(color=0x0000ff))
 # rotate circle around z-axis by 90 degree
-vis["circle"].set_transform(tf.rotation_matrix(np.pi/2, [0, 0, 1]))
+# vis["circle"].set_transform(tf.rotation_matrix(np.pi/2, [0, 0, 1]))
 for i in range(0, 300, 2):
     vis[f"traj{i}"].set_object(g.Sphere(0.01), material=g.MeshLambertMaterial(color=0x00ff00))
 
