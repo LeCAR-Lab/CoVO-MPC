@@ -63,6 +63,28 @@ class ActorCritic(nn.Module):
         )
 
         return pi, jnp.squeeze(critic, axis=-1)
+    
+# parameter compressor, 2 layer 128 hidden units with output dim 8 input dim=env.param_obs_dim
+class Compressor(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = nn.Dense(128, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.relu(x)
+        x = nn.Dense(128, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.relu(x)
+        x = nn.Dense(8, kernel_init=orthogonal(1.0), bias_init=constant(0.0))(x)
+        return x
+    
+# parameter adaptor, 2 layer 256 hidden units with output dim 8 input dim=env.adapt_obs_dim
+class Adaptor(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        x = nn.Dense(256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.relu(x)
+        x = nn.Dense(256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.relu(x)
+        return x
+
 
 class Transition(NamedTuple):
     done: jnp.ndarray
@@ -82,6 +104,7 @@ def make_train(env, config):
         config["NUM_ENVS"] * config["NUM_STEPS"] // config["NUM_MINIBATCHES"]
     )
     env = LogWrapper(env)
+
 
     def linear_schedule(count):
         frac = (
@@ -113,6 +136,7 @@ def make_train(env, config):
         rng, _rng = jax.random.split(rng)
         init_x = jnp.zeros(env.obs_dim)
         network_params = network.init(_rng, init_x)
+
         if config["ANNEAL_LR"]:
             tx = optax.chain(
                 optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
@@ -123,11 +147,46 @@ def make_train(env, config):
                 optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
                 optax.adam(config["LR"], eps=1e-5),
             )
-        train_state = TrainState.create(
-            apply_fn=network.apply,
-            params=network_params,
-            tx=tx,
-        )
+
+        if config['enable_RMA']:
+            compressor = Compressor()
+            compressor_params = compressor.init(_rng, jnp.zeros(env.param_obs_dim))
+            adaptor = Adaptor()
+            adaptor_params = adaptor.init(_rng, jnp.zeros(env.adapt_obs_dim))
+            adaptor_params = adaptor.init(_rng, jnp.zeros(env.adapt_obs_dim))
+            def get_compressed_obs(obs, state, params, compressor_params):
+                params_obs = env.get_obs_paramsonly(state, params)
+                compressed_params_obs = compressor.apply(compressor_params, params_obs)
+                return jnp.concatenate([obs, compressed_params_obs], axis=-1)
+            def get_adapted_obs(obs, state, params, adaptor_params):
+                adapt_obs = env.get_obs_adapt_hist(state, params)
+                adapted_embeding = adaptor.apply(adaptor_params, adapt_obs)
+                return jnp.concatenate([obs, adapted_embeding], axis=-1)
+            train_state = TrainState.create(
+                apply_fn=network.apply,
+                params=[network_params, compressor_params, adaptor_params],
+                tx=tx,
+            )
+            def get_pi_value(runner_state):
+                train_state, env_state, last_obs, rng, env_params = runner_state
+                compressed_last_obs = get_compressed_obs(last_obs, env_state, env_params, train_state.params[1])
+                pi, value = network.apply(train_state.params[0], compressed_last_obs)
+                return pi, value
+            def get_pi_value_adapt(runner_state):
+                train_state, env_state, last_obs, rng, env_params = runner_state
+                adapted_last_obs = get_adapted_obs(last_obs, env_state, env_params, train_state.params[2])
+                pi, value = network.apply(train_state.params[0], adapted_last_obs)
+                return pi, value
+        else:
+            train_state = TrainState.create(
+                apply_fn=network.apply,
+                params=network_params,
+                tx=tx,
+            )
+            def get_pi_value(runner_state):
+                train_state, env_state, last_obs, rng, env_params = runner_state
+                pi, value = network.apply(train_state.params, last_obs)
+                return pi, value
 
         # TRAIN LOOP
         @jax.jit
@@ -138,7 +197,8 @@ def make_train(env, config):
 
                 # SELECT ACTION
                 rng, _rng = jax.random.split(rng)
-                pi, value = network.apply(train_state.params, last_obs)
+
+                pi, value = get_pi_value(runner_state)
                 action = pi.sample(seed=_rng)
                 log_prob = pi.log_prob(action)
 
@@ -174,7 +234,7 @@ def make_train(env, config):
             
             # CALCULATE ADVANTAGE
             train_state, env_state, last_obs, rng, env_params = runner_state
-            _, last_val = network.apply(train_state.params, last_obs)
+            _, last_val = get_pi_value(runner_state)
 
             def _calculate_gae(traj_batch, last_val):
                 def _get_advantages(gae_and_next_value, transition):
@@ -289,12 +349,9 @@ def make_train(env, config):
             runner_state = (train_state, env_state, last_obs, rng, env_params)
             return runner_state, metric
 
+        # train PPO
         rng, _rng = jax.random.split(rng)
         runner_state = (train_state, env_state, obsv, _rng, env_params)
-        # NOTE not scan here for logging purpose
-        # runner_state, metric = jax.lax.scan(
-        #     _update_step, runner_state, None, config["NUM_UPDATES"]
-        # )
         metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_UPDATES"]):
@@ -325,10 +382,12 @@ class Args:
     task: str = "tracking_zigzag" # tracking, tracking_zigzag, 
     env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
     lower_controller: str = "base" # bodyrate, base
+    obs_type: str = "quad_params" # quad_params, quad
     debug: bool = False
     curri: bool = False
     dynamics: str = "free"
     curri: bool = False
+    enable_RMA: bool = False
 
 
 def main(args: Args):
@@ -349,6 +408,7 @@ def main(args: Args):
         "ANNEAL_LR": False,
         "task": args.task,
         "enable_curri": args.curri,
+        "enable_RMA": args.enable_RMA,
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
@@ -360,7 +420,7 @@ def main(args: Args):
         render_fn = quadjax.envs.quad2d_free.render_env
         eval_fn = quadjax.envs.quad2d_free.eval_env
     elif args.env == 'quad3d_free':
-        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics)
+        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type)
         render_fn = quadjax.envs.quad3d_free.render_env
         eval_fn = quadjax.envs.quad3d_free.eval_env
     elif args.env == 'quad3d':

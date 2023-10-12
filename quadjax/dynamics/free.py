@@ -223,6 +223,12 @@ def get_free_dynamics_3d_bodyrate():
         last_thrust = env_action.thrust
         last_torque = env_action.torque
 
+        # adaptation trajectory history information
+        vel_hist = jnp.concatenate([env_state.vel_hist[1:], jnp.expand_dims(env_state.vel, axis=0)])
+        omega_hist = jnp.concatenate([env_state.omega_hist[1:], jnp.expand_dims(env_state.omega, axis=0)])
+        action = jnp.concatenate([jnp.array([env_action.thrust]/env_params.max_thrust)*2.0-1.0, env_action.torque/env_params.max_torque])
+        action_hist = jnp.concatenate([env_state.action_hist[1:], jnp.expand_dims(action, axis=0)])
+
         env_state = env_state.replace(
             # drone
             pos=pos, vel=vel, omega=omega, quat=quat,

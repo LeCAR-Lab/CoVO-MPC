@@ -159,6 +159,11 @@ class EnvState3D:
     time: int
     f_disturb: jnp.ndarray
 
+    # trajectory information for adaptation
+    vel_hist: jnp.ndarray
+    omega_hist: jnp.ndarray
+    action_hist: jnp.ndarray 
+
     # control params is float or dataclass
     control_params:  Union[float, struct.dataclass] = 0.0    
 
@@ -216,6 +221,9 @@ class EnvParams3D:
 
     # curriculum related parameters
     curri_params: float = 1.0
+
+    # RMA related parameters
+    adapt_horizon: int = 4
 
 
 @struct.dataclass

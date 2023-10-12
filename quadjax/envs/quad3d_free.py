@@ -58,15 +58,18 @@ class Quad3D(environment.Environment):
         # observation function
         if obs_type == 'quad_params':
             self.get_obs = self.get_obs_quad_params
+            self.obs_dim = 28 + self.default_params.traj_obs_len * 6
         elif obs_type == 'quad':
             self.get_obs = self.get_obs_quadonly
+            self.obs_dim = 19 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
         self.equib = jnp.array([0.0]*6+[1.0]+[0.0]*6)
         # RL parameters
         self.action_dim = 4
-        self.obs_dim = 28 + self.default_params.traj_obs_len * 6
+        self.adapt_obs_dim = 12 * self.default_params.adapt_horizon
+        self.param_obs_dim = 9
 
 
     '''
@@ -98,6 +101,8 @@ class Quad3D(environment.Environment):
             dtype=jnp.float32,
         )
 
+
+    
     '''
     key methods
     '''
@@ -108,14 +113,39 @@ class Quad3D(environment.Environment):
         action: jnp.ndarray,
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-        thrust = (action[0] + 1.0) / 2.0 * params.max_thrust
-        torque = action[1:4] * params.max_torque
+        action = jnp.clip(action, -1.0, 1.0)
+        next_state = self.raw_step(key, state, action, params)
+        return self.get_obs_state_reward_done_info(state, next_state, params)
+
+    def step_env_wocontroller(
+        self,
+        key: chex.PRNGKey,
+        state: EnvState3D,
+        sub_action: jnp.ndarray,
+        params: EnvParams3D,
+    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+        return self.step_env(key, state, sub_action, params)
+    
+    def raw_step(
+        self,
+        key: chex.PRNGKey,
+        state: EnvState3D,
+        sub_action: jnp.ndarray,
+        params: EnvParams3D,
+    ) -> EnvState3D:
+        sub_action = jnp.clip(sub_action, -1.0, 1.0)
+        thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
+        torque = sub_action[1:] * params.max_torque
         env_action = Action3D(thrust=thrust, torque=torque)
-
-        reward = self.reward_fn(state)
-
-        next_state = self.step_fn(params, state, env_action, key)
-
+        return self.step_fn(params, state, env_action, key)
+    
+    def get_obs_state_reward_done_info(
+        self,
+        state: EnvState3D,
+        next_state: EnvState3D, 
+        params: EnvParams3D,
+    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+        reward = self.reward_fn(state, params)
         done = self.is_terminal(state, params)
         return (
             lax.stop_gradient(self.get_obs(next_state, params)),
@@ -137,6 +167,9 @@ class Quad3D(environment.Environment):
         # generate reference trajectory by adding a few sinusoids together
         pos_traj, vel_traj = self.generate_traj(traj_key)
         zeros3 = jnp.zeros(3)
+        vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3))
+        omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3))
+        action_hist = jnp.zeros((self.default_params.adapt_horizon+2, 4))
         state = EnvState3D(
             # drone
             pos=zeros3,
@@ -160,6 +193,8 @@ class Quad3D(environment.Environment):
             time=0,
             # disturbance
             f_disturb=jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale),
+            # trajectory information for adaptation
+            vel_hist=vel_hist,omega_hist=omega_hist,action_hist=action_hist,
         )
         return self.get_obs(state, params), state
 
@@ -202,6 +237,33 @@ class Quad3D(environment.Environment):
         obs = jnp.concatenate(obs_elements, axis=-1)
 
         return obs
+
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_adapt_hist(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        vel_hist = state.vel_hist
+        omega_hist = state.omega_hist
+        action_hist = state.action_hist
+
+        dvel_hist = jnp.diff(vel_hist, axis=0)
+        ddvel_hist = jnp.diff(dvel_hist, axis=0)
+        domega_hist = jnp.diff(omega_hist, axis=0)
+        ddomega_hist = jnp.diff(domega_hist, axis=0)
+
+        horizon = self.default_params.adapt_horizon
+        obs_elements = [
+            vel_hist[-horizon:].flatten(),
+            omega_hist[-horizon:].flatten(),
+            action_hist[-horizon:].flatten(),
+            dvel_hist[-horizon:].flatten(),
+            ddvel_hist[-horizon:].flatten(),
+            domega_hist[-horizon:].flatten(),
+            ddomega_hist[-horizon:].flatten(),
+        ]
+
+        obs = jnp.concatenate(obs_elements, axis=-1)
+
+        return obs
+
     
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_paramsonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -330,6 +392,8 @@ class Args:
     task: str = "hovering" # tracking, tracking_zigzag, hovering
     dynamics: str = 'free'
     controller: str = 'lqr' # fixed
+    controller_params: str = ''
+    debug: bool = False
 
 def main(args: Args):
     env = Quad3D(task=args.task, dynamics=args.dynamics)
@@ -351,6 +415,36 @@ def main(args: Args):
             u = jnp.asarray([0.8, 0.0, 0.0, 0.0]),
         )
         controller = controllers.FixedController(env)
+    elif args.controller == 'mppi':
+        sigma = 0.1
+        if args.controller_params == '':
+            N = 8192
+            H = 64
+            lam = 3e-3
+        else:
+            # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
+            N = int(args.controller_params.split('_')[0][1:])
+            H = int(args.controller_params.split('_')[1][1:])
+            lam = float(args.controller_params.split('_')[2][3:])
+            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}')
+        if args.debug:
+            N = 8
+            print(f'[DEBUG], override controller parameters to be: N={N}')
+        thrust_hover = env.default_params.m * env.default_params.g
+        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
+        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0]) 
+        a_mean = jnp.tile(a_mean_per_step, (H, 1))
+        a_cov_per_step = jnp.diag(jnp.array([sigma**2]*env.action_dim))
+        a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+        control_params = controllers.MPPIParams(
+            gamma_mean = 1.0,
+            gamma_sigma = 0.01,
+            discount = 0.9,
+            sample_sigma = sigma,
+            a_mean = a_mean,
+            a_cov = a_cov,
+        )
+        controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     render_env(env, controller=controller, control_params=control_params, repeat_times=1)
