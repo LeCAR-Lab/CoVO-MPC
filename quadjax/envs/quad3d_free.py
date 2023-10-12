@@ -28,7 +28,7 @@ class Quad3D(environment.Environment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'free'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad_params'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -49,12 +49,16 @@ class Quad3D(environment.Environment):
         # dynamics function
         if dynamics == 'free':
             self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d()
-            self.get_obs = self.get_obs_quadonly
         elif dynamics == 'dist_constant':
             self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
-            self.get_obs = self.get_obs_quadonly
         elif dynamics == 'bodyrate':
             self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_bodyrate()
+        else:
+            raise NotImplementedError
+        # observation function
+        if obs_type == 'quad_params':
+            self.get_obs = self.get_obs_quad_params
+        elif obs_type == 'quad':
             self.get_obs = self.get_obs_quadonly
         else:
             raise NotImplementedError
@@ -194,6 +198,14 @@ class Quad3D(environment.Environment):
             state.vel_tar,  # 3*2=6
             state.pos_traj[indices].flatten(), 
             state.vel_traj[indices].flatten(), 
+        ]  # 13+6=19
+        obs = jnp.concatenate(obs_elements, axis=-1)
+
+        return obs
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_paramsonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        obs_elements = [
             # parameter observation
             # I
             (params.I.diagonal()- params.I_diag_mean)/params.I_diag_std,
@@ -211,8 +223,13 @@ class Quad3D(environment.Environment):
             )
         ]  # 13+6=19
         obs = jnp.concatenate(obs_elements, axis=-1)
-
         return obs
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_quad_params(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        quad_obs = self.get_obs_quadonly(state, params)
+        param_obs = self.get_obs_paramsonly(state, params)
+        return jnp.concatenate([quad_obs, param_obs], axis=-1)
 
     @partial(jax.jit, static_argnums=(0,))
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:

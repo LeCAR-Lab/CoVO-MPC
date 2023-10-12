@@ -390,7 +390,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
     plt.subplots(num_rows, plot_per_row, figsize=(6*plot_per_row, 2 * num_rows))
 
     # plot reward
-    plt.subplot(num_rows, 6, 1)
+    plt.subplot(num_rows, plot_per_row, 1)
     plt.plot(time, reward_seq)
     plt.ylabel("reward")
 
@@ -398,7 +398,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
     # plot 10 obs in a subplot
     current_fig = 2
     for i in range(len(obs_seq[0]) // 10 + 1):
-        plt.subplot(num_rows, 6, current_fig)
+        plt.subplot(num_rows, plot_per_row, current_fig)
         current_fig += 1
         for j in range(10):
             idx = i * 10 + j
@@ -421,14 +421,14 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
                 raise NotImplementedError
             for i, subplot_name in scan_range:
                 current_fig += 1
-                plt.subplot(num_rows, 6, current_fig)
+                plt.subplot(num_rows, plot_per_row, current_fig)
                 plt.plot(time, xyz[:, i], label=f"{subplot_name}")
                 plt.plot(time, xyz_tar[:, i], "--", label=f"{subplot_name}_tar")
                 plt.ylabel(f"{name}_{subplot_name}")
                 plt.legend()
         else:
             current_fig += 1
-            plt.subplot(num_rows, 6, current_fig)
+            plt.subplot(num_rows, plot_per_row, current_fig)
             plt.plot(time, [getattr(s, name) for s in state_seq])
             plt.ylabel(name)
 
