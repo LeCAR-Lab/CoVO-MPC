@@ -380,13 +380,14 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
     import numpy as np
     # plot results
     num_figs = len(state_seq[0].__dict__) + 20
-    time = [s.time * env_params.dt for s in state_seq]
+    time = np.arange(len(state_seq)) * env_params.dt
 
     # calculate number of rows needed
-    num_rows = int(jnp.ceil(num_figs / 6))
+    plot_per_row = 4
+    num_rows = int(jnp.ceil(num_figs / plot_per_row))
 
     # create num_figs subplots
-    plt.subplots(num_rows, 6, figsize=(4 * 6, 2 * num_rows))
+    plt.subplots(num_rows, plot_per_row, figsize=(6*plot_per_row, 2 * num_rows))
 
     # plot reward
     plt.subplot(num_rows, 6, 1)
