@@ -408,7 +408,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
 
     # plot state
     for i, (name, value) in enumerate(state_seq[0].__dict__.items()):
-        if name in ["pos_traj", "vel_traj"]:
+        if name in ["pos_traj", "vel_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
             continue
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
             xyz = np.array([getattr(s, name) for s in state_seq])
@@ -418,7 +418,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
             elif xyz.shape[1] == 2:
                 scan_range = zip(range(2), ["y", "z"])
             else: 
-                raise NotImplementedError
+                print(f"[DEBUG] ignore {name} with shape {xyz.shape} while plotting")
             for i, subplot_name in scan_range:
                 current_fig += 1
                 plt.subplot(num_rows, plot_per_row, current_fig)

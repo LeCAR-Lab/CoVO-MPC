@@ -15,5 +15,5 @@ class BaseController:
         return self.init_control_params
     
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
+    def __call__(self, obs, state, env_params, rng_act, control_params, env_info = None) -> jnp.ndarray:
         raise NotImplementedError

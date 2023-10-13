@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 from jax import lax
-from gymnax.environments import environment, spaces
+from gymnax.environments import spaces
 from typing import Tuple, Optional
 import chex
 from functools import partial
@@ -16,13 +16,14 @@ from quadjax import controllers
 from quadjax.dynamics import utils
 from quadjax.dynamics import free
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
+from quadjax.envs.base import BaseEnvironment
 
 # for debug purpose
 from icecream import install
 install()
 
 
-class Quad3D(environment.Environment):
+class Quad3D(BaseEnvironment):
     """
     JAX Compatible version of Quad3D-v0 OpenAI gym environment. Source:
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
@@ -156,6 +157,8 @@ class Quad3D(environment.Environment):
                 "discount": self.discount(next_state, params),
                 "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
                 "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
+                "obs_param": self.get_obs_paramsonly(state, params),
+                "obs_adapt": self.get_obs_adapt_hist(state, params),
             },
         )
 
@@ -166,10 +169,10 @@ class Quad3D(environment.Environment):
         traj_key, disturb_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
         pos_traj, vel_traj = self.generate_traj(traj_key)
-        zeros3 = jnp.zeros(3)
-        vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3))
-        omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3))
-        action_hist = jnp.zeros((self.default_params.adapt_horizon+2, 4))
+        zeros3 = jnp.zeros(3, dtype=jnp.float32)
+        vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
+        omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
+        action_hist = jnp.zeros((self.default_params.adapt_horizon+2, 4), dtype=jnp.float32)
         state = EnvState3D(
             # drone
             pos=zeros3,
@@ -196,7 +199,14 @@ class Quad3D(environment.Environment):
             # trajectory information for adaptation
             vel_hist=vel_hist,omega_hist=omega_hist,action_hist=action_hist,
         )
-        return self.get_obs(state, params), state
+        info = {
+            "discount": self.discount(state, params),
+            "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
+            "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
+            "obs_param": self.get_obs_paramsonly(state, params),
+            "obs_adapt": self.get_obs_adapt_hist(state, params),
+        }
+        return self.get_obs(state, params), info, state
 
     @partial(jax.jit, static_argnums=(0,))
     def sample_params(self, key: chex.PRNGKey) -> EnvParams3D:
@@ -310,14 +320,14 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
     env_params = env.default_params
 
     rng, rng_reset = jax.random.split(rng)
-    obs, env_state = env.reset(rng_reset, env_params)
+    obs, info, env_state = env.reset(rng_reset, env_params)
 
     control_params = controller.update_params(env_params, control_params)
 
     def run_one_step(carry, _):
-        obs, env_state, rng, env_params, control_params = carry
+        obs, env_state, rng, env_params, control_params, info = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
-        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params, info)
         if control_info is not None:
             if 'a_mean' in control_info:
                 action = control_info['a_mean']
@@ -326,11 +336,11 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         new_control_params = controller.reset()
         control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
-        return (next_obs, next_env_state, rng, env_params, control_params), info['err_pos']
+        return (next_obs, next_env_state, rng, env_params, control_params, info), info['err_pos']
     
     t0 = time_module.time()
-    (obs, env_state, rng, env_params, control_params), err_pos = lax.scan(
-        run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))
+    (obs, env_state, rng, env_params, control_params, info), err_pos = lax.scan(
+        run_one_step, (obs, env_state, rng, env_params, control_params, info), jnp.arange(total_steps))
     print(f"env running time: {time_module.time()-t0:.2f}s")
 
     # save data
@@ -346,7 +356,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
 
     state_seq, obs_seq, reward_seq = [], [], []
     rng, rng_reset = jax.random.split(rng)
-    obs, env_state = env.reset(rng_reset, env_params)
+    obs, info, env_state = env.reset(rng_reset, env_params)
 
     # DEBUG set iniiial state here
     # env_state = env_state.replace(quat = jnp.array([jnp.sin(jnp.pi/4), 0.0, 0.0, jnp.cos(jnp.pi/4)]))
@@ -358,7 +368,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     while n_dones < repeat_times:
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params, info)
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:

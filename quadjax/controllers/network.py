@@ -14,5 +14,5 @@ class NetworkController(controllers.BaseController):
         return control_params
     
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
-        return self.apply_fn(control_params, obs)[0].mean(), control_params, None
+    def __call__(self, obs, state, env_params, rng_act, control_params, env_info = None) -> jnp.ndarray:
+        return self.apply_fn(control_params, obs, env_info)[0].mean(), control_params, None

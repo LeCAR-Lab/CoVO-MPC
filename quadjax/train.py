@@ -7,7 +7,6 @@ from flax.linen.initializers import constant, orthogonal
 from typing import Sequence, NamedTuple
 from flax.training.train_state import TrainState
 import distrax
-from gymnax.wrappers.purerl import LogWrapper
 import time
 from matplotlib import pyplot as plt
 from dataclasses import dataclass as pydataclass
@@ -17,6 +16,7 @@ import GPUtil
 
 import quadjax
 from quadjax.controllers import NetworkController
+from quadjax.envs.base import LogWrapper
 
 class ActorCritic(nn.Module):
     action_dim: Sequence[int]
@@ -97,20 +97,23 @@ class Transition(NamedTuple):
 
 
 def make_train(env, config):
-    config["NUM_UPDATES"] = int(
-        config["TOTAL_TIMESTEPS"] // config["NUM_STEPS"] // config["NUM_ENVS"]
+    config["NUM_PPO_UPDATES"] = int(
+        config["PPO_TIMESTEPS"] // config["NUM_STEPS"] // config["NUM_ENVS"]
     )
+    config["NUM_ADAPT_UPDATES"] = int(
+        config["ADAPT_TIMESTEPS"] // config["NUM_STEPS"] // config["NUM_ENVS"]
+    )
+
     config["MINIBATCH_SIZE"] = (
         config["NUM_ENVS"] * config["NUM_STEPS"] // config["NUM_MINIBATCHES"]
     )
     env = LogWrapper(env)
 
-
     def linear_schedule(count):
         frac = (
             1.0
             - (count // (config["NUM_MINIBATCHES"] * config["UPDATE_EPOCHS"]))
-            / config["NUM_UPDATES"]
+            / config["NUM_PPO_UPDATES"]
         )
         return config["LR"] * frac
 
@@ -126,16 +129,12 @@ def make_train(env, config):
         if config['enable_curri']:
             curri_params = 0.0
             env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
-        obsv, env_state = jax.vmap(env.reset)(reset_rng, env_params)
-
+        obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
 
         # INIT NETWORK
         network = ActorCritic(
             env.action_dim, activation=config["ACTIVATION"]
         )
-        rng, _rng = jax.random.split(rng)
-        init_x = jnp.zeros(env.obs_dim)
-        network_params = network.init(_rng, init_x)
 
         if config["ANNEAL_LR"]:
             tx = optax.chain(
@@ -150,91 +149,89 @@ def make_train(env, config):
 
         if config['enable_RMA']:
             compressor = Compressor()
+            rng, _rng = jax.random.split(rng)
             compressor_params = compressor.init(_rng, jnp.zeros(env.param_obs_dim))
             adaptor = Adaptor()
+            rng, _rng = jax.random.split(rng)
             adaptor_params = adaptor.init(_rng, jnp.zeros(env.adapt_obs_dim))
-            adaptor_params = adaptor.init(_rng, jnp.zeros(env.adapt_obs_dim))
-            def get_compressed_obs(obs, state, params, compressor_params):
-                params_obs = env.get_obs_paramsonly(state, params)
-                compressed_params_obs = compressor.apply(compressor_params, params_obs)
-                return jnp.concatenate([obs, compressed_params_obs], axis=-1)
-            def get_adapted_obs(obs, state, params, adaptor_params):
-                adapt_obs = env.get_obs_adapt_hist(state, params)
-                adapted_embeding = adaptor.apply(adaptor_params, adapt_obs)
-                return jnp.concatenate([obs, adapted_embeding], axis=-1)
+            def get_pi_value(train_params, last_obs, env_info):
+                compressed_params_obs = compressor.apply(train_params[1], env_info['obs_param'])
+                obs = jnp.concatenate([last_obs, compressed_params_obs], axis=-1)
+                pi, value = network.apply(train_params[0], obs)
+                return pi, value
+            def get_pi_value_adapt(train_params, last_obs, env_info):
+                adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
+                obs = jnp.concatenate([last_obs, adapted_last_obs], axis=-1)
+                pi, value = network.apply(train_params[0], obs)
+                return pi, value
+            rng, _rng = jax.random.split(rng)
+            network_params = network.init(_rng, jnp.zeros(env.obs_dim+8))
             train_state = TrainState.create(
-                apply_fn=network.apply,
+                apply_fn=get_pi_value_adapt, # for test
                 params=[network_params, compressor_params, adaptor_params],
                 tx=tx,
             )
-            def get_pi_value(runner_state):
-                train_state, env_state, last_obs, rng, env_params = runner_state
-                compressed_last_obs = get_compressed_obs(last_obs, env_state, env_params, train_state.params[1])
-                pi, value = network.apply(train_state.params[0], compressed_last_obs)
-                return pi, value
-            def get_pi_value_adapt(runner_state):
-                train_state, env_state, last_obs, rng, env_params = runner_state
-                adapted_last_obs = get_adapted_obs(last_obs, env_state, env_params, train_state.params[2])
-                pi, value = network.apply(train_state.params[0], adapted_last_obs)
-                return pi, value
         else:
+            def get_pi_value(train_params, last_obs, env_info):
+                pi, value = network.apply(train_params, last_obs)
+                return pi, value
+            rng, _rng = jax.random.split(rng)
+            network_params = network.init(_rng, jnp.zeros(env.obs_dim))
             train_state = TrainState.create(
-                apply_fn=network.apply,
+                apply_fn=get_pi_value,
                 params=network_params,
                 tx=tx,
             )
-            def get_pi_value(runner_state):
-                train_state, env_state, last_obs, rng, env_params = runner_state
-                pi, value = network.apply(train_state.params, last_obs)
-                return pi, value
 
+        # COLLECT TRAJECTORIES
+        @jax.jit
+        def _env_step(runner_state, unused):
+            train_state, env_state, last_obs, rng, env_params, env_info = runner_state
+
+            # SELECT ACTION
+            rng, _rng = jax.random.split(rng)
+
+            pi, value = get_pi_value(train_state.params, last_obs, env_info)
+            action = pi.sample(seed=_rng)
+            log_prob = pi.log_prob(action)
+
+            # STEP ENV
+            rng, _rng = jax.random.split(rng)
+            rng_step = jax.random.split(_rng, config["NUM_ENVS"])
+            obsv, env_state, reward, done, info = jax.vmap(env.step)(
+                rng_step, env_state, action, env_params
+            )
+            # resample environment parameters if done TODO wrap this into step function or other env wrapper
+            rng_params = jax.random.split(_rng, config["NUM_ENVS"])
+            new_env_params = jax.vmap(env.sample_params)(rng_params)
+            if config['enable_curri']:
+                new_env_params = new_env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])* curri_params)
+            def map_fn(done, x, y):
+                # reshaped_done = jnp.broadcast_to(done, x.shape)
+                indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
+                reshaped_done = done[indexes]
+                return reshaped_done * x + (1 - reshaped_done) * y
+            env_params = jax.tree_map(
+                lambda x, y: map_fn(done, x, y), new_env_params, env_params
+            )
+
+            transition = Transition(
+                done, action, value, reward, log_prob, last_obs, info
+            )
+            runner_state = (train_state, env_state, obsv, rng, env_params, info)
+            return runner_state, transition
+        
         # TRAIN LOOP
         @jax.jit
-        def _update_step(runner_state, unused):
-            # COLLECT TRAJECTORIES
-            def _env_step(runner_state, unused):
-                train_state, env_state, last_obs, rng, env_params = runner_state
-
-                # SELECT ACTION
-                rng, _rng = jax.random.split(rng)
-
-                pi, value = get_pi_value(runner_state)
-                action = pi.sample(seed=_rng)
-                log_prob = pi.log_prob(action)
-
-                # STEP ENV
-                rng, _rng = jax.random.split(rng)
-                rng_step = jax.random.split(_rng, config["NUM_ENVS"])
-                obsv, env_state, reward, done, info = jax.vmap(env.step)(
-                    rng_step, env_state, action, env_params
-                )
-                # resample environment parameters if done TODO wrap this into step function or other env wrapper
-                rng_params = jax.random.split(_rng, config["NUM_ENVS"])
-                new_env_params = jax.vmap(env.sample_params)(rng_params)
-                if config['enable_curri']:
-                    new_env_params = new_env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])* curri_params)
-                def map_fn(done, x, y):
-                    # reshaped_done = jnp.broadcast_to(done, x.shape)
-                    indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
-                    reshaped_done = done[indexes]
-                    return reshaped_done * x + (1 - reshaped_done) * y
-                env_params = jax.tree_map(
-                    lambda x, y: map_fn(done, x, y), new_env_params, env_params
-                )
-
-                transition = Transition(
-                    done, action, value, reward, log_prob, last_obs, info
-                )
-                runner_state = (train_state, env_state, obsv, rng, env_params)
-                return runner_state, transition
+        def _train_ppo(runner_state, unused):
 
             runner_state, traj_batch = jax.lax.scan(
                 _env_step, runner_state, None, config["NUM_STEPS"]
             )
             
             # CALCULATE ADVANTAGE
-            train_state, env_state, last_obs, rng, env_params = runner_state
-            _, last_val = get_pi_value(runner_state)
+            train_state, env_state, last_obs, rng, env_params, env_info = runner_state
+            _, last_val = get_pi_value(train_state.params, last_obs, env_info)
 
             def _calculate_gae(traj_batch, last_val):
                 def _get_advantages(gae_and_next_value, transition):
@@ -269,7 +266,7 @@ def make_train(env, config):
 
                     def _loss_fn(params, traj_batch, gae, targets):
                         # RERUN NETWORK
-                        pi, value = network.apply(params, traj_batch.obs)
+                        pi, value = get_pi_value(params, traj_batch.obs, traj_batch.info)
                         log_prob = pi.log_prob(traj_batch.action)
 
                         # CALCULATE VALUE LOSS
@@ -346,16 +343,79 @@ def make_train(env, config):
             metric = traj_batch.info
             rng = update_state[-1]
 
-            runner_state = (train_state, env_state, last_obs, rng, env_params)
+            runner_state = (train_state, env_state, last_obs, rng, env_params, env_info)
+            return runner_state, metric
+        
+        @jax.jit
+        def _train_adaptor(runner_state, unused):
+            # jax.debug.print("traj_batch {traj_batch}", traj_batch=traj_batch)
+            runner_state, traj_batch = jax.lax.scan(
+                _env_step, runner_state, None, config["NUM_STEPS"]
+            )
+            train_state, env_state, last_obs, rng, env_params, env_info = runner_state
+
+            # Update adaptor
+            def _update_adaptor(update_state, unused):
+                def _update_minbatch(train_state, batch_info):
+                    traj_batch = batch_info
+
+                    def _loss_fn(traj_batch):
+                        # RERUN NETWORK
+                        compressor_value = compressor.apply(train_state.params[1], traj_batch.info['obs_param'])
+                        adaptor_value = adaptor.apply(train_state.params[2], traj_batch.info['obs_adapt'])
+
+                        total_loss = jnp.square(compressor_value - adaptor_value).mean()
+                        return total_loss, None
+
+                    grad_fn = jax.value_and_grad(_loss_fn, has_aux=True)
+                    total_loss, grads = grad_fn(traj_batch)
+                    train_state = train_state.apply_gradients(grads=grads)
+                    return train_state, total_loss
+                train_state, traj_batch, rng = update_state
+                rng, _rng = jax.random.split(rng)
+                batch_size = config["MINIBATCH_SIZE"] * config["NUM_MINIBATCHES"]
+                assert (
+                    batch_size == config["NUM_STEPS"] * config["NUM_ENVS"]
+                ), "batch size must be equal to number of steps * number of envs"
+                permutation = jax.random.permutation(_rng, batch_size)
+                batch = traj_batch
+                batch = jax.tree_util.tree_map(
+                    lambda x: x.reshape((batch_size,) + x.shape[2:]), batch
+                )
+                shuffled_batch = jax.tree_util.tree_map(
+                    lambda x: jnp.take(x, permutation, axis=0), batch
+                )
+                minibatches = jax.tree_util.tree_map(
+                    lambda x: jnp.reshape(
+                        x, [config["NUM_MINIBATCHES"], -1] + list(x.shape[1:])
+                    ),
+                    shuffled_batch,
+                )
+                train_state, total_loss = jax.lax.scan(
+                    _update_minbatch, train_state, minibatches
+                )
+                update_state = (train_state, traj_batch, rng)
+                return update_state, total_loss
+        
+            update_state = (train_state, traj_batch, rng)
+            update_state, loss_info = jax.lax.scan(
+                _update_adaptor, update_state, None, config["UPDATE_EPOCHS"]
+            )
+            train_state = update_state[0]
+            metric = traj_batch.info
+            rng = update_state[-1]
+
+            runner_state = (train_state, env_state, last_obs, rng, env_params, env_info)
             return runner_state, metric
 
         # train PPO
+        print("training PPO...")
         rng, _rng = jax.random.split(rng)
-        runner_state = (train_state, env_state, obsv, _rng, env_params)
+        runner_state = (train_state, env_state, obsv, _rng, env_params, env_info)
         metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
-        for i in range(config["NUM_UPDATES"]):
-            runner_state, metric_local = _update_step(runner_state, None)
+        for i in range(config["NUM_PPO_UPDATES"]):
+            runner_state, metric_local = _train_ppo(runner_state, None)
             metric_local['step'] = jnp.array([(i+1)*step_per_log])
             metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
 
@@ -367,12 +427,28 @@ def make_train(env, config):
                 print('curri_params: ', curri_params)
                                          
             print('====================')
-            print(f'update {i+1}/{config["NUM_UPDATES"]}')
+            print(f'PPO update {i+1}/{config["NUM_PPO_UPDATES"]}')
             for k in metric.keys():
                 v_mean = metric_local[k].mean()
                 metric[k] = jnp.append(metric[k], v_mean)
                 print(f'{k}: {v_mean:.2e}')
             GPUtil.showUtilization()
+
+        # train adaptor
+        if config['enable_RMA']:
+            print("training adaptor...")
+            rng, _rng = jax.random.split(rng)
+            runner_state = (train_state, env_state, obsv, _rng, env_params, env_info)
+            for i in range(config["NUM_ADAPT_UPDATES"]):
+                runner_state, metric_local = _train_adaptor(runner_state, None)
+                print('====================')
+                print(f'Adaptor update {i+1}/{config["NUM_ADAPT_UPDATES"]}')
+                for k in metric.keys():
+                    v_mean = metric_local[k].mean()
+                    metric[k] = jnp.append(metric[k], v_mean)
+                    print(f'{k}: {v_mean:.2e}')
+                GPUtil.showUtilization()
+    
         return runner_state, metric
 
     return train
@@ -382,20 +458,21 @@ class Args:
     task: str = "tracking_zigzag" # tracking, tracking_zigzag, 
     env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
     lower_controller: str = "base" # bodyrate, base
-    obs_type: str = "quad_params" # quad_params, quad
+    obs_type: str = "quad" # quad_params, quad
     debug: bool = False
     curri: bool = False
     dynamics: str = "free"
     curri: bool = False
-    enable_RMA: bool = False
+    RMA: bool = False
 
 
 def main(args: Args):
     config = {
         "LR": 3e-4,
         "NUM_ENVS": 4096 if not args.debug else 1,
-        "NUM_STEPS": 300 if not args.debug else 100,
-        "TOTAL_TIMESTEPS": 1.6e8 if not args.debug else 1e3,
+        "NUM_STEPS": 300 if not args.debug else 10,
+        "PPO_TIMESTEPS": 1.2e8 if not args.debug else 1e3,
+        "ADAPT_TIMESTEPS": 0.4e8 if not args.debug else 0.3e3,
         "UPDATE_EPOCHS": 2,
         "NUM_MINIBATCHES": 320 if not args.debug else 1,
         "GAMMA": 0.99,
@@ -408,7 +485,7 @@ def main(args: Args):
         "ANNEAL_LR": False,
         "task": args.task,
         "enable_curri": args.curri,
-        "enable_RMA": args.enable_RMA,
+        "enable_RMA": args.RMA,
     }
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
