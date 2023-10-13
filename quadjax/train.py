@@ -13,6 +13,7 @@ from dataclasses import dataclass as pydataclass
 import tyro
 import pickle
 import GPUtil
+from functools import partial
 
 import quadjax
 from quadjax.controllers import NetworkController
@@ -68,9 +69,9 @@ class ActorCritic(nn.Module):
 class Compressor(nn.Module):
     @nn.compact
     def __call__(self, x):
-        x = nn.Dense(128, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.Dense(256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
         x = nn.relu(x)
-        x = nn.Dense(128, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
+        x = nn.Dense(256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
         x = nn.relu(x)
         x = nn.Dense(8, kernel_init=orthogonal(1.0), bias_init=constant(0.0))(x)
         return x
@@ -83,6 +84,7 @@ class Adaptor(nn.Module):
         x = nn.relu(x)
         x = nn.Dense(256, kernel_init=orthogonal(np.sqrt(2)), bias_init=constant(0.0))(x)
         x = nn.relu(x)
+        x = nn.Dense(8, kernel_init=orthogonal(1.0), bias_init=constant(0.0))(x)
         return x
 
 
@@ -109,18 +111,25 @@ def make_train(env, config):
     )
     env = LogWrapper(env)
 
-    def linear_schedule(count):
+    def linear_schedule_ppo(count):
         frac = (
             1.0
             - (count // (config["NUM_MINIBATCHES"] * config["UPDATE_EPOCHS"]))
             / config["NUM_PPO_UPDATES"]
         )
         return config["LR"] * frac
+    
+    def linear_schedule_adapt(count):
+        frac = (
+            1.0
+            - (count // (config["NUM_MINIBATCHES"] * config["UPDATE_EPOCHS"]))
+            / config["NUM_ADAPT_UPDATES"]
+        )
+        return config["LR"] * 10.0 * frac
 
     def train(rng):
         # INIT ENV
-        rng, rng1, rng2 = jax.random.split(rng, 3)
-        reset_rng = jax.random.split(rng1, config["NUM_ENVS"])
+        rng, rng2 = jax.random.split(rng)
         param_rng = jax.random.split(rng2, config["NUM_ENVS"])
         env_params = jax.vmap(env.sample_params)(param_rng)
         if config['enable_curri']:
@@ -129,7 +138,6 @@ def make_train(env, config):
         if config['enable_curri']:
             curri_params = 0.0
             env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
-        obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
 
         # INIT NETWORK
         network = ActorCritic(
@@ -139,7 +147,7 @@ def make_train(env, config):
         if config["ANNEAL_LR"]:
             tx = optax.chain(
                 optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
-                optax.adam(learning_rate=linear_schedule, eps=1e-5),
+                optax.adam(learning_rate=linear_schedule_ppo, eps=1e-5),
             )
         else:
             tx = optax.chain(
@@ -166,32 +174,50 @@ def make_train(env, config):
                 return pi, value
             rng, _rng = jax.random.split(rng)
             network_params = network.init(_rng, jnp.zeros(env.obs_dim+8))
-            train_state = TrainState.create(
+
+            # load parameters
+            # network_params, compressor_params, _ = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/rma_policy.pkl", "rb"))
+
+            ppo_train_state = TrainState.create(
                 apply_fn=get_pi_value_adapt, # for test
-                params=[network_params, compressor_params, adaptor_params],
+                params=[network_params, compressor_params],
                 tx=tx,
             )
+            # deep copy tx to get a new optimizer
+            tx_adapt = optax.chain(
+                optax.clip_by_global_norm(config["MAX_GRAD_NORM"]),
+                optax.adam(learning_rate=linear_schedule_adapt, eps=1e-5),
+            )
+            adapt_train_state = TrainState.create(
+                apply_fn=get_pi_value_adapt, # for test
+                params=adaptor_params,
+                tx=tx_adapt, 
+            )
+            def get_network_params(ppo_train_state, adapt_train_state):
+                return ppo_train_state.params + [adapt_train_state.params]
         else:
             def get_pi_value(train_params, last_obs, env_info):
                 pi, value = network.apply(train_params, last_obs)
                 return pi, value
             rng, _rng = jax.random.split(rng)
             network_params = network.init(_rng, jnp.zeros(env.obs_dim))
-            train_state = TrainState.create(
+            ppo_train_state = TrainState.create(
                 apply_fn=get_pi_value,
                 params=network_params,
                 tx=tx,
             )
+            adapt_train_state = None
+            def get_network_params(ppo_train_state, adapt_train_state):
+                return ppo_train_state.params
 
         # COLLECT TRAJECTORIES
-        @jax.jit
-        def _env_step(runner_state, unused):
-            train_state, env_state, last_obs, rng, env_params, env_info = runner_state
+        def _env_step(get_pi_value, runner_state, unused):
+            ppo_train_state, env_state, last_obs, rng, env_params, env_info, adapt_train_state = runner_state
 
             # SELECT ACTION
             rng, _rng = jax.random.split(rng)
 
-            pi, value = get_pi_value(train_state.params, last_obs, env_info)
+            pi, value = get_pi_value(get_network_params(ppo_train_state, adapt_train_state), last_obs, env_info)
             action = pi.sample(seed=_rng)
             log_prob = pi.log_prob(action)
 
@@ -218,20 +244,21 @@ def make_train(env, config):
             transition = Transition(
                 done, action, value, reward, log_prob, last_obs, info
             )
-            runner_state = (train_state, env_state, obsv, rng, env_params, info)
+            runner_state = (ppo_train_state, env_state, obsv, rng, env_params, info, adapt_train_state)
             return runner_state, transition
         
         # TRAIN LOOP
         @jax.jit
         def _train_ppo(runner_state, unused):
 
+            _env_step_fn = partial(_env_step, get_pi_value)
             runner_state, traj_batch = jax.lax.scan(
-                _env_step, runner_state, None, config["NUM_STEPS"]
+                _env_step_fn, runner_state, None, config["NUM_STEPS"]
             )
             
             # CALCULATE ADVANTAGE
-            train_state, env_state, last_obs, rng, env_params, env_info = runner_state
-            _, last_val = get_pi_value(train_state.params, last_obs, env_info)
+            ppo_train_state, env_state, last_obs, rng, env_params, env_info, adapt_train_state = runner_state
+            _, last_val = get_pi_value(ppo_train_state.params, last_obs, env_info)
 
             def _calculate_gae(traj_batch, last_val):
                 def _get_advantages(gae_and_next_value, transition):
@@ -261,7 +288,7 @@ def make_train(env, config):
 
             # UPDATE NETWORK
             def _update_epoch(update_state, unused):
-                def _update_minbatch(train_state, batch_info):
+                def _update_minbatch(ppo_train_state, batch_info):
                     traj_batch, advantages, targets = batch_info
 
                     def _loss_fn(params, traj_batch, gae, targets):
@@ -304,12 +331,12 @@ def make_train(env, config):
 
                     grad_fn = jax.value_and_grad(_loss_fn, has_aux=True)
                     total_loss, grads = grad_fn(
-                        train_state.params, traj_batch, advantages, targets
+                        ppo_train_state.params, traj_batch, advantages, targets
                     )
-                    train_state = train_state.apply_gradients(grads=grads)
-                    return train_state, total_loss
+                    ppo_train_state = ppo_train_state.apply_gradients(grads=grads)
+                    return ppo_train_state, total_loss
 
-                train_state, traj_batch, advantages, targets, rng = update_state
+                ppo_train_state, traj_batch, advantages, targets, rng = update_state
                 rng, _rng = jax.random.split(rng)
                 batch_size = config["MINIBATCH_SIZE"] * config["NUM_MINIBATCHES"]
                 assert (
@@ -329,56 +356,56 @@ def make_train(env, config):
                     ),
                     shuffled_batch,
                 )
-                train_state, total_loss = jax.lax.scan(
-                    _update_minbatch, train_state, minibatches
+                ppo_train_state, total_loss = jax.lax.scan(
+                    _update_minbatch, ppo_train_state, minibatches
                 )
-                update_state = (train_state, traj_batch, advantages, targets, rng)
+                update_state = (ppo_train_state, traj_batch, advantages, targets, rng)
                 return update_state, total_loss
 
-            update_state = (train_state, traj_batch, advantages, targets, rng)
+            update_state = (ppo_train_state, traj_batch, advantages, targets, rng)
             update_state, loss_info = jax.lax.scan(
                 _update_epoch, update_state, None, config["UPDATE_EPOCHS"]
             )
-            train_state = update_state[0]
+            ppo_train_state = update_state[0]
             metric = traj_batch.info
             rng = update_state[-1]
 
-            runner_state = (train_state, env_state, last_obs, rng, env_params, env_info)
+            runner_state = (ppo_train_state, env_state, last_obs, rng, env_params, env_info, adapt_train_state)
             return runner_state, metric
         
         @jax.jit
         def _train_adaptor(runner_state, unused):
-            # jax.debug.print("traj_batch {traj_batch}", traj_batch=traj_batch)
+            _env_step_fn = partial(_env_step, get_pi_value_adapt)
             runner_state, traj_batch = jax.lax.scan(
-                _env_step, runner_state, None, config["NUM_STEPS"]
+                _env_step_fn, runner_state, None, config["NUM_STEPS"]
             )
-            train_state, env_state, last_obs, rng, env_params, env_info = runner_state
+            ppo_train_state, env_state, last_obs, rng, env_params, env_info, adapt_train_state = runner_state
 
             # Update adaptor
             def _update_adaptor(update_state, unused):
-                def _update_minbatch(train_state, batch_info):
-                    traj_batch = batch_info
+                def _update_minbatch(adapt_train_state, batch_info):
+                    obs_param, obs_adapt = batch_info
 
-                    def _loss_fn(traj_batch):
+                    def _loss_fn(adaptor_params, compressor_params, obs_param, obs_adapt):
                         # RERUN NETWORK
-                        compressor_value = compressor.apply(train_state.params[1], traj_batch.info['obs_param'])
-                        adaptor_value = adaptor.apply(train_state.params[2], traj_batch.info['obs_adapt'])
+                        compressor_value = compressor.apply(compressor_params, obs_param)
+                        adaptor_value = adaptor.apply(adaptor_params, obs_adapt)
 
                         total_loss = jnp.square(compressor_value - adaptor_value).mean()
-                        return total_loss, None
+                        return total_loss
 
-                    grad_fn = jax.value_and_grad(_loss_fn, has_aux=True)
-                    total_loss, grads = grad_fn(traj_batch)
-                    train_state = train_state.apply_gradients(grads=grads)
-                    return train_state, total_loss
-                train_state, traj_batch, rng = update_state
+                    grad_fn = jax.value_and_grad(_loss_fn, argnums=0)
+                    total_loss, grads = grad_fn(adapt_train_state.params, ppo_train_state.params[1], obs_param, obs_adapt)
+                    adapt_train_state = adapt_train_state.apply_gradients(grads=grads)
+                    return adapt_train_state, total_loss
+                ppo_train_state, traj_batch, rng, adapt_train_state = update_state
                 rng, _rng = jax.random.split(rng)
                 batch_size = config["MINIBATCH_SIZE"] * config["NUM_MINIBATCHES"]
                 assert (
                     batch_size == config["NUM_STEPS"] * config["NUM_ENVS"]
                 ), "batch size must be equal to number of steps * number of envs"
                 permutation = jax.random.permutation(_rng, batch_size)
-                batch = traj_batch
+                batch = (traj_batch.info['obs_param'], traj_batch.info['obs_adapt'])
                 batch = jax.tree_util.tree_map(
                     lambda x: x.reshape((batch_size,) + x.shape[2:]), batch
                 )
@@ -391,37 +418,42 @@ def make_train(env, config):
                     ),
                     shuffled_batch,
                 )
-                train_state, total_loss = jax.lax.scan(
-                    _update_minbatch, train_state, minibatches
+                adapt_train_state, total_loss = jax.lax.scan(
+                    _update_minbatch, adapt_train_state, minibatches
                 )
-                update_state = (train_state, traj_batch, rng)
+                update_state = (ppo_train_state, traj_batch, rng, adapt_train_state)
                 return update_state, total_loss
         
-            update_state = (train_state, traj_batch, rng)
+            update_state = (ppo_train_state, traj_batch, rng, adapt_train_state)
             update_state, loss_info = jax.lax.scan(
                 _update_adaptor, update_state, None, config["UPDATE_EPOCHS"]
             )
-            train_state = update_state[0]
-            metric = traj_batch.info
-            rng = update_state[-1]
+            adapt_train_state = update_state[-1]
+            rng = update_state[-2]
 
-            runner_state = (train_state, env_state, last_obs, rng, env_params, env_info)
+            metric = traj_batch.info
+            metric['RMA_loss'] = loss_info
+
+            runner_state = (ppo_train_state, env_state, last_obs, rng, env_params, env_info, adapt_train_state)
             return runner_state, metric
 
         # train PPO
         print("training PPO...")
         rng, _rng = jax.random.split(rng)
-        runner_state = (train_state, env_state, obsv, _rng, env_params, env_info)
+        reset_rng = jax.random.split(_rng, config["NUM_ENVS"])
+        obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
+        rng, _rng = jax.random.split(rng)
+        runner_state = (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state)
         metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_PPO_UPDATES"]):
-            runner_state, metric_local = _train_ppo(runner_state, None)
+            runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
             metric_local['step'] = jnp.array([(i+1)*step_per_log])
             metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
 
             # curriculum learning
             if config['enable_curri']: 
-                (train_state, env_state, obsv, rng, env_params) = runner_state
+                (ppo_train_state, env_state, obsv, rng, env_params) = runner_state
                 if (metric_local['err_pos'].mean() < 0.2):
                     curri_params = jnp.clip(curri_params + 0.05, 0.0, 1.0)
                 print('curri_params: ', curri_params)
@@ -435,12 +467,18 @@ def make_train(env, config):
             GPUtil.showUtilization()
 
         # train adaptor
+        metric['RMA_loss'] = jnp.array([])
         if config['enable_RMA']:
             print("training adaptor...")
             rng, _rng = jax.random.split(rng)
-            runner_state = (train_state, env_state, obsv, _rng, env_params, env_info)
+            reset_rng = jax.random.split(_rng, config["NUM_ENVS"])
+            obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
+            rng, _rng = jax.random.split(rng)
             for i in range(config["NUM_ADAPT_UPDATES"]):
-                runner_state, metric_local = _train_adaptor(runner_state, None)
+                runner_state, metric_local = jax.block_until_ready(_train_adaptor(runner_state, None))
+                metric_local['step'] = jnp.array([(i+config["NUM_PPO_UPDATES"]+1)*step_per_log])
+                metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
+
                 print('====================')
                 print(f'Adaptor update {i+1}/{config["NUM_ADAPT_UPDATES"]}')
                 for k in metric.keys():
@@ -467,12 +505,14 @@ class Args:
 
 
 def main(args: Args):
+    if args.debug:
+        jax.disable_jit()
     config = {
         "LR": 3e-4,
         "NUM_ENVS": 4096 if not args.debug else 1,
         "NUM_STEPS": 300 if not args.debug else 10,
-        "PPO_TIMESTEPS": 1.2e8 if not args.debug else 1e3,
-        "ADAPT_TIMESTEPS": 0.4e8 if not args.debug else 0.3e3,
+        "PPO_TIMESTEPS": 1.6e8 if not args.debug else 1e2,
+        "ADAPT_TIMESTEPS": 8e6 if not args.debug else 0.3e2,
         "UPDATE_EPOCHS": 2,
         "NUM_MINIBATCHES": 320 if not args.debug else 1,
         "GAMMA": 0.99,
@@ -508,13 +548,16 @@ def main(args: Args):
 
     t0 = time.time()
     runner_state, metric = jax.block_until_ready(train_fn(rng))
+
     training_time = time.time() - t0
     print(f"train time: {training_time:.2f} s")
     # plot in three subplots of returned_episode_returns, err_pos, err_vel
-    fig, axs = plt.subplots(3, 1)
+    fig, axs = plt.subplots(4, 1)
     for _, (ax, data, title) in enumerate(
         zip(axs, [metric["returned_episode_returns"], metric["err_pos"], metric["err_vel"]], ["returns", "err_pos", "err_vel"])
     ):
+        if data.shape[0] <=0: 
+            continue
         ax.plot(metric['step'], data)
         ax.set_ylabel(title)
         ax.set_xlabel("steps")
@@ -526,22 +569,28 @@ def main(args: Args):
             f"{last_value:.2f}",
             bbox=dict(facecolor="red", alpha=0.8),
         )
+    axs[3].plot(metric['RMA_loss'], label='RMA_loss')
+    axs[3].set_ylabel('RMA_loss')
+    axs[3].set_xlabel("steps")
     # add training time to title
     fig.suptitle(f"training_time: {training_time:.2f} s")
     # save
     filename = f"{args.env}_{args.task}_{args.lower_controller}"
     plt.savefig(f"{quadjax.get_package_path()}/../results/ppo_{filename}.png")
 
-    with open(f"{quadjax.get_package_path()}/../results/ppo_params_{filename}.pkl", "wb") as f:
-        pickle.dump(runner_state[0].params, f)
-
     apply_fn = runner_state[0].apply_fn
-    params = runner_state[0].params
+    if args.RMA:
+        params = runner_state[0].params + [runner_state[-1].params]
+    else:
+        params = runner_state[0].params
+    
+    with open(f"{quadjax.get_package_path()}/../results/ppo_params_{filename}.pkl", "wb") as f:
+        pickle.dump(params, f)
 
     controller = NetworkController(apply_fn, env, control_params=params)
 
     # test policy
-    eval_fn(env = env, controller = controller, control_params = params, total_steps=3e4, filename=filename)
+    eval_fn(env = env, controller = controller, control_params = params, total_steps= 3e4, filename=filename)
     render_fn(env = env, controller = controller, control_params = params, repeat_times = 3, filename=filename)
 
 if __name__ == "__main__":

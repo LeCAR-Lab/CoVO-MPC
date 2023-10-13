@@ -29,7 +29,7 @@ class Quad3D(BaseEnvironment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad_params'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -69,7 +69,7 @@ class Quad3D(BaseEnvironment):
         self.equib = jnp.array([0.0]*6+[1.0]+[0.0]*6)
         # RL parameters
         self.action_dim = 4
-        self.adapt_obs_dim = 12 * self.default_params.adapt_horizon
+        self.adapt_obs_dim = 22 * self.default_params.adapt_horizon
         self.param_obs_dim = 9
 
 
@@ -343,6 +343,8 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
         run_one_step, (obs, env_state, rng, env_params, control_params, info), jnp.arange(total_steps))
     print(f"env running time: {time_module.time()-t0:.2f}s")
 
+    print(f"mean tracking error: {jnp.mean(err_pos):.2f}")
+
     # save data
     with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
         pickle.dump(np.array(err_pos), f)
@@ -403,10 +405,11 @@ class Args:
     dynamics: str = 'free'
     controller: str = 'lqr' # fixed
     controller_params: str = ''
+    obs_type: str = 'quad'
     debug: bool = False
 
 def main(args: Args):
-    env = Quad3D(task=args.task, dynamics=args.dynamics)
+    env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type)
 
     print("starting test...")
     # enable NaN value detection
@@ -455,6 +458,40 @@ def main(args: Args):
             a_cov = a_cov,
         )
         controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
+    elif args.controller == 'nn':
+        from quadjax.train import ActorCritic
+        network = ActorCritic(env.action_dim, activation='tanh')
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/nn_policy.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            return network.apply(train_params, last_obs)
+        controller = controllers.NetworkController(apply_fn, env, control_params)
+    elif args.controller == 'RMA':
+        from quadjax.train import ActorCritic, Compressor, Adaptor
+        network = ActorCritic(env.action_dim, activation='tanh')
+        compressor = Compressor()
+        adaptor = Adaptor()
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/rma_policy.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
+            obs = jnp.concatenate([last_obs, adapted_last_obs], axis=-1)
+            pi, value = network.apply(train_params[0], obs)
+            return pi, value
+        controller = controllers.NetworkController(apply_fn, env, control_params)
+    elif args.controller == 'RMA-expert':
+        from quadjax.train import ActorCritic, Compressor, Adaptor
+        network = ActorCritic(env.action_dim, activation='tanh')
+        compressor = Compressor()
+        adaptor = Adaptor()
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/rma_policy.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            compressed_last_obs = compressor.apply(train_params[1], env_info['obs_param'])
+            adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
+            jax.debug.print('compressed {com}', com = compressed_last_obs)
+            jax.debug.print('adapted {ada}', ada = adapted_last_obs)
+            obs = jnp.concatenate([last_obs, compressed_last_obs], axis=-1)
+            pi, value = network.apply(train_params[0], obs)
+            return pi, value
+        controller = controllers.NetworkController(apply_fn, env, control_params)
     else:
         raise NotImplementedError
     render_env(env, controller=controller, control_params=control_params, repeat_times=1)
