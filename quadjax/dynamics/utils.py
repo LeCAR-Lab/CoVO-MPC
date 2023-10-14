@@ -346,15 +346,15 @@ def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
     q = state.quat
     yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
-    reward = 1.0 - \
+    reward = 1.3 - \
         0.05 * err_vel - \
         err_pos * 0.4 - \
         jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
         jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
         jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
         jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
-        jnp.abs(state.omega[2]) * 0.05 - \
-        jnp.abs(yaw) * 0.1
+        jnp.abs(yaw) * 0.2
+        # jnp.abs(state.omega[2]) * 0.02 - \
 
     return reward
 
@@ -388,7 +388,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
     # check if quat in state_seq, if true, then add a new item called rpy (roll, pitch, yaw)
     if "quat" in state_seq[0]:
         for i, state in enumerate(state_seq):
-            rpy = quadjax.dynamics.qtorpy(state.quat)
+            rpy = quadjax.dynamics.qtorpy(state['quat'])
             state_seq[i]["rpy"] = rpy
 
     # plot results
@@ -424,8 +424,8 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
         if name in ["pos_traj", "vel_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
             continue
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
-            xyz = np.array([getattr(s, name) for s in state_seq])
-            xyz_tar = np.array([getattr(s, f"{name[:3]}_tar") for s in state_seq])
+            xyz = np.array([s[name] for s in state_seq])
+            xyz_tar = np.array([s[f"{name[:3]}_tar"] for s in state_seq])
             if xyz.shape[1] == 3:
                 scan_range = zip(range(3), ["x", "y", "z"])
             elif xyz.shape[1] == 2:
@@ -442,7 +442,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
         else:
             current_fig += 1
             plt.subplot(num_rows, plot_per_row, current_fig)
-            plt.plot(time, [getattr(s, name) for s in state_seq])
+            plt.plot(time, [s[name] for s in state_seq])
             plt.ylabel(name)
 
     plt.xlabel("time")
