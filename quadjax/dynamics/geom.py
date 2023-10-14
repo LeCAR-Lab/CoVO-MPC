@@ -83,3 +83,12 @@ def rptoq(phi: jnp.ndarray) -> jnp.ndarray:
 @jax.jit
 def qtorp(q: jnp.ndarray) -> jnp.ndarray:
     return q[:3]/q[3]
+
+def qtorpy(q: jnp.ndarray) -> jnp.ndarray:
+    # convert quaternion (x, y, z, w) to roll, pitch, yaw
+
+    roll = jnp.arctan2(2*(q[3]*q[0]+q[1]*q[2]), 1-2*(q[0]**2+q[1]**2))
+    pitch = jnp.arcsin(2*(q[3]*q[1]-q[2]*q[0]))
+    yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
+
+    return jnp.array([roll, pitch, yaw])

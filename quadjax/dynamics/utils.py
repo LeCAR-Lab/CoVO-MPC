@@ -344,6 +344,8 @@ def tracking_reward_fn(state: EnvState3D, params = None):
 def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
+    q = state.quat
+    yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
     reward = 1.0 - \
         0.05 * err_vel - \
         err_pos * 0.4 - \
@@ -351,7 +353,8 @@ def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
         jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
         jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
         jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
-        jnp.abs(state.omega[2]) * 0.05
+        jnp.abs(state.omega[2]) * 0.05 - \
+        jnp.abs(yaw) * 0.1
 
     return reward
 
@@ -372,14 +375,24 @@ def tracking_penyaw_obj_reward_fn(state: EnvState3D, params):
 
 
 
+
 '''
 visualization functions
 '''
 def plot_states(state_seq, obs_seq, reward_seq, env_params):
     import matplotlib.pyplot as plt
     import numpy as np
+    # convert state into dict
+    state_seq = [s.__dict__ for s in state_seq]
+
+    # check if quat in state_seq, if true, then add a new item called rpy (roll, pitch, yaw)
+    if "quat" in state_seq[0]:
+        for i, state in enumerate(state_seq):
+            rpy = quadjax.dynamics.qtorpy(state.quat)
+            state_seq[i]["rpy"] = rpy
+
     # plot results
-    num_figs = len(state_seq[0].__dict__) + 20
+    num_figs = len(state_seq[0]) + 20
     time = np.arange(len(state_seq)) * env_params.dt
 
     # calculate number of rows needed
@@ -407,7 +420,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
         plt.legend(fontsize=6, ncol=2)
 
     # plot state
-    for i, (name, value) in enumerate(state_seq[0].__dict__.items()):
+    for i, (name, value) in enumerate(state_seq[0].items()):
         if name in ["pos_traj", "vel_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
             continue
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
