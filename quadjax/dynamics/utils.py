@@ -382,8 +382,6 @@ visualization functions
 def plot_states(state_seq, obs_seq, reward_seq, env_params):
     import matplotlib.pyplot as plt
     import numpy as np
-    # convert state into dict
-    state_seq = [s.__dict__ for s in state_seq]
 
     # check if quat in state_seq, if true, then add a new item called rpy (roll, pitch, yaw)
     if "quat" in state_seq[0]:

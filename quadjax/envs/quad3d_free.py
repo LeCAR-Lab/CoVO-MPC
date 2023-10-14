@@ -357,6 +357,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     env_params = env.default_params # DEBUG
 
     state_seq, obs_seq, reward_seq = [], [], []
+    control_seq = []
     rng, rng_reset = jax.random.split(rng)
     obs, info, env_state = env.reset(rng_reset, env_params)
 
@@ -371,6 +372,9 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
         state_seq.append(env_state)
         rng, rng_act, rng_step = jax.random.split(rng, 3)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params, info)
+        # manually record certain control parameters into state_seq
+        if hasattr(control_params, 'd_hat') and hasattr(control_params, 'vel_hat'):
+            control_seq.append({'d_hat': control_params.d_hat, 'vel_hat': control_params.vel_hat})
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
@@ -386,7 +390,13 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     print(f"env running time: {time_module.time()-t0:.2f}s")
 
     t0 = time_module.time()
-    utils.plot_states(state_seq, obs_seq, reward_seq, env_params)
+    # convert state into dict
+    state_seq_dict = [s.__dict__ for s in state_seq]
+    if len(control_seq) > 0:
+        # merge control_seq into state_seq with dict
+        for i in range(len(state_seq)):
+            state_seq_dict[i] = {**state_seq_dict[i], **control_seq[i]}
+    utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params)
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
@@ -492,6 +502,9 @@ def main(args: Args):
             pi, value = network.apply(train_params[0], obs)
             return pi, value
         controller = controllers.NetworkController(apply_fn, env, control_params)
+    elif args.controller == 'l1':
+        control_params = controllers.L1Params()
+        controller = controllers.L1Controller(env, control_params)
     else:
         raise NotImplementedError
     render_env(env, controller=controller, control_params=control_params, repeat_times=1)

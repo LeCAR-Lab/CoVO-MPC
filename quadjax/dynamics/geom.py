@@ -92,3 +92,17 @@ def qtorpy(q: jnp.ndarray) -> jnp.ndarray:
     yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
 
     return jnp.array([roll, pitch, yaw])
+
+def axisangletoR(axis: jnp.ndarray, angle: float) -> jnp.ndarray:
+    # convert axis-angle to quaternion
+    # axis: 3d vector
+    # angle: radian
+    # output: rotation matrix
+    axis = axis/jnp.linalg.norm(axis)
+    return jnp.eye(3) + jnp.sin(angle)*hat(axis) + (1-jnp.cos(angle))*hat(axis)@hat(axis)
+
+def vee(R: jnp.ndarray):
+    # convert skew-symmetric matrix to vector
+    # R: 3x3 skew-symmetric matrix
+    # output: 3d vector
+    return jnp.array([R[2, 1], R[0, 2], R[1, 0]])
