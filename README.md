@@ -32,13 +32,20 @@ python train.py --env quad3d_free --task tracking
 
 train RMA
 
-```python
+```shell
 # RMA
 python train.py --env quad3d_free --dynamics bodyrate --RMA
 # robust PPO
 python train.py --env quad3d_free --dynamics bodyrate
 # expert PPO (PPO with true parameter)
 python train.py --env quad3d_free --dynamics bodyrate --obs_type quad_params
+```
+
+run certain controller
+
+```shell
+# L1 controller for quadrotor 3d free environment (NOTE: L1 currently only works for bodyrate dynamics)
+python quad3d_free.py --task tracking_zigzag --dynamics bodyrate --controller l1
 ```
 
 ![ppo](https://github.com/jc-bao/quadjax/assets/60093981/48220814-8775-4539-b9bc-85f6236b077b)
