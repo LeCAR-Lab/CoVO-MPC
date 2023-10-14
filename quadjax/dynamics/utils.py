@@ -123,7 +123,16 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
         axis=1
     )
 
-    return pos_traj, vel_traj
+    acc_traj = scale * jnp.stack(
+        [
+            -rand_amp[i, 0] * w1**2 * jnp.sin(w1 * ts + rand_phase[i, 0])
+            - rand_amp[i, 1] * w2**2 * jnp.sin(w2 * ts + rand_phase[i, 1])
+            for i in range(3)
+        ], 
+        axis=1
+    )
+
+    return pos_traj, vel_traj, acc_traj
 
 def generate_lissa_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
     # get random amplitude and phase
@@ -225,7 +234,7 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
     pos_traj = pos_traj - pos_traj[0]   
     vel_traj = jnp.concatenate(point_dot_traj_segs, axis=0)
 
-    return pos_traj, vel_traj
+    return pos_traj, vel_traj, jnp.zeros_like(pos_traj)
 
 
 
@@ -419,11 +428,14 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
 
     # plot state
     for i, (name, value) in enumerate(state_seq[0].items()):
-        if name in ["pos_traj", "vel_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
+        if name in ["pos_traj", "vel_traj", "acc_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
             continue
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
             xyz = np.array([s[name] for s in state_seq])
-            xyz_tar = np.array([s[f"{name[:3]}_tar"] for s in state_seq])
+            if 'hat' in name:
+                xyz_tar = np.array([s[f"{name[:3]}"] for s in state_seq])
+            else:
+                xyz_tar = np.array([s[f"{name[:3]}_tar"] for s in state_seq])
             if xyz.shape[1] == 3:
                 scan_range = zip(range(3), ["x", "y", "z"])
             elif xyz.shape[1] == 2:
@@ -437,6 +449,13 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
                 plt.plot(time, xyz_tar[:, i], "--", label=f"{subplot_name}_tar")
                 plt.ylabel(f"{name}_{subplot_name}")
                 plt.legend()
+        elif "d_hat" in name:
+            current_fig += 1
+            plt.subplot(num_rows, plot_per_row, current_fig)
+            plt.plot(time, [s[name] for s in state_seq], label=f"{name}")
+            plt.plot(time, [s["f_disturb"]/0.03 for s in state_seq], "--", label="real")
+            plt.ylabel(name)
+            plt.legend()
         else:
             current_fig += 1
             plt.subplot(num_rows, plot_per_row, current_fig)

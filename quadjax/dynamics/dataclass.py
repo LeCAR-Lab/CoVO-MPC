@@ -141,8 +141,10 @@ class EnvState3D:
     # target trajectory
     pos_traj: jnp.ndarray
     vel_traj: jnp.ndarray
+    acc_traj: jnp.ndarray
     pos_tar: jnp.ndarray
     vel_tar: jnp.ndarray
+    acc_tar: jnp.ndarray
     # hook state
     pos_hook: jnp.ndarray
     vel_hook: jnp.ndarray

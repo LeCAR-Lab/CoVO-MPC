@@ -218,6 +218,7 @@ def get_free_dynamics_3d_bodyrate():
         # trajectory
         pos_tar = env_state.pos_traj[time]
         vel_tar = env_state.vel_traj[time]
+        acc_tar = env_state.acc_traj[time]
 
         # debug value
         last_thrust = env_action.thrust
@@ -233,7 +234,7 @@ def get_free_dynamics_3d_bodyrate():
             # drone
             pos=pos, vel=vel, omega=omega, quat=quat,
             # trajectory
-            pos_tar=pos_tar, vel_tar=vel_tar,
+            pos_tar=pos_tar, vel_tar=vel_tar, acc_tar=acc_tar, 
             # debug value
             last_thrust=last_thrust, last_torque=last_torque,
             # step

@@ -168,7 +168,7 @@ class Quad3D(BaseEnvironment):
         """Reset environment state by sampling theta, theta_dot."""
         traj_key, disturb_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
-        pos_traj, vel_traj = self.generate_traj(traj_key)
+        pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
         zeros3 = jnp.zeros(3, dtype=jnp.float32)
         vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
         omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
@@ -188,8 +188,8 @@ class Quad3D(BaseEnvironment):
             l_rope=0.0,zeta=zeros3,zeta_dot=zeros3,
             f_rope=zeros3,f_rope_norm=0.0,
             # trajectory
-            pos_tar=pos_traj[0],vel_tar=vel_traj[0],
-            pos_traj=pos_traj,vel_traj=vel_traj,
+            pos_tar=pos_traj[0],vel_tar=vel_traj[0],acc_tar=acc_traj[0],
+            pos_traj=pos_traj,vel_traj=vel_traj,acc_traj=acc_traj, 
             # debug value
             last_thrust=0.0,last_torque=zeros3,
             # step
@@ -213,7 +213,7 @@ class Quad3D(BaseEnvironment):
         """Sample environment parameters."""
 
         param_key = jax.random.split(key)[0]
-        rand_val = jax.random.uniform(param_key, shape=(11,), minval=-1.0, maxval=1.0)
+        rand_val = jax.random.uniform(param_key, shape=(11,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
 
         params = self.default_params
         m = params.m_mean + rand_val[0] * params.m_std
@@ -317,7 +317,7 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
-    env_params = env.default_params
+    env_params = env.sample_params(rng_params)
 
     rng, rng_reset = jax.random.split(rng)
     obs, info, env_state = env.reset(rng_reset, env_params)
@@ -354,7 +354,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
-    env_params = env.default_params # DEBUG
+    # env_params = env.default_params # DEBUG
 
     state_seq, obs_seq, reward_seq = [], [], []
     control_seq = []
@@ -417,6 +417,7 @@ class Args:
     controller_params: str = ''
     obs_type: str = 'quad'
     debug: bool = False
+    mode: str = 'render' # eval, render
 
 def main(args: Args):
     env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type)
@@ -507,7 +508,12 @@ def main(args: Args):
         controller = controllers.L1Controller(env, control_params)
     else:
         raise NotImplementedError
-    render_env(env, controller=controller, control_params=control_params, repeat_times=1)
+    if args.mode == 'eval':
+        eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=args.controller)
+    elif args.mode == 'render':
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1)
+    else:
+        raise NotImplementedError
 
 
 if __name__ == "__main__":
