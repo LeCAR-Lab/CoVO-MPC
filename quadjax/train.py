@@ -495,7 +495,7 @@ def make_train(env, config):
 class Args:
     task: str = "tracking_zigzag" # tracking, tracking_zigzag, 
     env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
-    lower_controller: str = "base" # bodyrate, base
+    lower_controller: str = "base" # bodyrate, base, l1, l1_esitimate_only
     obs_type: str = "quad" # quad_params, quad
     debug: bool = False
     curri: bool = False
@@ -504,7 +504,7 @@ class Args:
     RMA: bool = False
     noDR: bool = False # no domain randomization
     disturb_type: str = "periodic" # periodic, sin, drag
-    name: str = ""
+    name: str = "" # experiment name
 
 
 def main(args: Args):
