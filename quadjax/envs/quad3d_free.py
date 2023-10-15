@@ -29,7 +29,7 @@ class Quad3D(BaseEnvironment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad', enable_randomizer: bool = True, lower_controller: str = 'base'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad', enable_randomizer: bool = True, lower_controller: str = 'base', disturb_type: str='periodic'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -53,7 +53,7 @@ class Quad3D(BaseEnvironment):
         elif dynamics == 'dist_constant':
             self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
         elif dynamics == 'bodyrate':
-            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_bodyrate()
+            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_bodyrate(disturb_type=disturb_type)
         else:
             raise NotImplementedError
         # lower-level controller
@@ -105,7 +105,7 @@ class Quad3D(BaseEnvironment):
             self.get_obs = self.get_obs_quadonly
             self.obs_dim = 19 + self.default_params.traj_obs_len * 6
         elif obs_type == 'quad_l1':
-            assert lower_controller == 'l1', "quad_l1 obs_type only works with l1 lower controller"
+            assert 'l1' in lower_controller, "quad_l1 obs_type only works with l1 lower controller"
             self.get_obs = self.get_obs_quad_l1
             self.obs_dim = 25 + self.default_params.traj_obs_len * 6
         else:
@@ -466,9 +466,12 @@ class Args:
     debug: bool = False
     mode: str = 'render' # eval, render
     lower_controller: str = 'base'
+    noDR: bool = False
+    disturb_type: str = 'periodic' # periodic, sin, drag
+    name: str = ''
 
 def main(args: Args):
-    env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, lower_controller=args.lower_controller)
+    env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, lower_controller=args.lower_controller, enable_randomizer=not args.noDR, disturb_type=args.disturb_type)
 
     print("starting test...")
     # enable NaN value detection
@@ -520,7 +523,11 @@ def main(args: Args):
     elif args.controller == 'nn':
         from quadjax.train import ActorCritic
         network = ActorCritic(env.action_dim, activation='tanh')
-        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/nn_policy.pkl", "rb"))
+        if args.controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{args.controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
         def apply_fn(train_params, last_obs, env_info):
             return network.apply(train_params, last_obs)
         controller = controllers.NetworkController(apply_fn, env, control_params)
@@ -529,7 +536,11 @@ def main(args: Args):
         network = ActorCritic(env.action_dim, activation='tanh')
         compressor = Compressor()
         adaptor = Adaptor()
-        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/rma_policy.pkl", "rb"))
+        if args.controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{args.controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
         def apply_fn(train_params, last_obs, env_info):
             adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
             obs = jnp.concatenate([last_obs, adapted_last_obs], axis=-1)
@@ -541,7 +552,11 @@ def main(args: Args):
         network = ActorCritic(env.action_dim, activation='tanh')
         compressor = Compressor()
         adaptor = Adaptor()
-        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/rma_policy.pkl", "rb"))
+        if args.controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{args.controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
         def apply_fn(train_params, last_obs, env_info):
             compressed_last_obs = compressor.apply(train_params[1], env_info['obs_param'])
             adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
@@ -557,9 +572,9 @@ def main(args: Args):
     else:
         raise NotImplementedError
     if args.mode == 'eval':
-        eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=args.controller)
+        eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=args.name)
     elif args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=1)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=args.name)
     else:
         raise NotImplementedError
 

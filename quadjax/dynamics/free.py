@@ -154,8 +154,32 @@ def get_free_dynamics_3d():
 
     return free_dynamics_3d, quad_dynamics_rk4
 
-def get_free_dynamics_3d_bodyrate():
+def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
     # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
+
+    @jax.jit
+    def period_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
+        disturb = jnp.where(time % params.disturb_period == 0, jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale)
+                            , jnp.zeros((3,)))
+        return disturb
+    
+    @jax.jit
+    def sin_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
+        random_phase = jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
+        disturb = params.disturb_scale * jnp.sin(2*jnp.pi/params.disturb_period*time + random_phase)
+        return disturb
+    
+    @jax.jit
+    def drag_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
+        disturb = -jnp.abs(params.disturb_scale) * state.vel * jnp.linalg.norm(state.vel) / (1.5**2)
+        return disturb
+    
+    if disturb_type == 'periodic':
+        disturb_func = period_disturb
+    elif disturb_type == 'sin':
+        disturb_func = sin_disturb
+    elif disturb_type == 'drag':
+        disturb_func = drag_disturb
 
     @jax.jit
     def quad_dynamics_bodyrate(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D, dt: float):
@@ -212,8 +236,16 @@ def get_free_dynamics_3d_bodyrate():
 
         # update disturbance
         disturb_key, key = jax.random.split(key)
-        f_disturb = jnp.where(time % env_params.disturb_period == 0, jax.random.uniform(disturb_key, shape=(3,), minval=-env_params.disturb_scale, maxval=env_params.disturb_scale)
-                            , env_state.f_disturb)
+
+        # generate period disturbance
+        f_disturb = disturb_func(disturb_key, env_params, time, env_state)
+        
+        # generate 3d sinusoidal disturbance with period and scale and random phase
+        # random_phase = jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
+        # f_disturb = env_params.disturb_scale * jnp.sin(2*jnp.pi/env_params.disturb_period*time + random_phase)
+        
+        # generate disturbance w.r.t. speed
+        # f_disturb = env_params.disturb_scale * env_state.vel * jnp.linalg.norm(env_state.vel) / (1.5**2)
 
         # trajectory
         pos_tar = env_state.pos_traj[time]

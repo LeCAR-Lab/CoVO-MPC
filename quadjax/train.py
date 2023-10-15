@@ -503,6 +503,7 @@ class Args:
     curri: bool = False
     RMA: bool = False
     noDR: bool = False # no domain randomization
+    disturb_type: str = "periodic" # periodic, sin, drag
     name: str = ""
 
 
@@ -539,7 +540,7 @@ def main(args: Args):
         render_fn = quadjax.envs.quad2d_free.render_env
         eval_fn = quadjax.envs.quad2d_free.eval_env
     elif args.env == 'quad3d_free':
-        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, enable_randomizer=(not args.noDR), lower_controller=args.lower_controller)
+        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, enable_randomizer=(not args.noDR), lower_controller=args.lower_controller, disturb_type=args.disturb_type)
         render_fn = quadjax.envs.quad3d_free.render_env
         eval_fn = quadjax.envs.quad3d_free.eval_env
     elif args.env == 'quad3d':

@@ -47,7 +47,7 @@ def generate_fixed_traj(
     pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
     pos_traj = zeros + pos
     vel_traj = zeros
-    return pos_traj, vel_traj
+    return pos_traj, vel_traj, zeros
 
 def generate_jumping_fixed_traj(
     max_steps: int, dt:float, key: chex.PRNGKey
