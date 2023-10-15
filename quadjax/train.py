@@ -502,6 +502,8 @@ class Args:
     dynamics: str = "free"
     curri: bool = False
     RMA: bool = False
+    noDR: bool = False # no domain randomization
+    name: str = ""
 
 
 def main(args: Args):
@@ -537,7 +539,7 @@ def main(args: Args):
         render_fn = quadjax.envs.quad2d_free.render_env
         eval_fn = quadjax.envs.quad2d_free.eval_env
     elif args.env == 'quad3d_free':
-        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type)
+        env = quadjax.envs.quad3d_free.Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, enable_randomizer=(not args.noDR), lower_controller=args.lower_controller)
         render_fn = quadjax.envs.quad3d_free.render_env
         eval_fn = quadjax.envs.quad3d_free.eval_env
     elif args.env == 'quad3d':
@@ -575,8 +577,11 @@ def main(args: Args):
     # add training time to title
     fig.suptitle(f"training_time: {training_time:.2f} s")
     # save
-    filename = f"{args.env}_{args.task}_{args.lower_controller}"
-    plt.savefig(f"{quadjax.get_package_path()}/../results/ppo_{filename}.png")
+    if len(args.name) > 0:
+        filename = args.name
+    else:
+        filename = f"{args.env}_{args.task}_{args.lower_controller}"
+    plt.savefig(f"{quadjax.get_package_path()}/../results/training_curve_{filename}.png")
 
     apply_fn = runner_state[0].apply_fn
     if args.RMA:

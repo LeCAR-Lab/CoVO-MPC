@@ -67,7 +67,6 @@ class Quad3D(environment.Environment):
             loose_state = loose_dynamics(params, state, env_action)
             return dynamic_transfer(
                 params, loose_state, taut_state, old_loose_state)
-            return loose_dynamics(params, state, env_action)
         self.step_fn = step_fn
         # lower-level controller
         if lower_controller == 'base':
@@ -311,7 +310,7 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
-    env_params = env.default_params
+    env_params = env.sample_params(rng_params)
 
     rng, rng_reset = jax.random.split(rng)
     obs, env_state = env.reset(rng_reset, env_params)

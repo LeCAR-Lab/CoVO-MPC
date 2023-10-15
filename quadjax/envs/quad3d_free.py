@@ -29,7 +29,7 @@ class Quad3D(BaseEnvironment):
     github.com/openai/gym/blob/master/gym/envs/classic_control/Quad3D.py
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'free', obs_type: str = 'quad', enable_randomizer: bool = True, lower_controller: str = 'base'):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -56,6 +56,47 @@ class Quad3D(BaseEnvironment):
             self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_bodyrate()
         else:
             raise NotImplementedError
+        # lower-level controller
+        if lower_controller == 'base':
+            self.default_control_params = 0.0
+            def base_controller_fn(obs, state, env_params, rng_act, input_action):
+                return input_action, None, state
+            self.control_fn = base_controller_fn
+        elif lower_controller == 'l1':
+            self.default_control_params = controllers.L1Params()
+            controller = controllers.L1Controller(self, self.default_control_params)
+            def l1_control_fn(obs, state, env_params, rng_act, input_action):
+                action_l1, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params, 0.0)
+                state = state.replace(control_params=control_params)
+                return action_l1 + input_action, None, state
+            self.control_fn = l1_control_fn
+        elif lower_controller == 'l1_esitimate_only':
+            self.default_control_params = controllers.L1Params()
+            controller = controllers.L1Controller(self, self.default_control_params)
+            def l1_esitimate_only_control_fn(obs, state, env_params, rng_act, input_action):
+                _, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params, 0.0)
+                state = state.replace(control_params=control_params)
+                return input_action, None, state
+            self.control_fn = l1_esitimate_only_control_fn
+        else:
+            raise NotImplementedError
+        # sampling function
+        if enable_randomizer:
+            def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
+                param_key = jax.random.split(key)[0]
+                rand_val = jax.random.uniform(param_key, shape=(11,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
+
+                params = self.default_params
+                m = params.m_mean + rand_val[0] * params.m_std
+                I_diag = params.I_diag_mean + rand_val[1:4] * params.I_diag_std
+                I = jnp.diag(I_diag)
+                action_scale = params.action_scale_mean + rand_val[4] * params.action_scale_std
+                alpha_bodyrate = params.alpha_bodyrate_mean + rand_val[5] * params.alpha_bodyrate_std
+
+                return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate)
+            self.sample_params = sample_random_params
+        else:
+            self.sample_params = lambda key: self.default_params
         # observation function
         if obs_type == 'quad_params':
             self.get_obs = self.get_obs_quad_params
@@ -63,6 +104,10 @@ class Quad3D(BaseEnvironment):
         elif obs_type == 'quad':
             self.get_obs = self.get_obs_quadonly
             self.obs_dim = 19 + self.default_params.traj_obs_len * 6
+        elif obs_type == 'quad_l1':
+            assert lower_controller == 'l1', "quad_l1 obs_type only works with l1 lower controller"
+            self.get_obs = self.get_obs_quad_l1
+            self.obs_dim = 25 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
@@ -103,7 +148,6 @@ class Quad3D(BaseEnvironment):
         )
 
 
-    
     '''
     key methods
     '''
@@ -115,7 +159,8 @@ class Quad3D(BaseEnvironment):
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
-        next_state = self.raw_step(key, state, action, params)
+        sub_action, _, state = self.control_fn(None, state, params, key, action)
+        next_state = self.raw_step(key, state, sub_action, params)
         return self.get_obs_state_reward_done_info(state, next_state, params)
 
     def step_env_wocontroller(
@@ -198,6 +243,8 @@ class Quad3D(BaseEnvironment):
             f_disturb=jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale),
             # trajectory information for adaptation
             vel_hist=vel_hist,omega_hist=omega_hist,action_hist=action_hist,
+            # control parameters
+            control_params=self.default_control_params,
         )
         info = {
             "discount": self.discount(state, params),
@@ -207,22 +254,6 @@ class Quad3D(BaseEnvironment):
             "obs_adapt": self.get_obs_adapt_hist(state, params),
         }
         return self.get_obs(state, params), info, state
-
-    @partial(jax.jit, static_argnums=(0,))
-    def sample_params(self, key: chex.PRNGKey) -> EnvParams3D:
-        """Sample environment parameters."""
-
-        param_key = jax.random.split(key)[0]
-        rand_val = jax.random.uniform(param_key, shape=(11,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
-
-        params = self.default_params
-        m = params.m_mean + rand_val[0] * params.m_std
-        I_diag = params.I_diag_mean + rand_val[1:4] * params.I_diag_std
-        I = jnp.diag(I_diag)
-        action_scale = params.action_scale_mean + rand_val[4] * params.action_scale_std
-        alpha_bodyrate = params.alpha_bodyrate_mean + rand_val[5] * params.alpha_bodyrate_std
-
-        return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate)
     
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quadonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -298,10 +329,26 @@ class Quad3D(BaseEnvironment):
         return obs
     
     @partial(jax.jit, static_argnums=(0,))
+    def get_obs_l1only(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        obs_elements = [
+            # l1 observation
+            state.control_params.vel_hat,
+            state.control_params.d_hat,
+        ]
+        obs = jnp.concatenate(obs_elements, axis=-1)
+        return obs
+    
+    @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_params(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
         quad_obs = self.get_obs_quadonly(state, params)
         param_obs = self.get_obs_paramsonly(state, params)
         return jnp.concatenate([quad_obs, param_obs], axis=-1)
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_quad_l1(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        quad_obs = self.get_obs_quadonly(state, params)
+        l1_obs = self.get_obs_l1only(state, params)
+        return jnp.concatenate([quad_obs, l1_obs], axis=-1)
 
     @partial(jax.jit, static_argnums=(0,))
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
@@ -396,13 +443,13 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
         # merge control_seq into state_seq with dict
         for i in range(len(state_seq)):
             state_seq_dict[i] = {**state_seq_dict[i], **control_seq[i]}
-    utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params)
+    utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params, filename)
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
     # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
     # get package quadjax path
     
-    with open(f"{quadjax.get_package_path()}/../results/state_seq.pkl", "wb") as f:
+    with open(f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb") as f:
         pickle.dump(state_seq, f)
 
 '''
@@ -418,9 +465,10 @@ class Args:
     obs_type: str = 'quad'
     debug: bool = False
     mode: str = 'render' # eval, render
+    lower_controller: str = 'base'
 
 def main(args: Args):
-    env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type)
+    env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, lower_controller=args.lower_controller)
 
     print("starting test...")
     # enable NaN value detection
@@ -436,9 +484,9 @@ def main(args: Args):
         controller = controllers.LQRController(env, control_params = control_params)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
-            u = jnp.asarray([0.8, 0.0, 0.0, 0.0]),
+            u = jnp.asarray([0.0, 0.0, 0.0, 0.0]),
         )
-        controller = controllers.FixedController(env)
+        controller = controllers.FixedController(env, control_params = control_params)
     elif args.controller == 'mppi':
         sigma = 0.1
         if args.controller_params == '':

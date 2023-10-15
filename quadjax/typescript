@@ -1,0 +1,1020 @@
+Script started on 2023-10-14 22:00:16-04:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="372" LINES="14"]
+zsh[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                     ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax]1;..adjax/quadjax[0m[27m[24m[J(base) [01;32m➜  [36mquadjax[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004hzzsh[32mz[32ms[32mh[39m 
+[J[A[35C[90m./process_video2.sh[39m[19D
+[0;1;2mdirectory[0m
+[01;34massets[0m/       [01;34mcontrollers[0m/  [01;34mdevel[0m/        [01;34mdynamics[0m/     [01;34menvs[0m/         [01;34m__pycache__[0m/  [01;34mscripts[0m/      [01;34mtest[0m/       
+[0;1;2mscript file[0m
+[J[0m__init__.py                          [Jtrain.py                             [Jtypescript                         [J[4A[0m[27m[24m[31C[32mzsh[39m [90m./process_video2.sh[39m[K[19D[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [20D[90m ./process_video2.sh[39m[20D[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mshell function[0m
+[0mzsh_math_func_max  zsh_math_func_min  zsh_math_func_sum  zsh_stats        
+[J[0;2m[1mcommon substring:[0m [30m[103mzsh_[39m[49m[3A[0m[27m[24m[31C[32mzsh[39m[90m ./process_video2.sh[39m[K[20D[1m[31mz[1m[31ms[0m[39m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [21D[90mh ./process_video2.sh[39m[21D[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mshell function[0m
+[0mzsh_math_func_max  zsh_math_func_min  zsh_math_func_sum  zsh_stats        
+[J[0;2m[1mcommon substring:[0m [30m[103mzsh_[39m[49m[3A[0m[27m[24m[31C[1m[31mzs[0m[39m[90mh ./process_video2.sh[39m[K[21D[1m[31mz[1m[31ms[1m[31mc[0m[39m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [20D[1m[31mc[1m[31md[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mzstd[J[A[A[0m[27m[24m[31C[1m[31mzscd[0m[39m[K 
+[J[A[36C
+[J[0;1;2mdirectory[0m
+[01;34massets[0m/       [01;34mcontrollers[0m/  [01;34mdevel[0m/        [01;34mdynamics[0m/     [01;34menvs[0m/         [01;34m__pycache__[0m/  [01;34mscripts[0m/      [01;34mtest[0m/       
+[0;1;2mfile[0m
+[J[0m__init__.py                          [Jtrain.py                             [Jtypescript                         [J[4A[0m[27m[24m[31C[1m[31mzscd[0m[39m[K[1C
+[J[A[36C[0m[39m [0m[39m [0m[39m [0m[39m [1m[31mc[0m[39m[1m[31mc[0m[39m[90md ~/Research/quadjax[39m[20D[0m[32mc[32md[39m
+[J[0;1;2mbuiltin command[0m
+[J[0mcd[J[A[A[0m[27m[24m[31C[32mcd[39m[90m ~/Research/quadjax[39m[K[19D[39m 
+[J[A[34C
+[J[0;1;2mdirectory[0m
+[J[01;34massets[0m/       [J[01;34mcontrollers[0m/  [J[01;34mdevel[0m/        [J[01;34mdynamics[0m/     [J[01;34menvs[0m/         [J[01;34m__pycache__[0m/  [J[01;34mscripts[0m/      [J[01;34mtest[0m/       [J[A[A[0m[27m[24m[31C[32mcd[39m [90m~/Research/quadjax[39m[K[18D[39ms[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [17D[90mcripts[39m
+[J[0;1;2mdirectory[0m
+[J[01;34mscripts[0m/[J[A[A[0m[27m[24m[31C[32mcd[39m s[90mcripts[39m[K[39mc
+[J[0;1;2mdirectory[0m
+[J[01;34mscripts[0m/[J[A[A[0m[27m[24m[31C[32mcd[39m sc[90mripts[39m[K[39mr[39mi
+[J[0;1;2mdirectory[0m
+[J[01;34mscripts[0m/[J[A[A[0m[27m[24m[31C[32mcd[39m scri[90mpts[39m[K
+[J[A[38C[39mp[39mt[39ms[4m[35ms[4m[35mc[4m[35mr[4m[35mi[4m[35mp[4m[35mt[4m[35ms[1m[4m[35m/[0m[24m[39m
+[J[J[0;2mno matching `directory', `recent directory', `ancestor directory', or `corrections' completions[0m[A[0m[27m[24m[31C[32mcd[39m [4m[35mscripts[1m[4m[35m/[0m[24m[39m[K[4m[35ms[24m[39m[0m[24m[39m [?1l>[?2004l
+[J[A[41C
+[J]2;cd scripts]1;cd[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(base) [01;32m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h[1m[31mp[0m[39m[1m[31mp[0m[39m[90mython train.py --env quad3d_free --dynamics bodyrate [39m[53D
+[0;1;2mshell function[0m
+[J[0mparse_git_dirty    [Jpyenv_prompt_info[J[A[A[0m[27m[24m[31C[1m[31mp[0m[39m[90mython train.py --env quad3d_free --dynamics bodyrate [39m[K[53D[1m[31mp[1m[31my[0m[39m
+[J[0;1;2mshell function[0m
+[J[0mpyenv_prompt_info[J[A[A[0m[27m[24m[31C[1m[31mpy[0m[39m[90mthon train.py --env quad3d_free --dynamics bodyrate [39m[K[52D[1m[31mp[1m[31my[1m[31mt[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mpytest-3    [Jpython    [Jpython3    [Jpython3.1    [Jpython3.10    [Jpython3.10-config    [Jpython3.10-coverage    [Jpython3-config    [Jpython3-coverage    [Jpython3-futurize    [Jpython3-pasteurize    [Jpython-argcomplete-check-easy-install-script3    [Jpython-argcomplete-tcsh3    [J[A[A[0m[27m[24m[31C[1m[31mpyt[0m[39m[90mhon train.py --env quad3d_free --dynamics bodyrate [39m[K[51D[1m[31mt[1m[31mo[0m[39m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [50D
+[J[0;1;2mexternal command[0m
+[J[0mpjtoppm  [Jpstopnm  [Jpydoc  [Jpydoc3  [Jpydoc3.10  [Jpydoc3.12  [Jpytest-3  [Jpython  [Jpython3  [Jpython3.1  [Jpython3.10  [Jpython3.10-config  [Jpython3.10-coverage  [Jpython3-config  [Jpython3-coverage  [Jpython3-futurize  [Jpython3-pasteurize  [Jpython-argcomplete-check-easy-install-script3  [Jpython-argcomplete-tcsh3  [J[A[A[0m[27m[24m[31C[1m[31mpyto[0m[39m[K[1m[31mt[0m[39m[0m[39m [90mhon train.py --env quad3d_free --dynamics bodyrate [39m[51D
+[J[0;1;2mexternal command[0m
+[J[0mpytest-3    [Jpython    [Jpython3    [Jpython3.1    [Jpython3.10    [Jpython3.10-config    [Jpython3.10-coverage    [Jpython3-config    [Jpython3-coverage    [Jpython3-futurize    [Jpython3-pasteurize    [Jpython-argcomplete-check-easy-install-script3    [Jpython-argcomplete-tcsh3    [J[A[A[0m[27m[24m[31C[1m[31mpyt[0m[39m[90mhon train.py --env quad3d_free --dynamics bodyrate [39m[K[51D[1m[31mt[1m[31mh[0m[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mexternal command[0m
+[0mpython    python3    python3.1    python3.10    python3.10-config    python3.10-coverage    python3-config    python3-coverage    python3-futurize    python3-pasteurize    python-argcomplete-check-easy-install-script3    python-argcomplete-tcsh3    
+[J[0;2m[1mcommon substring:[0m [30m[103mpython[39m[49m[3A[0m[27m[24m[31C[1m[31mpyth[0m[39m[90mon train.py --env quad3d_free --dynamics bodyrate [39m[K[50D[1m[31mh[1m[31mo[0m[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mexternal command[0m
+[0mpython    python3    python3.1    python3.10    python3.10-config    python3.10-coverage    python3-config    python3-coverage    python3-futurize    python3-pasteurize    python-argcomplete-check-easy-install-script3    python-argcomplete-tcsh3    
+[J[0;2m[1mcommon substring:[0m [30m[103mpython[39m[49m[3A[0m[27m[24m[31C[1m[31mpytho[0m[39m[90mn train.py --env quad3d_free --dynamics bodyrate [39m[K[49D
+[J[A[36C[0m[39m [0m[39m [0m[39m [0m[39m [0m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [54D[1m[31mz[0m[39m[1m[31mz[0m[39m[90msh ./process_video2.sh[39m[22D
+[J[0;1;2mshell function[0m
+[J[0mzle-line-finish    [Jzle-line-init      [Jzmathfunc          [Jzrecompile         [Jzsh_math_func_max  [Jzsh_math_func_min  [Jzsh_math_func_sum  [Jzsh_stats        [J[A[A[0m[27m[24m[31C[1m[31mz[0m[39m[90msh ./process_video2.sh[39m[K[22D[1m[31mz[1m[31ms[0m[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mshell function[0m
+[0mzsh_math_func_max  zsh_math_func_min  zsh_math_func_sum  zsh_stats        
+[J[0;2m[1mcommon substring:[0m [30m[103mzsh_[39m[49m[3A[0m[27m[24m[31C[1m[31mzs[0m[39m[90mh ./process_video2.sh[39m[K[21D[0m[32mz[0m[32ms[32mh[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mshell function[0m
+[0mzsh_math_func_max  zsh_math_func_min  zsh_math_func_sum  zsh_stats        
+[J[0;2m[1mcommon substring:[0m [30m[103mzsh_[39m[49m[3A[0m[27m[24m[31C[32mzsh[39m[90m ./process_video2.sh[39m[K[20D[39m 
+[J[A[35C[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mscript file[0m
+[0mDATT_exp.sh                      quad2d_free_mppi_sensitivity.sh
+[J[0;2m[1mcommon substring:[0m [30m[103m.sh[39m[49m[3A[0m[27m[24m[31C[32mzsh[39m [90m./process_video2.sh[39m[K[19D[39mD[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [18D
+[J[0;1;2mscript file[0m
+[J[0mDATT_exp.sh[J[A[A[0m[27m[24m[31C[32mzsh[39m D[KA
+[J[0;1;2mscript file[0m
+[J[0mDATT_exp.sh[J[A[A[0m[27m[24m[31C[32mzsh[39m DA[KT
+[J[0;1;2mscript file[0m
+[J[0mDATT_exp.sh[J[A[A[0m[27m[24m[31C[32mzsh[39m DAT[KT
+[J[0;1;2mscript file[0m
+[J[0mDATT_exp.sh[J[A[A[0m[27m[24m[31C[32mzsh[39m DATT[K
+[J[A[39C[35mD[35mA[35mT[35mT[35m_exp.sh[39m
+[J[0;1;2mscript file[0m
+[J[0mDATT_exp.sh[J[A[A[0m[27m[24m[31C[32mzsh[39m [35mDATT_exp.sh[39m[K[?1l>[?2004l
+[J[A[46C
+[J]2;zsh DATT_exp.sh]1;zshpython: can't open file '/home/pcy/Research/quadjax/quadjax/scripts/../env/train.py': [Errno 2] No such file or directory
+[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(base) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[21C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[47C[1B[2m [0m[2m3428[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3429[0m[2m  [0mpython train.py --env quad3d_free --dynamics bodyrate                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[J[7m 3434  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[31C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3434  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3434  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[31C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[47C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[46C
+[J]2;zsh DATT_exp.sh]1;zshTraceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 1, in <module>
+    import jax
+ModuleNotFoundError: No module named 'jax'
+[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(base) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h[1m[31mc[0m[39m[1m[31mc[0m[39m[90md scripts[39m[9D[1m[31mc[1m[31mo[0m[39m[39m [39m [39m [39m [39m [39m [39m [39m [8D[90mnda activate jax[39m[16D[1m[31mc[1m[31mo[1m[31mn[0m[39m[1m[31mn[1m[31md[0m[39m
+[0;1;2mshell function[0m
+[J[0mconda[J[A[A[0m[27m[24m[31C[1m[31mcond[0m[39m[90ma activate jax[39m[K[14D[0m[32mc[0m[32mo[0m[32mn[0m[32md[32ma[39m
+[J[0;1;2mshell function[0m
+[J[0mconda[J[A[A[0m[27m[24m[31C[32mconda[39m[90m activate jax[39m[K[13D[39m 
+[J[A[37C[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mfile[0m
+[0mDATT_exp.sh                      quad2d_free_mppi_sensitivity.sh
+[J[0;2m[1mcommon substring:[0m [30m[103m.sh[39m[49m[3A[0m[27m[24m[31C[32mconda[39m [90mactivate jax[39m[K[12D[39ma[39mc[39mt[39mi[39mv[39ma[39mt[39me[39m [39mj[39ma[39mx[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mrecent directory[0m
+[01;34m~/Research/quadjax/quadjax[0m/  [01;34m~/Research/quadjax[0m/       
+[J[0;2m[1mcommon substring:[0m [30m[103m~/Research/quadjax[39m[49m[3A[0m[27m[24m[31C[32mconda[39m activate jax[K[?1l>[?2004l
+[J[A[49C
+[J]2;conda activate jax]1;conda[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;32m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mconda[39m activate jax;[1B[K[A[49C[1B[2m [0m[2m3429[0m[2m  [0mpython train.py --env quad3d_free --dynamics bodyrate                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[J[7m 3435  conda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[0m[J[7A[0m[27m[24m[30C[32mconda[39m activate jax;[K
+[6B[7m 3435  conda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[0m[7m 3435  conda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[0m[7A[0m[27m[24m[30C[32mconda[39m activate jax;[K[19D[32mz[32ms[32mh[39m[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m;   
+[5B[7m 3434  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[1B[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 255, in _train_ppo
+    runner_state, traj_batch = jax.lax.scan(
+                               ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 227, in _env_step
+    obsv, env_state, reward, done, info = jax.vmap(env.step)(
+                                          ^^^^^^^^^^^^^^^^^^^
+  File "/home/pcy/mambaforge/envs/jax/lib/python3.11/site-packages/gymnax/wrappers/purerl.py", line 93, in step
+    obs, env_state, reward, done, info = self._env.step(
+                                         ^^^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/envs/base.py", line 28, in step
+    obs_st, state_st, reward, done, info = self.step_env(
+                                           ^^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/envs/quad3d_free.py", line 162, in step_env
+    sub_action, _, state = self.control_fn(None, state, params, key, action)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/envs/quad3d_free.py", line 69, in l1_control_fn
+    action_l1, control_params, _ = self.control_fn(obs, state, env_params, rng_act, state.control_params, None)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Quad3D.__init__.<locals>.l1_control_fn() takes 5 positional arguments but 6 were given
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+2023-10-14 22:04:38.058205: E external/xla/xla/status_macros.cc:54] INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+*** Begin stack trace ***
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	
+	
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	PyObject_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	PyEval_EvalCode
+	
+	
+	
+	_PyRun_SimpleFileObject
+	_PyRun_AnyFileObject
+	Py_RunMain
+	Py_BytesMain
+	
+	__libc_start_main
+	
+*** End stack trace ***
+
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+2023-10-14 22:05:18.709361: E external/xla/xla/status_macros.cc:54] INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+*** Begin stack trace ***
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	
+	
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	PyObject_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	PyEval_EvalCode
+	
+	
+	
+	_PyRun_SimpleFileObject
+	_PyRun_AnyFileObject
+	Py_RunMain
+	Py_BytesMain
+	
+	__libc_start_main
+	
+*** End stack trace ***
+
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+====================
+PPO update 1/10
+step: 1.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 1.32e-01
+err_vel: 1.54e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  2% | 81% |
+====================
+PPO update 2/10
+step: 2.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 4.40e-01
+err_vel: 1.70e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  0% | 81% |
+====================
+PPO update 3/10
+step: 3.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 7.96e-01
+err_vel: 2.18e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  4% | 81% |
+====================
+PPO update 4/10
+step: 4.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 1.25e+00
+err_vel: 3.77e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  4% | 81% |
+====================
+PPO update 5/10
+step: 5.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 1.94e+00
+err_vel: 5.68e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  4% | 81% |
+====================
+PPO update 6/10
+step: 6.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 2.86e+00
+err_vel: 6.24e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  8% | 81% |
+====================
+PPO update 7/10
+step: 7.00e+01
+returned_episode_returns: 0.00e+00
+returned_episode_lengths: 0.00e+00
+mean_episode_returns: nan
+err_pos: 3.95e+00
+err_vel: 8.24e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  8% | 81% |
+====================
+PPO update 8/10
+step: 8.00e+01
+returned_episode_returns: -2.57e+01
+returned_episode_lengths: 5.84e+01
+mean_episode_returns: nan
+err_pos: 1.02e+00
+err_vel: 3.31e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  8% | 81% |
+====================
+PPO update 9/10
+step: 9.00e+01
+returned_episode_returns: -3.22e+01
+returned_episode_lengths: 7.30e+01
+mean_episode_returns: -4.41e-01
+err_pos: 4.35e-01
+err_vel: 2.84e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  8% | 81% |
+====================
+PPO update 10/10
+step: 1.00e+02
+returned_episode_returns: -3.22e+01
+returned_episode_lengths: 7.30e+01
+mean_episode_returns: -4.41e-01
+err_pos: 1.19e+00
+err_vel: 4.83e+00
+| ID | GPU | MEM |
+------------------
+|  0 |  8% | 81% |
+train time: 10.17 s
+env running time: 9.09s
+mean tracking error: 1.38
+env running time: 1.72s
+plotting time: 3.88s
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;32m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+2023-10-14 22:07:18.752629: E external/xla/xla/status_macros.cc:54] INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+*** Begin stack trace ***
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	
+	
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	PyObject_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	PyEval_EvalCode
+	
+	
+	
+	_PyRun_SimpleFileObject
+	_PyRun_AnyFileObject
+	Py_RunMain
+	Py_BytesMain
+	
+	__libc_start_main
+	
+*** End stack trace ***
+
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+2023-10-14 22:09:17.673473: E external/xla/xla/status_macros.cc:54] INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+*** Begin stack trace ***
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	
+	
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	PyObject_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	PyEval_EvalCode
+	
+	
+	
+	_PyRun_SimpleFileObject
+	_PyRun_AnyFileObject
+	Py_RunMain
+	Py_BytesMain
+	
+	__libc_start_main
+	
+*** End stack trace ***
+
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                                       [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                                          [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                                             [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+2023-10-14 22:10:09.118726: E external/xla/xla/status_macros.cc:54] INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+*** Begin stack trace ***
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	
+	
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	PyObject_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	PyEval_EvalCode
+	
+	
+	
+	_PyRun_SimpleFileObject
+	_PyRun_AnyFileObject
+	Py_RunMain
+	Py_BytesMain
+	
+	__libc_start_main
+	
+*** End stack trace ***
+
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                                    ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m 
+Loading...[K[A[20C[32mzsh[39m [35mDATT_exp.sh[39m;[1B[K[A[46C[1B[2m [0m[2m3430[0m[2m  [0mcd ~/Research/quadjax                                                                                                                                                                                                                                                                                                                                      [K[K
+[2m [0m[2m3431[0m[2m  [0mquadjax                                                                                                                                                                                                                                                                                                                                                    [K[K
+[2m [0m[2m3432[0m[2m  [0mscript                                                                                                                                                                                                                                                                                                                                                     [K[K
+[2m [0m[2m3433[0m[2m  [0mcd scripts                                                                                                                                                                                                                                                                                                                                                 [K[K
+[2m [0m[2m3434[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                            [K[K
+[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                         [K[K
+[J[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                            [K[0m[J[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[6B[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                            [K[0m[7m 3436  zsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                            [K[0m[7A[0m[27m[24m[30C[32mzsh[39m [35mDATT_exp.sh[39m;[K
+[J[A[46C[16D[39mz[39ms[39mh [39mD[39mA[39mT[39mT[39m_[39me[39mx[39mp[39m.[39ms[39mh[1C[16D[32mz[32ms[32mh[39m [35mD[35mA[35mT[35mT[35m_[35me[35mx[35mp[35m.[35ms[35mh[39m [?1l>[?2004l
+[J[A[45C
+[J]2;zsh DATT_exp.sh]1;zshtraining PPO...
+2023-10-14 22:15:22.577790: E external/xla/xla/status_macros.cc:54] INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+*** Begin stack trace ***
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	
+	
+	
+	
+	
+	_PyObject_MakeTpCall
+	
+	
+	_PyObject_MakeTpCall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	
+	
+	PyObject_Call
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	_PyEval_EvalFrameDefault
+	_PyFunction_Vectorcall
+	PyObject_Vectorcall
+	
+	
+	PyObject_Vectorcall
+	_PyEval_EvalFrameDefault
+	
+	PyEval_EvalCode
+	
+	
+	
+	_PyRun_SimpleFileObject
+	_PyRun_AnyFileObject
+	Py_RunMain
+	Py_BytesMain
+	
+	__libc_start_main
+	
+*** End stack trace ***
+
+Traceback (most recent call last):
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 602, in <module>
+    main(tyro.cli(Args))
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 552, in main
+    runner_state, metric = jax.block_until_ready(train_fn(rng))
+                                                 ^^^^^^^^^^^^^
+  File "/home/pcy/Research/quadjax/quadjax/scripts/../train.py", line 450, in train
+    runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
+                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: RET_CHECK failure (external/xla/xla/service/gpu/gemm_rewriter_triton.cc:1268) fusion_inputs.size() - operand_count_before <= TritonFusionAnalysis::kMaxParameterPerScope 
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+[0m[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                   ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;31m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h[1m[31mn[0m[39m[1m[31mn[0m[39m[90mvidia-smi[39m[9D
+[0;1;2mshell function[0m
+[J[0mnvm_prompt_info[J[A[A[0m[27m[24m[30C[1m[31mn[0m[39m[90mvidia-smi[39m[K[9D[1m[31mn[1m[31mv[0m[39m
+[J[0;1;2mshell function[0m
+[J[0mnvm_prompt_info[J[A[A[0m[27m[24m[30C[1m[31mnv[0m[39m[90midia-smi[39m[K[8D[1m[31mn[1m[31mv[1m[31mi[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-bug-report.sh   [Jnvidia-cuda-mps-control   [Jnvidia-cuda-mps-server   [Jnvidia-debugdump   [Jnvidia-detector   [Jnvidia-installer   [Jnvidia-modprobe   [Jnvidia-ngx-updater   [Jnvidia-persistenced   [Jnvidia-powerd   [Jnvidia-settings   [Jnvidia-sleep.sh   [Jnvidia-smi   [Jnvidia-uninstall   [Jnvidia-xconfig   [Jnvim   [J[A[A[0m[27m[24m[30C[1m[31mnvi[0m[39m[90mdia-smi[39m[K[1m[31mi[1m[31md[0m[39m[1m[31md[1m[31mi[0m[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mexternal command[0m
+[0mnvidia-bug-report.sh    nvidia-cuda-mps-control    nvidia-cuda-mps-server    nvidia-debugdump    nvidia-detector    nvidia-installer    nvidia-modprobe    nvidia-ngx-updater    nvidia-persistenced    nvidia-powerd    nvidia-settings    nvidia-sleep.sh    nvidia-smi    nvidia-uninstall    nvidia-xconfig    
+[J[0;2m[1mcommon substring:[0m [30m[103mnvidia-[39m[49m[3A[0m[27m[24m[30C[1m[31mnvidi[0m[39m[90ma-smi[39m[K[1m[31mi[1m[31ma[0m[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mexternal command[0m
+[0mnvidia-bug-report.sh    nvidia-cuda-mps-control    nvidia-cuda-mps-server    nvidia-debugdump    nvidia-detector    nvidia-installer    nvidia-modprobe    nvidia-ngx-updater    nvidia-persistenced    nvidia-powerd    nvidia-settings    nvidia-sleep.sh    nvidia-smi    nvidia-uninstall    nvidia-xconfig    
+[J[0;2m[1mcommon substring:[0m [30m[103mnvidia-[39m[49m[3A[0m[27m[24m[30C[1m[31mnvidia[0m[39m[90m-smi[39m[K[1m[31ma[1m[31m0[0m[39m[39m [39m [39m [1m[31m0[1m[31ms[0m[39m[1m[31ms[1m[31mm[0m[39m[1m[31mm[1m[31mi[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-smi[J[A[A[0m[27m[24m[30C[1m[31mnvidia0smi[0m[39m[K[1m[31mm[0m[39m[0m[39m [1m[31ms[0m[39m[0m[39m [1m[31m0[0m[39m[0m[39m [1m[31ma[0m[39m[0m[39m [90m-smi[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mexternal command[0m
+[0mnvidia-bug-report.sh    nvidia-cuda-mps-control    nvidia-cuda-mps-server    nvidia-debugdump    nvidia-detector    nvidia-installer    nvidia-modprobe    nvidia-ngx-updater    nvidia-persistenced    nvidia-powerd    nvidia-settings    nvidia-sleep.sh    nvidia-smi    nvidia-uninstall    nvidia-xconfig    
+[J[0;2m[1mcommon substring:[0m [30m[103mnvidia-[39m[49m[3A[0m[27m[24m[30C[1m[31mnvidia[0m[39m[90m-smi[39m[K[1m[31ma[1m[31m-[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-bug-report.sh    [Jnvidia-cuda-mps-control    [Jnvidia-cuda-mps-server    [Jnvidia-debugdump    [Jnvidia-detector    [Jnvidia-installer    [Jnvidia-modprobe    [Jnvidia-ngx-updater    [Jnvidia-persistenced    [Jnvidia-powerd    [Jnvidia-settings    [Jnvidia-sleep.sh    [Jnvidia-smi    [Jnvidia-uninstall    [Jnvidia-xconfig    [J[A[A[0m[27m[24m[30C[1m[31mnvidia-[0m[39m[90msmi[39m[K[1m[31m-[1m[31ms[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-settings  [Jnvidia-sleep.sh  [Jnvidia-smi     [J[A[A[0m[27m[24m[30C[1m[31mnvidia-s[0m[39m[90mmi[39m[K[1m[31ms[1m[31mm[0m[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-smi[J[A[A[0m[27m[24m[30C[1m[31mnvidia-sm[0m[39m[90mi[39m[K[9D[0m[32mn[0m[32mv[0m[32mi[0m[32md[0m[32mi[0m[32ma[0m[32m-[0m[32ms[0m[32mm[32mi[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-smi[J[A[A[0m[27m[24m[30C[32mnvidia-smi[39m[K[?1l>[?2004l
+[J[A[40C
+[J]2;nvidia-smi]1;nvidia-smiSat Oct 14 22:17:47 2023       
++-----------------------------------------------------------------------------+
+| NVIDIA-SMI 525.125.06   Driver Version: 525.125.06   CUDA Version: 12.0     |
+|-------------------------------+----------------------+----------------------+
+| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+|                               |                      |               MIG M. |
+|===============================+======================+======================|
+|   0  NVIDIA GeForce ...  Off  | 00000000:01:00.0 Off |                  N/A |
+| N/A   41C    P8     5W / 115W |     96MiB / 12282MiB |      0%      Default |
+|                               |                      |                  N/A |
++-------------------------------+----------------------+----------------------+
+                                                                               
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
+|        ID   ID                                                   Usage      |
+|=============================================================================|
+|    0   N/A  N/A      1529      G   /usr/lib/xorg/Xorg                 86MiB |
+|    0   N/A  N/A      1693      G   /usr/bin/gnome-shell                8MiB |
++-----------------------------------------------------------------------------+
+[1m[7m%[27m[1m[0m                                                                                                                                                                                                                                                                                                                                                                   ]2;pcy@pcy-OMEN:~/Research/quadjax/quadjax/scripts]1;..adjax/scripts[0m[27m[24m[J(jax) [01;32m➜  [36mscripts[00m [01;34mgit:([31mmain[34m) [33m✗[00m [K[?1h=[?2004h
+Loading...[K[A[20C[32mnvidia-smi[39m;[1B[K[A[41C[1B[2m [0m[2m3435[0m[2m  [0mconda activate jax                                                                                                                                                                                                                                                                                                                                         [K[K
+[2m [0m[2m3436[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                            [K[K
+[2m [0m[2m3437[0m[2m* [0mconda activate jax                                                                                                                                                                                                                                                                                                                                         [K[K
+[2m [0m[2m3438[0m[2m* [0mcd quadjax/envs                                                                                                                                                                                                                                                                                                                                            [K[K
+[2m [0m[2m3439[0m[2m* [0mpython quad3d_free.py --task tracking_zigzag --dynamics bodyrate --controller fixed --lower-controller l1                                                                                                                                                                                                                                                  [K[K
+[2m [0m[2m3440[0m[2m  [0mzsh DATT_exp.sh                                                                                                                                                                                                                                                                                                                                            [K[K
+[J[7m 3441  nvidia-smi                                                                                                                                                                                                                                                                                                                                                 [K[0m[J[7A[0m[27m[24m[30C[32mnvidia-smi[39m;[K
+[6B[7m 3441  nvidia-smi                                                                                                                                                                                                                                                                                                                                                 [K[0m[7m 3441  nvidia-smi                                                                                                                                                                                                                                                                                                                                                 [K[0m[7A[0m[27m[24m[30C[32mnvidia-smi[39m;[K
+[J[A[41C[11D[39mn[39mv[39mi[39md[39mi[39ma[39m-[39ms[39mm[39mi[1C[11D[32mn[32mv[32mi[32md[32mi[32ma[32m-[32ms[32mm[32mi[39m 
+[J[A[41C[90m-l 1[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mfile[0m
+[0mDATT_exp.sh                      quad2d_free_mppi_sensitivity.sh
+[J[0;2m[1mcommon substring:[0m [30m[103m.sh[39m[49m[3A[0m[27m[24m[30C[32mnvidia-smi[39m [90m-l 1[39m[K[39m [39m [39m [39m 
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-smi[J[A[A[0m[27m[24m[30C[32mnvidia-smi[39m[K[10D[1m[31mn[1m[31mv[1m[31mi[1m[31md[1m[31mi[1m[31ma[1m[31m-[1m[31ms[1m[31mm[0m[39m[39m [90mi[39m
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-smi[J[A[A[0m[27m[24m[30C[1m[31mnvidia-sm[0m[39m[90mi[39m[K[1m[31ms[0m[39m[0m[39m [39m [90mmi[39m[1m[31m-[0m[39m[0m[39m [39m [39m [90msmi[39m[1m[31ma[0m[39m[0m[39m [39m [39m [39m [90m-smi[39m[1m[31mi[0m[39m[0m[39m [39m [39m [39m [39m [90ma-smi[39m[1m[31md[0m[39m[0m[39m [39m [39m [39m [39m [39m [90mia-smi[39m[1m[31mi[0m[39m[0m[39m [39m [39m [39m [39m [39m [39m [90mdia-smi[39m[1m[31mn[1m[31mv[0m[39m[0m[39m [39m [39m [39m [39m [39m [39m [39m [8D[90midia-smi[39m[8D[1m[31mn[0m[39m[0m[39m [39m [39m [39m [39m [39m [39m [39m [39m [9D[1m[31mn[0m[39m[90mvidia-smi[39m[9D[0m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [10D
+[J[A[30C[32mw[39m[32mw[39m[90mhich python[39m[11D
+[J[0;1;2malias[0m
+[J[0mwhich-command[J[A[A[0m[27m[24m[30C[32mw[39m[90mhich python[39m[K[11D[1m[31mw[1m[31ma[0m[39m[39m [39m [39m [39m [39m [39m [39m [39m [39m [39m [10D[90mtch -n 1 nvidia-smi[39m[19D
+[J[0;1;2mbuiltin command[0m
+[J[0mwait[J[A[A[0m[27m[24m[30C[1m[31mwa[0m[39m[90mtch -n 1 nvidia-smi[39m[K[19D[1m[31mw[1m[31ma[1m[31mt[0m[39m[30m[103m[39m[49m[30m[103m[39m[49m
+[J[0;1;2mexternal command[0m
+[0mwatch       watchgnupg
+[J[0;2m[1mcommon substring:[0m [30m[103mwatch[39m[49m[3A[0m[27m[24m[30C[1m[31mwat[0m[39m[90mch -n 1 nvidia-smi[39m[K[18D[0m[32mw[0m[32ma[0m[32mt[32mc[32mh[39m[39m [36m-[36mn[39m[39m [39m1[39m [39mn[39mv[39mi[39md[39mi[39ma[39m-[39ms[39mm[39mi
+[J[0;1;2mexternal command[0m
+[J[0mnvidia-smi[J[A[A[0m[27m[24m[30C[32mwatch[39m [36m-n[39m 1 nvidia-smi[K[?1l>[?2004l
+[J[A[51C
+[J]2;watch -n 1 nvidia-smi]1;watch[?1049h[22;0;0t[1;14r(B[m[4l[?7h[H[2JEvery 1.0s: nvidia-smi[1;322Hpcy-OMEN: Sat Oct 14 22:18:03 2023[3;1HSat Oct 14 22:18:03 2023[4d+-----------------------------------------------------------------------------+[5d| NVIDIA-SMI 525.125.06   Driver Version: 525.125.06   CUDA Version: 12.0     |[6d|-------------------------------+----------------------+----------------------+[7d| GPU  Name[7;20HPersistence-M| Bus-Id[7;49HDisp.A | Volatile Uncorr. ECC |[8d| Fan  Temp  Perf  Pwr:Usage/Cap|[8;43HMemory-Usage | GPU-Util  Compute M. |[9d|[9;33H|[9;56H|[9;72HMIG M. |[10d|===============================+======================+======================|[11d|   0  NVIDIA GeForce ...  Off  | 00000000:01:00.0 Off |[11;75HN/A |[12d| N/A   40C    P8     5W / 115W |     96MiB / 12282MiB |[63G0%[71GDefault |[13d|[13;33H|[13;56H|[13;75HN/A |[14d+-------------------------------+----------------------+----------------------+[355G[1;350H4[3;19H4[14;355H[1;350H5[3;19H5[14;355H[H[2JEvery 1.0s: nvidia-smi[1;322Hpcy-OMEN: Sat Oct 14 22:18:06 2023[3;1HSat Oct 14 22:18:06 2023[4d+-----------------------------------------------------------------------------+[5d| NVIDIA-SMI 525.125.06   Driver Version: 525.125.06   CUDA Version: 12.0     |[6d|-------------------------------+----------------------+----------------------+[7d| GPU  Name[7;20HPersistence-M| Bus-Id[7;49HDisp.A | Volatile Uncorr. ECC |[8d| Fan  Temp  Perf  Pwr:Usage/Cap|[8;43HMemory-Usage | GPU-Util  Compute M. |[9d|[9;33H|[9;56H|[9;72HMIG M. |[10d|===============================+======================+======================|[11d|   0  NVIDIA GeForce ...  Off  | 00000000:01:00.0 Off |[11;75HN/A |[12d| N/A   40C    P8     5W / 115W |     96MiB / 12282MiB |[63G0%[71GDefault |[13d|[13;33H|[13;56H|[13;75HN/A |[14d+-------------------------------+----------------------+----------------------+[16d+-----------------------------------------------------------------------------+[17d| Processes:[17;79H|[18d|  GPU   GI   CI[18;25HPID   Type   Process name[18;68HGPU Memory |[19d|[19;10HID   ID[19;68HUsage[79G|[20d|=============================================================================|[21d|    0   N/A  N/A[24G1529[34GG   /usr/lib/xorg/Xorg[21;73H86MiB |[22d|    0   N/A  N/A[24G1693[34GG   /usr/bin/gnome-shell[22;74H8MiB |[23d+-----------------------------------------------------------------------------+[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[12;10H1[17G0    24[12;38H689[12;63H3[23d|    0   N/A  N/A     35738      C   python[28X[23;72H590MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H3[3;19H3[12;10H2[12;23H9[12;37H9737[12;63H0[23;71H9638[36;355H[1;350H4[3;19H4[12;38H833[23;72H734[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;40H9[23;73H40[36;355H[1;350H7[3;19H7[36;355H[24d[J[1;350H8[3;19H8[12;10H3[12;22H34[12;37H  96[23d+-----------------------------------------------------------------------------+[36;355H[1;350H9[3;19H9[12;23H8[36;355H[1;349H30[3;18H30[12;10H2[17G5    34[36;355H[1;350H1[3;19H1[12;10H1[17G8    2[36;355H[1;350H3[3;19H3[12;22H 7[36;355H[1;350H4[3;19H4[12;23H5[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H9:01[3;16H9:01[12;10H0[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H1[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;346H20:00[3;15H20:00[36;355H[1;350H1[3;19H1[12;10H2[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;347H1:00[3;16H1:00[12;63H1[36;355H[1;350H1[3;19H1[12;63H0[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H3[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H4[36;355H[1;350H4[3;19H4[12;10H5[17G0    18[12;38H615[12;63H3[23d|    0   N/A  N/A     37775      C   python[28X[23;72H518MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H5[3;19H5[12;22H29[12;37H9737[12;63H0[23;71H963[36;355H[1;350H6[3;19H6[12;38H833[23;72H734[36;355H[1;350H7[3;19H7[12;10H6[12;22H30[12;63H1[36;355H[1;350H8[3;19H8[12;40H9[12;63H0[23;73H40[36;355H[1;350H9[3;19H9[36;355H[24d[J[1;349H50[3;18H50[12;10H7[12;23H2[12;37H  96[12;62H52[23d+-----------------------------------------------------------------------------+[36;355H[1;350H1[3;19H1[12;23H9[12;62H 0[36;355H[1;350H2[3;19H2[12;10H6[17G5    36[36;355H[1;350H4[3;19H4[12;10H5[12;22H15[36;355H[1;350H5[3;19H5[12;17H8    13[36;355H[1;350H6[3;19H6[12;22H 5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H2:00[3;16H2:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H6[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H7[17G0    20[12;38H691[12;63H3[23d|    0   N/A  N/A     38438      C   python[28X[23;72H592MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H8[3;19H8[12;22H3[12;37H9737[12;63H0[23;71H9638[36;355H[1;350H9[3;19H9[12;10H8[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[12;17H5[36;355H[1;350H6[3;19H6[12;10H7[17G8    15[36;355H[1;350H7[3;19H7[12;22H 6[36;355H[1;350H8[3;19H8[12;23H5[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[12;10H8[17G0    26[12;38H833[23;72H734[36;355H[1;350H5[3;19H5[12;22H30[12;63H1[36;355H[1;350H6[3;19H6[12;40H9[12;63H0[23;73H40[36;355H[1;350H8[3;19H8[12;10H9[36;355H[24d[J[1;350H9[3;19H9[12;37H  96[12;62H3[23d+-----------------------------------------------------------------------------+[36;355H[1;349H40[3;18H40[12;23H9[12;62H [36;355H[1;350H1[3;19H1[12;10H8[17G5    35[36;355H[1;350H2[3;19H2[12;22H16[36;355H[1;350H3[3;19H3[12;17H8    11[36;355H[1;350H4[3;19H4[12;22H 7[36;355H[1;350H5[3;19H5[12;23H6[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H2[36;355H[1;350H3[3;19H3[12;10H9[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H3:00[3;16H3:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H8[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;347H4:00[3;16H4:00[12;63H1[36;355H[1;350H1[3;19H1[12;63H0[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[12;10H9[17G0    17[12;38H545[12;63H3[23d|    0   N/A  N/A     40074      C   python[28X[23;72H446MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;349H10[3;18H10[12;9H50[12;22H30[12;37H9737[12;63H0[23;71H9638[36;355H[1;350H1[3;19H1[12;38H833[23;72H734[36;355H[1;350H2[3;19H2[12;63H1[36;355H[1;350H4[3;19H4[12;40H9[12;63H0[23;73H40[36;355H[24d[J[1;350H5[3;19H5[12;10H1[12;23H1[12;37H  96[23d+-----------------------------------------------------------------------------+[36;355H[1;350H6[3;19H6[12;22H40[36;355H[1;350H7[3;19H7[12;10H0[17G4    36[36;355H[1;350H8[3;19H8[12;17H5    2[36;355H[1;350H9[3;19H9[12;9H49[17G8    1[36;355H[1;349H20[3;18H20[12;23H1[36;355H[1;350H1[3;19H1[12;22H 6[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[12;9H50[17G0    15[12;38H411[12;63H2[23d|    0   N/A  N/A     40747      C   python[28X[23;72H312MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H8[3;19H8[12;22H30[12;37H9737[12;63H0[23;71H9638[36;355H[1;350H9[3;19H9[12;10H1[12;38H833[12;63H1[23;72H734[36;355H[1;349H41[3;18H41[12;63H0[36;355H[1;350H2[3;19H2[12;40H5[23;74H6[36;355H[1;350H3[3;19H3[12;40H9[23;73H40[36;355H[1;350H4[3;19H4[36;355H[24d[J[1;350H5[3;19H5[12;10H2[12;23H8[12;37H  96[23d+-----------------------------------------------------------------------------+[36;355H[1;350H6[3;19H6[12;17H4    40[36;355H[1;350H7[3;19H7[12;10H1[17G5    35[36;355H[1;350H8[3;19H8[12;10H0[12;22H1[36;355H[1;350H9[3;19H9[12;17H8    11[36;355H[1;349H50[3;18H50[12;22H 6[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H5:00[3;16H5:00[36;355H[1;350H1[3;19H1[12;9H49[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H21[3;18H21[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H8[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[12;23H5[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[12;10H7[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[12;10H6[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[12;10H5[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;347H6:00[3;16H6:00[36;355H[1;350H1[3;19H1[12;10H6[17G0    17[12;38H485[12;63H2[23d|    0   N/A  N/A     41804      C   python[28X[23;72H386MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H2[3;19H2[12;22H30[12;37H9737[12;63H0[23;71H9638[36;355H[1;350H3[3;19H3[12;38H833[23;72H734[36;355H[1;350H4[3;19H4[12;63H1[36;355H[1;350H5[3;19H5[12;40H9[12;63H0[23;73H40[36;355H[1;350H6[3;19H6[36;355H[24d[J[1;350H7[3;19H7[12;10H7[12;23H1[12;37H  96[12;62H82[23d+-----------------------------------------------------------------------------+[36;355H[1;350H8[3;19H8[12;23H9[12;62H 0[36;355H[1;350H9[3;19H9[12;10H6[17G5    35[36;355H[1;349H10[3;18H10[12;22H2[36;355H[1;350H1[3;19H1[12;10H5[17G8    12[36;355H[1;350H2[3;19H2[12;22H 5[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[12;10H4[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[12;10H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H7:00[3;16H7:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[12;10H1[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H0[36;355H[1;350H4[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[12;10H1[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H9[36;355H[1;347H8:00[3;16H8:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[12;10H2[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[12;10H3[17G0     9[12;38H331[12;63H1[23d|    0   N/A  N/A     43357      C   python[28X[23;72H232MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H9[3;19H9[12;22H2[12;37H9737[12;63H2[23;71H9638[36;355H[24d[J[1;349H20[3;18H20[12;10H4[12;22H31[12;37H  96[12;62H89[23d+-----------------------------------------------------------------------------+[36;355H[1;350H1[3;19H1[12;23H8[12;62H 0[36;355H[1;350H2[3;19H2[12;10H3[17G4    32[36;355H[1;350H3[3;19H3[12;17H5    26[36;355H[1;350H4[3;19H4[12;17H8    15[36;355H[1;350H5[3;19H5[12;10H2[12;23H1[36;355H[1;350H6[3;19H6[12;22H 6[36;355H[1;350H8[3;19H8[12;23H5[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[12;10H1[36;355H[1;350H9[3;19H9[36;355H[1;349H41[3;18H41[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[12;10H2[17G0     9[12;38H375[12;63H2[23d|    0   N/A  N/A     43908      C   python[28X[23;72H276MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H9[3;19H9[12;10H3[12;22H2[12;37H9737[12;63H1[23;71H9638[36;355H[1;347H9:00[3;16H9:00[12;38H833[23;72H734[36;355H[1;350H1[3;19H1[12;63H0[36;355H[1;350H2[3;19H2[12;10H4[12;40H5[23;74H6[36;355H[1;350H3[3;19H3[12;40H9[23;73H40[36;355H[1;350H4[3;19H4[36;355H[24d[J[1;350H5[3;19H5[12;22H37[12;37H  96[23d+-----------------------------------------------------------------------------+[36;355H[1;350H6[3;19H6[12;17H4    38[36;355H[1;350H7[3;19H7[12;10H3[17G5    32[36;355H[1;350H9[3;19H9[12;17H8    23[36;355H[1;349H10[3;18H10[12;22H12[36;355H[1;350H1[3;19H1[12;22H 5[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H2[3;19H2[12;10H4[36;355H[1;350H3[3;19H3[12;10H5[17G0    11[12;38H403[12;63H2[23d|    0   N/A  N/A     44561      C   python[28X[23;72H304MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H4[3;19H4[12;22H30[12;37H9737[12;63H0[23;71H9638[36;355H[1;350H5[3;19H5[12;38H833[12;63H1[23;72H734[36;355H[1;350H6[3;19H6[12;10H6[12;63H0[36;355H[1;350H7[3;19H7[12;40H5[23;74H6[36;355H[1;350H8[3;19H8[12;40H9[23;73H40[36;355H[1;350H9[3;19H9[36;355H[24d[J[1;349H30[3;18H30[12;10H7[12;23H7[12;37H  96[23d+-----------------------------------------------------------------------------+[36;355H[1;350H1[3;19H1[12;17H5    39[36;355H[1;350H2[3;19H2[12;10H6[12;23H4[36;355H[1;350H3[3;19H3[12;17H8    25[36;355H[1;350H4[3;19H4[12;10H5[12;22H [36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;346H30:00[3;15H30:00[36;355H[1;350H1[3;19H1[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[12;10H4[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H1:00[3;16H1:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H21[3;18H21[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H2:01[3;16H2:01[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H41[3;18H41[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[12;10H6[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H3:00[3;16H3:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H7[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[12;10H8[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[12;10H9[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;9H50[17G0    20[12;38H517[12;63H3[23d|    0   N/A  N/A     47165      C   python[28X[23;72H418MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H7[3;19H7[12;22H3[12;37H973[12;63H0[23;71H963[36;355H[1;350H8[3;19H8[12;38H833[23;72H734[36;355H[1;350H9[3;19H9[12;10H1[12;63H1[36;355H[1;349H50[3;18H50[12;40H9[12;63H0[23;73H40[36;355H[1;350H2[3;19H2[36;355H[24d[J[1;350H3[3;19H3[12;23H1[12;37H  96[12;62H3[23d+-----------------------------------------------------------------------------+[36;355H[1;350H4[3;19H4[12;10H2[12;23H9[12;62H [36;355H[1;350H5[3;19H5[12;10H1[17G5    35[36;355H[1;350H6[3;19H6[12;10H0[12;23H0[36;355H[1;350H7[3;19H7[12;17H8    16[36;355H[1;350H8[3;19H8[12;22H [36;355H[1;350H9[3;19H9[36;355H[1;347H4:00[3;16H4:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[12;9H49[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H2[3;19H2[12;10H8[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;347H5:00[3;16H5:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[12;10H9[17G0    2[12;38H677[12;63H3[23d|    0   N/A  N/A     48330      C   python[28X[23;72H578MiB |[24d+-----------------------------------------------------------------------------+[36;355H[1;350H9[3;19H9[12;22H30[12;37H973[12;63H0[23;71H963[36;355H[1;349H10[3;18H10[12;9H50[12;38H833[23;72H734[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;40H9[23;73H40[36;355H[1;350H4[3;19H4[36;355H[24d[J[1;350H5[3;19H5[12;10H1[12;23H4[12;37H  96[23d+-----------------------------------------------------------------------------+[36;355H[1;350H6[3;19H6[12;23H9[36;355H[1;350H7[3;19H7[12;9H49[17G5    37[36;355H[1;350H8[3;19H8[12;17H8    26[36;355H[1;350H9[3;19H9[12;22H 7[36;355H[1;349H20[3;18H20[12;23H6[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[12;10H8[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[12;23H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H7[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[12;10H6[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H6:00[3;16H6:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[12;10H5[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[12;10H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[12;10H3[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[12;10H2[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;347H7:00[3;16H7:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[12;10H1[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[12;10H0[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H51[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H8:00[3;16H8:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[12;9H39[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H31[3;18H31[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H9:00[3;16H9:00[12;9H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;63H1[36;355H[1;350H4[3;19H4[12;63H0[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[12;10H1[36;355H[1;350H4[3;19H4[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;346H40:00[3;15H40:00[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H5[3;19H5[12;10H2[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H20[3;18H20[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;347H1:00[3;16H1:00[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H10[3;18H10[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;18H20[36;355H[1;349H21[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H30[3;18H30[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H6[3;19H6[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H40[3;18H40[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;19H4[36;355H[1;350H5[3;19H5[36;355H[1;350H7[3;19H7[36;355H[1;350H8[3;19H8[36;355H[1;350H9[3;19H9[36;355H[1;349H50[3;18H50[36;355H[1;350H1[3;19H1[36;355H[1;350H2[3;19H2[36;355H[1;350H3[3;19H3[36;355H[1;350H4[3;

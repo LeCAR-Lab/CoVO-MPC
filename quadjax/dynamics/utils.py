@@ -388,7 +388,7 @@ def tracking_penyaw_obj_reward_fn(state: EnvState3D, params):
 '''
 visualization functions
 '''
-def plot_states(state_seq, obs_seq, reward_seq, env_params):
+def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     import matplotlib.pyplot as plt
     import numpy as np
 
@@ -463,4 +463,4 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params):
             plt.ylabel(name)
 
     plt.xlabel("time")
-    plt.savefig(f"{quadjax.get_package_path()}/../results/plot.png")
+    plt.savefig(f"{quadjax.get_package_path()}/../results/render_plot_{filename}.png")
