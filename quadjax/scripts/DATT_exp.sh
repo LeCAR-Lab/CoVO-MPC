@@ -1,4 +1,4 @@
-# experinment with noDR
+# experinment with noDR (no domain randomization)
 
 # DATT
 python ../train.py --env quad3d_free --dynamics bodyrate --noDR --lower_controller l1_esitimate_only --obs_type quad_l1 --name DATT 
