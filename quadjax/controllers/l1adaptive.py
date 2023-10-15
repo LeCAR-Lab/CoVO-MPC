@@ -57,12 +57,12 @@ class L1Controller(controllers.BaseController):
 
         # attitude control
         z_d = f_d / jnp.linalg.norm(f_d)
-        rotation_axis = jnp.cross(jnp.array([0.0, 0.0, 1.0]), z_d)
+        axis_angle = jnp.cross(jnp.array([0.0, 0.0, 1.0]), z_d)
+        angle = jnp.linalg.norm(axis_angle)
         # when the rotation axis is zero, set it to [0.0, 0.0, 1.0] and set angle to 0.0
-        small_angle = jnp.linalg.norm(rotation_axis) < 1e-4
-        rotation_axis = jnp.where(small_angle, jnp.array([0.0, 0.0, 1.0]), rotation_axis)
-        rotation_angle = jnp.where(small_angle, 0.0, jnp.arcsin(jnp.linalg.norm(rotation_axis)))
-        R_d = geom.axisangletoR(rotation_axis, rotation_angle)
+        small_angle = (jnp.abs(angle) < 1e-4)
+        axis = jnp.where(small_angle, jnp.array([0.0, 0.0, 1.0]), axis_angle / angle)
+        R_d = geom.axisangletoR(axis, angle)
         R_e = R_d.T @ Q
         angle_err = geom.vee(R_e - R_e.T)
         # generate desired angular velocity
