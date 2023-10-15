@@ -68,7 +68,7 @@ class Quad3D(BaseEnvironment):
             def l1_control_fn(obs, state, env_params, rng_act, input_action):
                 action_l1, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params, 0.0)
                 state = state.replace(control_params=control_params)
-                return action_l1 + input_action, None, state
+                return (action_l1 + input_action), None, state
             self.control_fn = l1_control_fn
         elif lower_controller == 'l1_esitimate_only':
             self.default_control_params = controllers.L1Params()

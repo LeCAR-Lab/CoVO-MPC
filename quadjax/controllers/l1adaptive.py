@@ -1,6 +1,7 @@
 import jax
 from jax import numpy as jnp 
 from flax import struct
+from functools import partial
 
 from quadjax import controllers
 from quadjax.dynamics import geom
@@ -32,6 +33,7 @@ class L1Controller(controllers.BaseController):
     def update_params(self, env_param, control_params):
         return control_params
     
+    @partial(jax.jit, static_argnums=(0,))
     def update_esitimate(self, state, control_params):
 
         Q = geom.qtoQ(state.quat)
@@ -43,6 +45,7 @@ class L1Controller(controllers.BaseController):
 
         return control_params.replace(vel_hat=vel_hat, d_hat=d_hat)
 
+    @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs, state, env_param, rng_act, control_params, info) -> jnp.ndarray:
         control_params = self.update_esitimate(state, control_params)
 
@@ -66,6 +69,6 @@ class L1Controller(controllers.BaseController):
         omega_d = - control_params.Kp_att * angle_err
 
         # generate action
-        action = jnp.array([(thrust/self.param.max_thrust) * 2.0 - 1.0, *(omega_d/self.param.max_omega)])
+        action = jnp.concatenate([jnp.array([(thrust/self.param.max_thrust) * 2.0 - 1.0]), (omega_d/self.param.max_omega)])
 
         return action, control_params, None

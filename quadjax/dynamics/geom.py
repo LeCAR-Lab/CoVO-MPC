@@ -105,4 +105,6 @@ def vee(R: jnp.ndarray):
     # convert skew-symmetric matrix to vector
     # R: 3x3 skew-symmetric matrix
     # output: 3d vector
+    # P = jnp.array([[0.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]])
+    # return - (P @ R @ P).diagonal()
     return jnp.array([R[2, 1], R[0, 2], R[1, 0]])
