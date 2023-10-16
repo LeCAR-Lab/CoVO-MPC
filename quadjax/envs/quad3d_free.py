@@ -127,7 +127,7 @@ class Quad3D(BaseEnvironment):
         elif obs_type == 'quad_nlac':
             assert 'nlac' in lower_controller, "quad_nlac obs_type only works with nlac lower controller"
             self.get_obs = self.get_obs_quad_nlac
-            self.obs_dim = 31 + self.default_params.traj_obs_len * 6
+            self.obs_dim = 37 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point

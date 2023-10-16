@@ -10,11 +10,12 @@ from quadjax.dynamics.dataclass import default_array
 
 @struct.dataclass
 class NLACParams:
-    a_hat: jnp.ndarray = default_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    base_dim: int = 12
+    a_hat: jnp.ndarray = default_array(jnp.zeros((base_dim,)))
     d_hat: jnp.ndarray = default_array([0.0, 0.0, 0.0])
     vel_hat: jnp.ndarray = default_array([0.0, 0.0, 0.0])
     As: jnp.ndarray = default_array(-5.0 * jnp.eye(3, dtype=jnp.float32))
-    P: jnp.ndarray = default_array(5.0 * jnp.eye(6, dtype=jnp.float32))
+    P: jnp.ndarray = default_array(5.0 * jnp.eye(base_dim, dtype=jnp.float32))
     R: jnp.ndarray = default_array(1.0 * jnp.eye(3, dtype=jnp.float32))
     alpha: float = 0.9
 
@@ -37,24 +38,27 @@ class NLAdaptiveController(controllers.BaseController):
     def update_params(self, env_param, control_params):
         return control_params
 
-    def phi(v):
-        return jnp.concatenate([jnp.diag(v*jnp.abs(v)), jnp.eye(3)], axis=1)
+    def phi(state, params):
+        v = state.vel
+        time = state.time
+        return jnp.concatenate([jnp.diag(v*jnp.abs(v)), jnp.eye(3)*jnp.sin(2*jnp.pi/params.disturb_period*time), jnp.eye(3)*jnp.cos(2*jnp.pi/params.disturb_period*time), jnp.eye(3)], axis=1)
 
     @partial(jax.jit, static_argnums=(0,))
     def update_esitimate(self, state, control_params):
 
         Q = geom.qtoQ(state.quat)
         vel_hat_dot = jnp.array([0.0, 0.0, -self.param.g]) + 1.0 / self.param.m * (Q @ jnp.asarray([0, 0, state.last_thrust])) + \
-            NLAdaptiveController.phi(state.vel) @ control_params.a_hat + \
+            NLAdaptiveController.phi(state, self.param) @ control_params.a_hat + \
             control_params.As @ (control_params.vel_hat - state.vel)
         vel_hat = control_params.vel_hat + vel_hat_dot * self.param.dt
 
-        a_hat_new = - control_params.P @ NLAdaptiveController.phi(state.vel).T @ jnp.linalg.inv(control_params.R) @ (state.vel - vel_hat) * self.param.dt + control_params.a_hat
+        a_hat_new = - control_params.P @ NLAdaptiveController.phi(state, self.param).T @ jnp.linalg.inv(
+            control_params.R) @ (state.vel - vel_hat) * self.param.dt + control_params.a_hat
 
         a_hat = control_params.alpha * control_params.a_hat + \
             (1.0 - control_params.alpha) * a_hat_new
 
-        d_hat = NLAdaptiveController.phi(state.vel) @ a_hat
+        d_hat = NLAdaptiveController.phi(state, self.param) @ a_hat
         return control_params.replace(vel_hat=vel_hat, d_hat=d_hat, a_hat=a_hat)
 
     @partial(jax.jit, static_argnums=(0,))
