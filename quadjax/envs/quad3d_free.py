@@ -94,6 +94,22 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return input_action, None, state
             self.control_fn = nlac_esitimate_only_control_fn
+        elif lower_controller == 'nlac':
+            self.default_control_params = controllers.NLACParams()
+            controller = controllers.NLAdaptiveController(self, self.default_control_params)
+            def nlac_control_fn(obs, state, env_params, rng_act, input_action):
+                action_nlac, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params, 0.0)
+                state = state.replace(control_params=control_params)
+                return (action_nlac + input_action), None, state
+            self.control_fn = nlac_control_fn
+        elif lower_controller == 'nlac_esitimate_only':
+            self.default_control_params = controllers.NLACParams()
+            controller = controllers.NLAdaptiveController(self, self.default_control_params)
+            def nlac_esitimate_only_control_fn(obs, state, env_params, rng_act, input_action):
+                _, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params, 0.0)
+                state = state.replace(control_params=control_params)
+                return input_action, None, state
+            self.control_fn = nlac_esitimate_only_control_fn
         else:
             raise NotImplementedError
         # sampling function
@@ -132,7 +148,7 @@ class Quad3D(BaseEnvironment):
         elif obs_type == 'quad_nlac':
             assert 'nlac' in lower_controller, "quad_nlac obs_type only works with nlac lower controller"
             self.get_obs = self.get_obs_quad_nlac
-            self.obs_dim = 31 + self.default_params.traj_obs_len * 6
+            self.obs_dim = 37 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
@@ -375,6 +391,17 @@ class Quad3D(BaseEnvironment):
         return obs
     
     @partial(jax.jit, static_argnums=(0,))
+    def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        obs_elements = [
+            # nlac observation
+            state.control_params.vel_hat,
+            state.control_params.a_hat,
+            state.control_params.d_hat,
+        ]
+        obs = jnp.concatenate(obs_elements, axis=-1)
+        return obs
+    
+    @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_params(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
         quad_obs = self.get_obs_quadonly(state, params)
         param_obs = self.get_obs_paramsonly(state, params)
@@ -385,6 +412,12 @@ class Quad3D(BaseEnvironment):
         quad_obs = self.get_obs_quadonly(state, params)
         l1_obs = self.get_obs_l1only(state, params)
         return jnp.concatenate([quad_obs, l1_obs], axis=-1)
+
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        quad_obs = self.get_obs_quadonly(state, params)
+        nlac_obs = self.get_obs_nlaconly(state, params)
+        return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -491,6 +524,8 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
         # manually record certain control parameters into state_seq
         if hasattr(control_params, 'd_hat') and hasattr(control_params, 'vel_hat'):
             control_seq.append({'d_hat': control_params.d_hat, 'vel_hat': control_params.vel_hat})
+        if hasattr(control_params, 'a_hat'):
+            control_seq.append({'a_hat': control_params.a_hat})
         if hasattr(control_params, 'a_hat'):
             control_seq.append({'a_hat': control_params.a_hat})
         next_obs, next_env_state, reward, done, info = env.step(
