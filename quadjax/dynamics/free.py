@@ -165,7 +165,8 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
     
     @jax.jit
     def sin_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
-        random_phase = jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
+        random_phase = jnp.where(time % params.max_steps_in_episode == 0, jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
+                            , state.f_disturb)
         disturb = params.disturb_scale * jnp.sin(2*jnp.pi/params.disturb_period*time + random_phase)
         return disturb
     
@@ -231,14 +232,14 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         vel = x_new[7:10]
         omega = x_new[10:13]
 
-        # step
-        time = env_state.time + 1
-
         # update disturbance
         disturb_key, key = jax.random.split(key)
 
         # generate period disturbance
         f_disturb = disturb_func(disturb_key, env_params, time, env_state)
+
+        # step
+        time = env_state.time + 1
         
         # generate 3d sinusoidal disturbance with period and scale and random phase
         # random_phase = jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)

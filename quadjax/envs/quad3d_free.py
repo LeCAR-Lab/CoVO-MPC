@@ -361,35 +361,55 @@ class Quad3D(BaseEnvironment):
         return done
 
 def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filename = ''):
+    env_num = 8192
+
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
-    env_params = env.sample_params(rng_params)
+    rng_params = jax.random.split(rng_params, env_num)
+    env_params = jax.vmap(env.sample_params)(rng_params)
 
     rng, rng_reset = jax.random.split(rng)
-    obs, info, env_state = env.reset(rng_reset, env_params)
+    rng_reset = jax.random.split(rng_reset, env_num)
+    obs, info, env_state = jax.vmap(env.reset)(rng_reset, env_params)
 
     control_params = controller.update_params(env_params, control_params)
 
+    cumulated_err_pos = jnp.zeros(env_num)
     def run_one_step(carry, _):
-        obs, env_state, rng, env_params, control_params, info = carry
+        obs, env_state, rng, env_params, control_params, info, cumulated_err_pos = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params, info)
         if control_info is not None:
             if 'a_mean' in control_info:
                 action = control_info['a_mean']
-        next_obs, next_env_state, reward, done, info = env.step(
-            rng_step, env_state, action, env_params)
+        next_obs, next_env_state, reward, done, info = jax.vmap(env.step(
+            rng_step, env_state, action, env_params))
+        # if done, reset environment parameters
+        rng, rng_params = jax.random.split(rng)
+        rng_params = jax.random.split(rng_params, env_num)
+        new_env_params = jax.vmap(env.sample_params)(rng_params)
+        def map_fn(done, x, y):
+            # reshaped_done = jnp.broadcast_to(done, x.shape)
+            indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
+            reshaped_done = done[indexes]
+            return reshaped_done * x + (1 - reshaped_done) * y
+        env_params = jax.tree_map(
+            lambda x, y: map_fn(done, x, y), new_env_params, env_params
+        )
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         new_control_params = controller.reset()
         control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
-        return (next_obs, next_env_state, rng, env_params, control_params, info), info['err_pos']
+        return (next_obs, next_env_state, rng, env_params, control_params, info, cumulated_err_pos), None
     
     t0 = time_module.time()
-    (obs, env_state, rng, env_params, control_params, info), err_pos = lax.scan(
-        run_one_step, (obs, env_state, rng, env_params, control_params, info), jnp.arange(total_steps))
+    env_rng, rng = jax.random.split(rng)
+    env_rng = jax.random.split(env_rng, env_num)
+    (obs, env_state, env_rng, env_params, control_params, info, cumulated_err_pos), _ = lax.scan(
+        run_one_step, (obs, env_state, rng, env_params, control_params, info, cumulated_err_pos), jnp.arange(total_steps))
     print(f"env running time: {time_module.time()-t0:.2f}s")
 
+    err_pos = cumulated_err_pos / total_steps
     print(f"mean tracking error: {jnp.mean(err_pos):.2f}")
 
     # save data
