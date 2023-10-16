@@ -171,7 +171,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
     
     @jax.jit
     def drag_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
-        disturb = -jnp.abs(params.disturb_scale) * state.vel * jnp.linalg.norm(state.vel) / (1.5**2)
+        disturb = -jnp.abs(params.disturb_scale) * state.vel * jnp.abs(state.vel) / (1.5**2)
         return disturb
     
     if disturb_type == 'periodic':
