@@ -459,6 +459,8 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
         # manually record certain control parameters into state_seq
         if hasattr(control_params, 'd_hat') and hasattr(control_params, 'vel_hat'):
             control_seq.append({'d_hat': control_params.d_hat, 'vel_hat': control_params.vel_hat})
+        if hasattr(control_params, 'a_hat'):
+            control_seq.append({'a_hat': control_params.a_hat})
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
