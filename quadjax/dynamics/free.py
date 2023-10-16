@@ -167,9 +167,12 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
     @jax.jit
     def sin_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, state: EnvState3D):
         time = state.time
-        random_phase = jnp.where(time % params.max_steps_in_episode == 0, jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
-                            , state.f_disturb)
-        disturb = params.disturb_scale * jnp.sin(2*jnp.pi/params.disturb_period*time + random_phase)
+        # random_phase = jnp.where(time % params.max_steps_in_episode == 0, jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
+                            # , state.f_disturb)
+        scale = params.disturb_params[:3] * params.disturb_scale
+        period = params.disturb_params[:3] * (params.disturb_period/3) + params.disturb_period
+        phase = params.disturb_params[3:6] * 2 * jnp.pi
+        disturb = scale * jnp.sin(2*jnp.pi/period*time+phase)
         return disturb
     
     @jax.jit

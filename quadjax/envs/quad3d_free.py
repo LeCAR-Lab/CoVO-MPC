@@ -84,7 +84,7 @@ class Quad3D(BaseEnvironment):
         if enable_randomizer:
             def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
                 param_key = jax.random.split(key)[0]
-                rand_val = jax.random.uniform(param_key, shape=(11,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
+                rand_val = jax.random.uniform(param_key, shape=(12,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
 
                 params = self.default_params
                 m = params.m_mean + rand_val[0] * params.m_std
@@ -93,10 +93,15 @@ class Quad3D(BaseEnvironment):
                 action_scale = params.action_scale_mean + rand_val[4] * params.action_scale_std
                 alpha_bodyrate = params.alpha_bodyrate_mean + rand_val[5] * params.alpha_bodyrate_std
 
-                return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate)
+                disturb_params = rand_val[6:12] * params.disturb_scale
+
+                return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate, disturb_params=disturb_params)
             self.sample_params = sample_random_params
         else:
-            self.sample_params = lambda key: self.default_params
+            def sample_default_params(key: chex.PRNGKey) -> EnvParams3D:
+                disturb_params = jax.random.uniform(key, shape=(6,), minval=-1.0, maxval=1.0)
+                return EnvParams3D(disturb_params=disturb_params)
+            self.sample_params = sample_default_params
         # observation function
         if obs_type == 'quad_params':
             self.get_obs = self.get_obs_quad_params
@@ -400,6 +405,7 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filena
         env_params = jax.tree_map(
             lambda x, y: map_fn(done, x, y), new_env_params, env_params
         )
+        cumulated_err_pos = cumulated_err_pos + info['err_pos']
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         # NOTE: controller parameters are not reset here
         # new_control_params = controller.reset()

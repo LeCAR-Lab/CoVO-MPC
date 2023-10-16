@@ -220,6 +220,7 @@ class EnvParams3D:
     d_offset: jnp.ndarray = default_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     disturb_period: int = 50
     disturb_scale: float = 0.2
+    disturb_params: jnp.ndarray = default_array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
     # curriculum related parameters
     curri_params: float = 1.0
