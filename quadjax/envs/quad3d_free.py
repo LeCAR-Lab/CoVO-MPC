@@ -360,7 +360,7 @@ class Quad3D(BaseEnvironment):
             | (jnp.abs(state.omega) > 100.0).any()
         return done
 
-def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filename = ''):
+def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = ''):
     env_num = 8192
 
     # running environment
@@ -379,12 +379,14 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params, info, cumulated_err_pos = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
+        rng_act = jax.random.split(rng_act, env_num)
         action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params, info)
         if control_info is not None:
             if 'a_mean' in control_info:
                 action = control_info['a_mean']
-        next_obs, next_env_state, reward, done, info = jax.vmap(env.step(
-            rng_step, env_state, action, env_params))
+        rng_step = jax.random.split(rng_step, env_num)
+        next_obs, next_env_state, reward, done, info = jax.vmap(env.step)(
+            rng_step, env_state, action, env_params)
         # if done, reset environment parameters
         rng, rng_params = jax.random.split(rng)
         rng_params = jax.random.split(rng_params, env_num)
@@ -394,12 +396,16 @@ def eval_env(env: Quad3D, controller, control_params, total_steps = 30000, filen
             indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
             reshaped_done = done[indexes]
             return reshaped_done * x + (1 - reshaped_done) * y
+            # return jnp.where(reshaped_done, x, y)
         env_params = jax.tree_map(
             lambda x, y: map_fn(done, x, y), new_env_params, env_params
         )
         # if done, reset controller parameters, aviod use if, use lax.cond instead
-        new_control_params = controller.reset()
-        control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
+        # NOTE: controller parameters are not reset here
+        # new_control_params = controller.reset()
+        # control_params = jax.tree_map(
+        #     lambda x, y: map_fn(done, x, y), new_control_params, control_params
+        # )
         return (next_obs, next_env_state, rng, env_params, control_params, info, cumulated_err_pos), None
     
     t0 = time_module.time()
@@ -592,7 +598,7 @@ def main(args: Args):
     else:
         raise NotImplementedError
     if args.mode == 'eval':
-        eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=args.name)
+        eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name)
     elif args.mode == 'render':
         render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=args.name)
     else:

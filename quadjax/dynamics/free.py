@@ -158,20 +158,23 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
     # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
 
     @jax.jit
-    def period_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
+    def period_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, state: EnvState3D):
+        time = state.time
         disturb = jnp.where(time % params.disturb_period == 0, jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale)
                             , state.f_disturb)
         return disturb
     
     @jax.jit
-    def sin_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
+    def sin_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, state: EnvState3D):
+        time = state.time
         random_phase = jnp.where(time % params.max_steps_in_episode == 0, jax.random.uniform(disturb_key, shape=(3,), minval=0, maxval=2*jnp.pi)
                             , state.f_disturb)
         disturb = params.disturb_scale * jnp.sin(2*jnp.pi/params.disturb_period*time + random_phase)
         return disturb
     
     @jax.jit
-    def drag_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, time: int, state: EnvState3D):
+    def drag_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, state: EnvState3D):
+        time = state.time
         disturb = -jnp.abs(params.disturb_scale) * state.vel * jnp.abs(state.vel) / (1.5**2)
         return disturb
     
@@ -236,7 +239,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         disturb_key, key = jax.random.split(key)
 
         # generate period disturbance
-        f_disturb = disturb_func(disturb_key, env_params, time, env_state)
+        f_disturb = disturb_func(disturb_key, env_params, env_state)
 
         # step
         time = env_state.time + 1
