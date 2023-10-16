@@ -15,7 +15,7 @@ class NLACParams:
     d_hat: jnp.ndarray = default_array([0.0, 0.0, 0.0])
     vel_hat: jnp.ndarray = default_array([0.0, 0.0, 0.0])
     As: jnp.ndarray = default_array(-5.0 * jnp.eye(3, dtype=jnp.float32))
-    P: jnp.ndarray = default_array(5.0 * jnp.eye(6, dtype=jnp.float32))
+    P: jnp.ndarray = default_array(5.0 * jnp.eye(base_dim, dtype=jnp.float32))
     R: jnp.ndarray = default_array(1.0 * jnp.eye(3, dtype=jnp.float32))
     alpha: float = 0.9
 
