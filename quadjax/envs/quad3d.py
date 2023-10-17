@@ -190,7 +190,7 @@ class Quad3D(environment.Environment):
         """Reset environment state by sampling theta, theta_dot."""
         traj_key, pos_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
-        pos_traj, vel_traj = self.generate_traj(traj_key)
+        pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
 
         zeros3 = jnp.zeros(3)
         pos_hook = jnp.array([0.0, 0.0, params.l]) + self.obj_init_pos
@@ -217,14 +217,15 @@ class Quad3D(environment.Environment):
             # trajectory
             pos_tar=pos_traj[0],
             vel_tar=vel_traj[0],
+            acc_tar=acc_traj[0],
             pos_traj=pos_traj,
             vel_traj=vel_traj,
+            acc_traj=acc_traj,
             # debug value
             last_thrust=0.0,
             last_torque=zeros3,
             # step
             time=0,
-            reward=0.0,
             # control_params
             control_params=self.default_control_params,
         )

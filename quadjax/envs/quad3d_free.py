@@ -12,9 +12,9 @@ import time as time_module
 import numpy as np
 
 import quadjax
+from quadjax import dynamics as quad_dyn
 from quadjax import controllers
 from quadjax.dynamics import utils
-from quadjax.dynamics import free
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.envs.base import BaseEnvironment
 
@@ -49,11 +49,23 @@ class Quad3D(BaseEnvironment):
             raise NotImplementedError
         # dynamics function
         if dynamics == 'free':
-            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d()
+            self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d()
         elif dynamics == 'dist_constant':
-            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
+            self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
         elif dynamics == 'bodyrate':
-            self.step_fn, self.dynamics_fn = free.get_free_dynamics_3d_bodyrate(disturb_type=disturb_type)
+            self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(disturb_type=disturb_type)
+        elif dynamics == 'slung':
+            taut_dynamics = quad_dyn.get_taut_dynamics_3d()
+            loose_dynamics = quad_dyn.get_loose_dynamics_3d()
+            dynamic_transfer = quad_dyn.get_dynamic_transfer_3d()
+            def step_fn(params, state, env_action):
+                old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
+                taut_state = taut_dynamics(params, state, env_action)
+                loose_state = loose_dynamics(params, state, env_action)
+                return dynamic_transfer(
+                    params, loose_state, taut_state, old_loose_state)
+            self.step_fn = step_fn
+            self.dynamics_fn = None
         else:
             raise NotImplementedError
         # lower-level controller
@@ -62,6 +74,7 @@ class Quad3D(BaseEnvironment):
             def base_controller_fn(obs, state, env_params, rng_act, input_action):
                 return input_action, None, state
             self.control_fn = base_controller_fn
+            self.sub_steps = 1
         elif lower_controller == 'l1':
             self.default_control_params = controllers.L1Params()
             controller = controllers.L1Controller(self, self.default_control_params)
@@ -70,6 +83,7 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return (action_l1 + input_action), None, state
             self.control_fn = l1_control_fn
+            self.sub_steps = 1
         elif lower_controller == 'l1_esitimate_only':
             self.default_control_params = controllers.L1Params()
             controller = controllers.L1Controller(self, self.default_control_params)
@@ -78,6 +92,7 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return input_action, None, state
             self.control_fn = l1_esitimate_only_control_fn
+            self.sub_steps = 1
         elif lower_controller == 'nlac':
             self.default_control_params = controllers.NLACParams()
             controller = controllers.NLAdaptiveController(self, self.default_control_params)
@@ -86,6 +101,7 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return (action_nlac + input_action), None, state
             self.control_fn = nlac_control_fn
+            self.sub_steps = 1
         elif lower_controller == 'nlac_esitimate_only':
             self.default_control_params = controllers.NLACParams()
             controller = controllers.NLAdaptiveController(self, self.default_control_params)
@@ -94,6 +110,7 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return input_action, None, state
             self.control_fn = nlac_esitimate_only_control_fn
+            self.sub_steps = 1
         elif lower_controller == 'nlac':
             self.default_control_params = controllers.NLACParams()
             controller = controllers.NLAdaptiveController(self, self.default_control_params)
@@ -102,6 +119,7 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return (action_nlac + input_action), None, state
             self.control_fn = nlac_control_fn
+            self.sub_steps = 1
         elif lower_controller == 'nlac_esitimate_only':
             self.default_control_params = controllers.NLACParams()
             controller = controllers.NLAdaptiveController(self, self.default_control_params)
@@ -110,6 +128,49 @@ class Quad3D(BaseEnvironment):
                 state = state.replace(control_params=control_params)
                 return input_action, None, state
             self.control_fn = nlac_esitimate_only_control_fn
+            self.sub_steps = 1
+        elif lower_controller == 'pid_bodyrate':
+            self.default_control_params = controllers.PIDParams(
+                kp=jnp.array([30.0, 30.0, 30.0]),
+                ki=jnp.array([3.0, 3.0, 3.0])/self.default_params.dt,
+                kd=jnp.array([0.0, 0.0, 0.0]),
+                last_error=jnp.zeros(3),
+                integral=jnp.zeros(3),
+            )
+            controller = controllers.PIDControllerBodyrate(self, self.default_control_params)
+            def pid_controller_fn(obs, state, env_params, rng_act, input_action):
+                thrust_normed = input_action[:1]
+                omega_tar = input_action[1:] * self.default_params.max_omega
+                state = state.replace(omega_tar = omega_tar)
+
+                u, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params)
+
+                state = state.replace(control_params = control_params)
+                torque = self.default_params.I @ u + jnp.cross(state.omega, self.default_params.I @ state.omega)
+                torque_normed = torque / self.default_params.max_torque
+                action = jnp.concatenate([thrust_normed, torque_normed])
+                return action, None, state
+            self.control_fn = pid_controller_fn
+            self.substeps=5
+        elif lower_controller == 'l1_bodyrate':
+            self.default_control_params = controllers.L1ParamsBodyrate()
+            controller = controllers.L1ControllerBodyrate(self, self.default_control_params)
+            def pid_controller_fn(obs, state, env_params, rng_act, input_action):
+                thrust_normed = input_action[:1]
+                omega_tar = input_action[1:] * self.default_params.max_omega
+                state = state.replace(omega_tar = omega_tar)
+
+                u, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params)
+
+                state = state.replace(control_params = control_params)
+                torque = self.default_params.I @ u + jnp.cross(state.omega, self.default_params.I @ state.omega)
+                torque_normed = torque / self.default_params.max_torque
+                action = jnp.concatenate([thrust_normed, torque_normed])
+
+                
+                return action, None, state
+            self.control_fn = pid_controller_fn
+            self.substeps=5
         else:
             raise NotImplementedError
         # sampling function
