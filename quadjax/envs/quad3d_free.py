@@ -54,12 +54,15 @@ class Quad3D(BaseEnvironment):
         # dynamics function
         if dynamics == 'free':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d()
+            self.update_time = lambda x: x
         elif dynamics == 'dist_constant':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
+            self.update_time = lambda x: x
         elif dynamics == 'bodyrate':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(disturb_type=disturb_type)
+            self.update_time = lambda x: x
         elif dynamics == 'slung':
-            taut_dynamics, update_time = quad_dyn.get_taut_dynamics_3d()
+            taut_dynamics, self.update_time = quad_dyn.get_taut_dynamics_3d()
             loose_dynamics, _update_time = quad_dyn.get_loose_dynamics_3d()
             dynamic_transfer = quad_dyn.get_dynamic_transfer_3d()
             def step_fn(params, state, env_action, key, sim_dt):
@@ -68,7 +71,6 @@ class Quad3D(BaseEnvironment):
                 loose_state = loose_dynamics(params, state, env_action, key, sim_dt)
                 new_state = dynamic_transfer(
                     params, loose_state, taut_state, old_loose_state)
-                new_state = update_time(new_state)
                 return new_state
             self.step_fn = step_fn
             self.dynamics_fn = None
@@ -281,6 +283,7 @@ class Quad3D(BaseEnvironment):
             return (key, next_state, action, params), None
         # call lax.scan to get next_state
         (_, next_state, _, params), _ = lax.scan(step_once, (key, state, action, params), jnp.arange(self.sub_steps))
+        next_state = self.update_time(next_state)
         return self.get_obs_state_reward_done_info(state, next_state, params)
 
     def step_env_wocontroller(
