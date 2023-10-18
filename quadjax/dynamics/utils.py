@@ -356,31 +356,26 @@ def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
     yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
     reward = 1.3 - \
         0.05 * err_vel - \
-        err_pos * 0.4 - \
-        jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
-        jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
-        jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
-        jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
+        log_pos_fn(err_pos) - \
         jnp.abs(yaw) * 0.2
         # jnp.abs(state.omega[2]) * 0.02 - \
 
     return reward
 
 @jax.jit
-def tracking_penyaw_obj_reward_fn(state: EnvState3D, params):
-    err_pos = jnp.linalg.norm(state.pos_tar - state.pos_obj)
-    err_vel = jnp.linalg.norm(state.vel_tar - state.vel_obj)
+def tracking_penyaw_obj_reward_fn(state: EnvState3D, params:EnvParams3D):
+    err_pos = jnp.linalg.norm(state.pos_tar+jnp.array([0.0, 0.0, params.l])-params.hook_offset-state.pos)
+    err_vel = jnp.linalg.norm(state.vel)
+    err_pos_obj = jnp.linalg.norm(state.pos_tar - state.pos_obj)
+    err_vel_obj = jnp.linalg.norm(state.vel_tar - state.vel_obj)
     reward = 0.0 - \
-        0.05 * jnp.linalg.norm(state.vel) - \
-        0.05 * err_vel - \
-        err_pos * 0.4 - \
-        jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
-        jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
-        jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
-        jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
-        jnp.linalg.norm(state.omega) * 0.03 - \
+        0.025 * err_vel - \
+        0.3 * err_pos - \
+        0.05 * err_vel_obj - \
+        log_pos_fn(err_pos_obj) - \
+        jnp.linalg.norm(state.omega) * 0.01 - \
         jnp.abs(state.omega[2]) * 0.05
-    reward = 1.0 + reward/1.5
+    reward = 1.0 + reward/2.5
 
     return reward
 

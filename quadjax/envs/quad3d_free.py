@@ -433,14 +433,14 @@ class Quad3D(BaseEnvironment):
         obs_elements = [
             # drone
             state.pos,
-            state.vel,
+            state.vel/3.0,
             state.quat,
-            state.omega,  # 3*3+4=13
+            state.omega/5.0,  # 3*3+4=13
             # trajectory
             state.pos_tar,
-            state.vel_tar,  # 3*2=6
+            state.vel_tar/3.0,  # 3*2=6
             state.pos_traj[indices].flatten(), 
-            state.vel_traj[indices].flatten(), 
+            state.vel_traj[indices].flatten()/3.0, 
         ]  # 13+6=19
         obs = jnp.concatenate(obs_elements, axis=-1)
 
@@ -451,14 +451,14 @@ class Quad3D(BaseEnvironment):
         obs_elements = [
             # object
             state.pos_obj,
-            state.vel_obj,
+            state.vel_obj/3.0,
             # hook
             state.pos_hook,
-            state.vel_hook,
+            state.vel_hook/3.0,
             # rope
             jnp.expand_dims(state.l_rope, axis=0),
             state.zeta,
-            state.zeta_dot,  # 3*3=9
+            state.zeta_dot/10.0,  # 3*3=9
             state.f_rope,
             jnp.expand_dims(state.f_rope_norm, axis=0),  # 3+1=4
         ]
@@ -583,8 +583,9 @@ class Quad3D(BaseEnvironment):
         done = (state.time >= params.max_steps_in_episode) \
             | (jnp.abs(state.pos) > 3.0).any() \
             | (jnp.abs(state.pos_obj) > 3.0).any() \
-            | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) 
-            # | (jnp.abs(state.omega) > 100.0).any()
+            | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) \
+            | (jnp.abs(state.omega) > 100.0).any() \
+            | (jnp.abs(state.zeta_dot) > 100.0).any()
         return done
 
 def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = '', debug=False):
