@@ -59,15 +59,17 @@ class Quad3D(BaseEnvironment):
         elif dynamics == 'bodyrate':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(disturb_type=disturb_type)
         elif dynamics == 'slung':
-            taut_dynamics = quad_dyn.get_taut_dynamics_3d()
-            loose_dynamics = quad_dyn.get_loose_dynamics_3d()
+            taut_dynamics, update_time = quad_dyn.get_taut_dynamics_3d()
+            loose_dynamics, _update_time = quad_dyn.get_loose_dynamics_3d()
             dynamic_transfer = quad_dyn.get_dynamic_transfer_3d()
             def step_fn(params, state, env_action, key, sim_dt):
                 old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
                 taut_state = taut_dynamics(params, state, env_action, key, sim_dt)
                 loose_state = loose_dynamics(params, state, env_action, key, sim_dt)
-                return dynamic_transfer(
+                new_state = dynamic_transfer(
                     params, loose_state, taut_state, old_loose_state)
+                new_state = update_time(new_state)
+                return new_state
             self.step_fn = step_fn
             self.dynamics_fn = None
         else:

@@ -237,7 +237,6 @@ def get_taut_dynamics():
             f_rope_z,
         ) = obs_eqs_func(*params, *states, *states_dot, *action)
 
-        time = env_state.time + 1
 
         # Update all state variables at once using replace()
         env_state = env_state.replace(
@@ -263,6 +262,14 @@ def get_taut_dynamics():
             l_rope=env_params.l,
             last_thrust=env_action.thrust,
             last_tau=env_action.tau,
+        )
+
+        return env_state
+    
+    def update_time(env_state: EnvState3D):
+        time = env_state.time + 1
+
+        return env_state.replace(
             time=time,
             y_tar=env_state.y_traj[time],
             z_tar=env_state.z_traj[time],
@@ -270,9 +277,7 @@ def get_taut_dynamics():
             z_dot_tar=env_state.z_dot_traj[time],
         )
 
-        return env_state
-
-    return taut_dynamics
+    return taut_dynamics, update_time
 
 
 def get_taut_dynamics_3d():
@@ -519,19 +524,12 @@ def get_taut_dynamics_3d():
             new_zeta_dot[2]
         ]
 
-        # Compute other state variables
-        time = env_state.time + 1
-        pos_tar = env_state.pos_traj[time]
-        vel_tar = env_state.vel_traj[time]
-
         # replace state
         env_state = env_state.replace(
             pos=new_pos,
             vel=new_vel,
             quat=new_quat,
             omega=new_omega,
-            pos_tar=pos_tar,
-            vel_tar=vel_tar,
             pos_hook=pos_hook_func(
                 *params, *states_new, *states_dot, *action
             ).squeeze(),
@@ -547,12 +545,20 @@ def get_taut_dynamics_3d():
             zeta_dot=new_zeta_dot, 
             last_thrust=env_action.thrust,
             last_torque=env_action.torque,
-            time=time,
         )
 
         return env_state
+    
+    def update_time(env_state: EnvState3D):
+        time = env_state.time + 1
 
-    return taut_dynamics_3d
+        return env_state.replace(
+            time=time,
+            pos_tar = env_state.pos_traj[time], 
+            vel_tar = env_state.vel_traj[time]
+        )
+
+    return taut_dynamics_3d, update_time
 
 
 def quat2rot(quat):

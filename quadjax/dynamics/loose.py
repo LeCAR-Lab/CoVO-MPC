@@ -113,8 +113,6 @@ def get_loose_dynamics_3d():
         # object
         vel_obj = env_state.vel_obj + sim_dt * acc_obj
         pos_obj = env_state.pos_obj + sim_dt * vel_obj
-        # step
-        time = env_state.time + 1
 
         # other variables
         # hook
@@ -128,9 +126,6 @@ def get_loose_dynamics_3d():
         zeta_dot = (vel_obj - vel) / l_rope
         f_rope = jnp.zeros(3)
         f_rope_norm = 0.0
-        # trajectory
-        pos_tar = env_state.pos_traj[time]
-        vel_tar = env_state.vel_traj[time]
         # debug value
         last_thrust = env_action.thrust
         last_torque = env_action.torque
@@ -145,14 +140,19 @@ def get_loose_dynamics_3d():
             # rope
             l_rope=l_rope, zeta=zeta, zeta_dot=zeta_dot,
             f_rope=f_rope, f_rope_norm=f_rope_norm,
-            # trajectory
-            pos_tar=pos_tar, vel_tar=vel_tar,
             # debug value
             last_thrust=last_thrust, last_torque=last_torque,
-            # step
-            time=time,  
         )
 
         return env_state
+    
+    def update_time(env_state: EnvState3D):
+        time = env_state.time + 1
 
-    return loose_dynamics_3d
+        return env_state.replace(
+            time=time,
+            pos_tar = env_state.pos_traj[time], 
+            vel_tar = env_state.vel_traj[time]
+        )
+    
+    return loose_dynamics_3d, update_time
