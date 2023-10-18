@@ -33,6 +33,7 @@ class Quad3D(BaseEnvironment):
         super().__init__()
         self.task = task
         # reference trajectory function
+        self.task = task
         if task == "tracking":
             self.generate_traj = partial(utils.generate_lissa_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_penyaw_reward_fn
@@ -42,8 +43,8 @@ class Quad3D(BaseEnvironment):
             self.reward_fn = utils.tracking_penyaw_reward_fn
             self.get_init_state = self.fixed_init_state
         elif task in "jumping":
-            self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.jumping_reward_fn
+            self.generate_traj = partial(utils.generate_jumping_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.reward_fn = utils.jumping_obj_reward_fn
             self.get_init_state = self.sample_init_state
         elif task == 'hovering':
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
@@ -345,6 +346,9 @@ class Quad3D(BaseEnvironment):
         pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
         pos_key, key = jax.random.split(key)
         pos_hook = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
+        if self.task == 'jumping':
+            # convert pos_hook to make sure x>0.3
+            pos_hook = (pos_hook + jnp.array([1.6, 0.0, 0.0])) / jnp.array([2.0, 1.0, 1.0])
         pos = pos_hook - params.hook_offset
         # randomly sample object position from a sphere with radius params.l and center at hook_pos
         pos_obj = utils.sample_sphere(key, params.l, pos_hook)

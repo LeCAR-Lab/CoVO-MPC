@@ -45,8 +45,6 @@ class Quad3D(environment.Environment):
         elif task in "jumping":
             self.generate_traj = partial(utils.generate_jumping_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.jumping_obj_reward_fn
-            self.generate_traj = partial(utils.generate_jumping_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.jumping_obj_reward_fn
         elif task == 'hovering':
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_reward_fn
