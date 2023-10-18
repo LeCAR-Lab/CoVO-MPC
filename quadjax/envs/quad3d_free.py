@@ -217,9 +217,11 @@ class Quad3D(BaseEnvironment):
                 return EnvParams3D(disturb_params=disturb_params)
             self.sample_params = sample_default_params
         # observation function
-        if dynamics == 'slung':
+        if dynamics == 'slung' and ('obj' not in obs_type):
             obs_type = 'quad_obj'
             print("Warning: obs_type is changed to quad_obj for slung dynamics")
+        if enable_randomizer and 'params' not in obs_type:
+            print("Warning: enable domain randomziation without params in obs_type")
         if obs_type == 'quad_params':
             self.get_obs = self.get_obs_quad_params
             self.obs_dim = 28 + self.default_params.traj_obs_len * 6
@@ -237,6 +239,9 @@ class Quad3D(BaseEnvironment):
         elif obs_type == 'quad_obj':
             self.get_obs = self.get_obs_quad_obj
             self.obs_dim = 42 + self.default_params.traj_obs_len * 6
+        elif obs_type == 'quad_obj_params':
+            self.get_obs = self.get_obs_quad_obj_params
+            self.obs_dim = 59 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
@@ -586,6 +591,13 @@ class Quad3D(BaseEnvironment):
         quad_obs = self.get_obs_quadonly(state, params)
         obj_obs = self.get_obs_objonly(state, params)
         return jnp.concatenate([quad_obs, obj_obs], axis=-1)
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_quad_obj_params(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        quad_obs = self.get_obs_quadonly(state, params)
+        obj_obs = self.get_obs_objonly(state, params)
+        param_obs = self.get_obs_paramsonly(state, params)
+        return jnp.concatenate([quad_obs, obj_obs, param_obs], axis=-1)
     
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_l1(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
