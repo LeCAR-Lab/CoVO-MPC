@@ -1,4 +1,5 @@
 from jax import numpy as jnp
+import chex
 
 from quadjax.dynamics.utils import angle_normalize
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
@@ -8,7 +9,7 @@ from quadjax.dynamics import geom
 def get_loose_dynamics():
 
     # dynamics (params, states) -> states_dot
-    def loose_dynamics(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D):
+    def loose_dynamics(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D, key: chex.PRNGKey, sim_dt:float):
         params = [env_params.m, env_params.I, env_params.g, env_params.l,
                   env_params.mo, env_params.delta_yh, env_params.delta_zh]
         states = [env_state.y, env_state.z, env_state.theta, env_state.phi,
@@ -20,13 +21,13 @@ def get_loose_dynamics():
             jnp.cos(env_state.theta) / env_params.m - env_params.g
         theta_ddot = env_action.tau / env_params.I
 
-        new_y_dot = env_state.y_dot + env_params.dt * y_ddot
-        new_z_dot = env_state.z_dot + env_params.dt * z_ddot
-        new_theta_dot = env_state.theta_dot + env_params.dt * theta_ddot
-        new_y = env_state.y + env_params.dt * new_y_dot
-        new_z = env_state.z + env_params.dt * new_z_dot
+        new_y_dot = env_state.y_dot + sim_dt * y_ddot
+        new_z_dot = env_state.z_dot + sim_dt * z_ddot
+        new_theta_dot = env_state.theta_dot + sim_dt * theta_ddot
+        new_y = env_state.y + sim_dt * new_y_dot
+        new_z = env_state.z + sim_dt * new_z_dot
         new_theta = angle_normalize(
-            env_state.theta + env_params.dt * new_theta_dot)
+            env_state.theta + sim_dt * new_theta_dot)
 
         # states = [new_y, new_z, new_theta, env_state.phi, new_y_dot, new_z_dot, new_theta_dot, env_state.phi_dot]
 
@@ -40,9 +41,9 @@ def get_loose_dynamics():
         z_hook_dot = new_z_dot + new_theta_dot * delta_y_hook
 
         new_y_obj_dot = env_state.y_obj_dot
-        new_z_obj_dot = env_state.z_obj_dot - env_params.g * env_params.dt
-        new_y_obj = env_state.y_obj + env_params.dt * new_y_obj_dot
-        new_z_obj = env_state.z_obj + env_params.dt * new_z_obj_dot
+        new_z_obj_dot = env_state.z_obj_dot - env_params.g * sim_dt
+        new_y_obj = env_state.y_obj + sim_dt * new_y_obj_dot
+        new_z_obj = env_state.z_obj + sim_dt * new_z_obj_dot
 
         phi_th = -jnp.arctan2(y_hook - new_y_obj, z_hook - new_z_obj)
         new_phi = angle_normalize(phi_th - new_theta)
@@ -94,7 +95,7 @@ def get_loose_dynamics():
 def get_loose_dynamics_3d():
 
     # dynamics (params, states) -> states_dot
-    def loose_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D):
+    def loose_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D, key: chex.PRNGKey, sim_dt: float):
         # dynamics
         thrust_local = jnp.array([0.0, 0.0, env_action.thrust])
         thrust_world = geom.rotate_with_quat(thrust_local, env_state.quat)
@@ -105,13 +106,13 @@ def get_loose_dynamics_3d():
 
         # meta variables
         # quadrotor
-        vel = env_state.vel + env_params.dt * acc
-        pos = env_state.pos + env_params.dt * vel
-        omega = env_state.omega + env_params.dt * alpha
-        quat = geom.integrate_quat(env_state.quat, omega, env_params.dt)
+        vel = env_state.vel + sim_dt * acc
+        pos = env_state.pos + sim_dt * vel
+        omega = env_state.omega + sim_dt * alpha
+        quat = geom.integrate_quat(env_state.quat, omega, sim_dt)
         # object
-        vel_obj = env_state.vel_obj + env_params.dt * acc_obj
-        pos_obj = env_state.pos_obj + env_params.dt * vel_obj
+        vel_obj = env_state.vel_obj + sim_dt * acc_obj
+        pos_obj = env_state.pos_obj + sim_dt * vel_obj
         # step
         time = env_state.time + 1
 

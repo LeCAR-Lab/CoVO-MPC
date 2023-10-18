@@ -46,8 +46,7 @@ def generate_fixed_traj(
     key_pos = jax.random.split(key)[0]
     pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
     pos_traj = zeros + pos
-    vel_traj = zeros
-    return pos_traj, vel_traj, zeros
+    return pos_traj, zeros, zeros
 
 def generate_jumping_fixed_traj(
     max_steps: int, dt:float, key: chex.PRNGKey
@@ -464,3 +463,16 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
 
     plt.xlabel("time")
     plt.savefig(f"{quadjax.get_package_path()}/../results/render_plot_{filename}.png")
+
+def sample_sphere(key: chex.PRNGKey, R, center):
+    """Sample a point inside a sphere."""
+    theta_key, phi_key, r_key = jax.random.split(key, 3)
+    theta = jax.random.uniform(theta_key, shape=(1,), minval=0, maxval=2 * jnp.pi)
+    phi = jax.random.uniform(phi_key, shape=(1,), minval=0, maxval=jnp.pi)
+    R = jax.random.uniform(r_key, shape=(1,), minval=0, maxval=R)
+
+    x = R * jnp.sin(phi) * jnp.cos(theta) + center[0]
+    y = R * jnp.sin(phi) * jnp.sin(theta) + center[1]
+    z = R * jnp.cos(phi) + center[2]
+
+    return jnp.concatenate([x, y, z], axis=0)

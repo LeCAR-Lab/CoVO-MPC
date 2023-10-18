@@ -44,7 +44,7 @@ def get_free_bodyrate_dynamics_2d():
         x = jnp.asarray([*env_state.pos, env_state.roll, *env_state.vel])
 
         # rk4
-        x_new = dynamics_fn(x, u, env_params, env_params.dt)
+        x_new = dynamics_fn(x, u, env_params, sim_dt)
         pos = x_new[:2]
         roll = x_new[2]
         vel = x_new[3:5]
@@ -122,7 +122,7 @@ def get_free_dynamics_3d():
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega])
 
         # rk4
-        x_new = quad_dynamics_rk4(x, u, env_params, env_params.dt)
+        x_new = quad_dynamics_rk4(x, u, env_params, sim_dt)
         pos = x_new[:3]
         quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
         vel = x_new[7:10]
@@ -224,7 +224,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         return x_new
 
     @jax.jit
-    def free_dynamics_3d_bodyrate(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D, key:chex.PRNGKey):
+    def free_dynamics_3d_bodyrate(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D, key:chex.PRNGKey, sim_dt: float):
         # dynamics NOTE: u is normalized thrust and torque [-1, 1]
         # thrust_normed = env_action.thrust/env_params.max_thrust * 2.0 - 1.0
         # torque_normed = env_action.torque / env_params.max_torque
@@ -233,7 +233,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         u = jnp.concatenate([jnp.array([env_action.thrust]), omega_tar])
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega, env_state.f_disturb])
 
-        x_new = quad_dynamics_bodyrate(x, u, env_params, env_params.dt)
+        x_new = quad_dynamics_bodyrate(x, u, env_params, sim_dt)
         pos = x_new[:3]
         quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
         vel = x_new[7:10]
@@ -339,7 +339,7 @@ def get_free_dynamics_3d_disturbance(d_func):
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega])
 
         # rk4
-        x_new = quad_dynamics_rk4(x, u, env_params, env_params.dt, d_func)
+        x_new = quad_dynamics_rk4(x, u, env_params, sim_dt, d_func)
         pos = x_new[:3]
         quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
         vel = x_new[7:10]

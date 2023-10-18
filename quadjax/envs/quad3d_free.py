@@ -14,7 +14,7 @@ import numpy as np
 import quadjax
 from quadjax import dynamics as quad_dyn
 from quadjax import controllers
-from quadjax.dynamics import utils
+from quadjax.dynamics import utils, geom
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.envs.base import BaseEnvironment
 
@@ -36,15 +36,19 @@ class Quad3D(BaseEnvironment):
         if task == "tracking":
             self.generate_traj = partial(utils.generate_lissa_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_penyaw_reward_fn
+            self.get_init_state = self.fixed_init_state
         elif task == "tracking_zigzag":
             self.generate_traj = partial(utils.generate_zigzag_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.tracking_penyaw_reward_fn
+            self.get_init_state = self.fixed_init_state
         elif task in "jumping":
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
             self.reward_fn = utils.jumping_reward_fn
+            self.get_init_state = self.sample_init_state
         elif task == 'hovering':
             self.generate_traj = partial(utils.generate_fixed_traj, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.tracking_reward_fn
+            self.reward_fn = utils.tracking_penyaw_obj_reward_fn
+            self.get_init_state = self.sample_init_state
         else:
             raise NotImplementedError
         # dynamics function
@@ -58,10 +62,10 @@ class Quad3D(BaseEnvironment):
             taut_dynamics = quad_dyn.get_taut_dynamics_3d()
             loose_dynamics = quad_dyn.get_loose_dynamics_3d()
             dynamic_transfer = quad_dyn.get_dynamic_transfer_3d()
-            def step_fn(params, state, env_action):
+            def step_fn(params, state, env_action, key, sim_dt):
                 old_loose_state = state.l_rope < (params.l - params.rope_taut_therehold)
-                taut_state = taut_dynamics(params, state, env_action)
-                loose_state = loose_dynamics(params, state, env_action)
+                taut_state = taut_dynamics(params, state, env_action, key, sim_dt)
+                loose_state = loose_dynamics(params, state, env_action, key, sim_dt)
                 return dynamic_transfer(
                     params, loose_state, taut_state, old_loose_state)
             self.step_fn = step_fn
@@ -155,24 +159,24 @@ class Quad3D(BaseEnvironment):
         elif lower_controller == 'l1_bodyrate':
             self.default_control_params = controllers.L1ParamsBodyrate()
             controller = controllers.L1ControllerBodyrate(self, self.default_control_params)
-            def pid_controller_fn(obs, state, env_params, rng_act, input_action):
+            def l1_controller_fn(obs, state, env_params, rng_act, input_action):
                 thrust_normed = input_action[:1]
                 omega_tar = input_action[1:] * self.default_params.max_omega
                 state = state.replace(omega_tar = omega_tar)
 
-                u, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params)
+                u, control_params, _ = controller(obs, state, env_params, rng_act, state.control_params, None)
 
                 state = state.replace(control_params = control_params)
                 torque = self.default_params.I @ u + jnp.cross(state.omega, self.default_params.I @ state.omega)
                 torque_normed = torque / self.default_params.max_torque
                 action = jnp.concatenate([thrust_normed, torque_normed])
 
-                
                 return action, None, state
-            self.control_fn = pid_controller_fn
+            self.control_fn = l1_controller_fn
             self.substeps=5
         else:
             raise NotImplementedError
+        self.sim_dt = self.default_params.dt / self.substeps
         # sampling function
         if enable_randomizer:
             def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
@@ -196,6 +200,9 @@ class Quad3D(BaseEnvironment):
                 return EnvParams3D(disturb_params=disturb_params)
             self.sample_params = sample_default_params
         # observation function
+        if dynamics == 'slung':
+            obs_type = 'quad_obj'
+            print("Warning: obs_type is changed to quad_obj for slung dynamics")
         if obs_type == 'quad_params':
             self.get_obs = self.get_obs_quad_params
             self.obs_dim = 28 + self.default_params.traj_obs_len * 6
@@ -210,6 +217,9 @@ class Quad3D(BaseEnvironment):
             assert 'nlac' in lower_controller, "quad_nlac obs_type only works with nlac lower controller"
             self.get_obs = self.get_obs_quad_nlac
             self.obs_dim = 37 + self.default_params.traj_obs_len * 6
+        elif obs_type == 'quad_obj':
+            self.get_obs = self.get_obs_quad_obj
+            self.obs_dim = 30 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
@@ -261,8 +271,14 @@ class Quad3D(BaseEnvironment):
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
-        sub_action, _, state = self.control_fn(None, state, params, key, action)
-        next_state = self.raw_step(key, state, sub_action, params)
+        def step_once(carried, _):
+            key, state, action, params = carried
+            # call controller to get sub_action and new_control_params
+            sub_action, _, state = self.control_fn(None, state, params, key, action)
+            next_state = self.raw_step(key, state, sub_action, params)
+            return (key, next_state, action, params), None
+        # call lax.scan to get next_state
+        (_, next_state, _, params), _ = lax.scan(step_once, (key, state, action, params), jnp.arange(self.substeps))
         return self.get_obs_state_reward_done_info(state, next_state, params)
 
     def step_env_wocontroller(
@@ -285,7 +301,7 @@ class Quad3D(BaseEnvironment):
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
         torque = sub_action[1:] * params.max_torque
         env_action = Action3D(thrust=thrust, torque=torque)
-        return self.step_fn(params, state, env_action, key)
+        return self.step_fn(params, state, env_action, key, self.sim_dt)
     
     def get_obs_state_reward_done_info(
         self,
@@ -308,10 +324,53 @@ class Quad3D(BaseEnvironment):
                 "obs_adapt": self.get_obs_adapt_hist(state, params),
             },
         )
+    
+    def sample_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
+        """Reset environment state by sampling theta, theta_dot."""
+        traj_key, disturb_key, key = jax.random.split(key, 3)
+        # generate reference trajectory by adding a few sinusoids together
+        pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
+        pos_key, key = jax.random.split(key)
+        pos_hook = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
+        pos = pos_hook - params.hook_offset
+        # randomly sample object position from a sphere with radius params.l and center at hook_pos
+        pos_obj = utils.sample_sphere(key, params.l, pos_hook)
+        l_rope = jnp.linalg.norm(pos_obj - pos_hook)
+        zeta = (pos_obj - pos_hook) / l_rope
+        zeros3 = jnp.zeros(3, dtype=jnp.float32)
+        vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
+        omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
+        action_hist = jnp.zeros((self.default_params.adapt_horizon+2, 4), dtype=jnp.float32)
+        return EnvState3D(
+            # drone
+            pos=pos,
+            vel=zeros3,
+            omega=zeros3,
+            omega_tar=zeros3,
+            quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
+            # object
+            pos_obj=pos_obj,vel_obj=zeros3,
+            # hook
+            pos_hook=pos_hook,vel_hook=zeros3,
+            # rope
+            l_rope=l_rope,zeta=zeta,zeta_dot=zeros3,
+            f_rope=zeros3,f_rope_norm=0.0,
+            # trajectory
+            pos_tar=pos_traj[0],vel_tar=vel_traj[0],acc_tar=acc_traj[0],
+            pos_traj=pos_traj,vel_traj=vel_traj,acc_traj=acc_traj, 
+            # debug value
+            last_thrust=0.0,last_torque=zeros3,
+            # step
+            time=0,
+            # disturbance
+            f_disturb=jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale),
+            # trajectory information for adaptation
+            vel_hist=vel_hist,omega_hist=omega_hist,action_hist=action_hist,
+            # control parameters
+            control_params=self.default_control_params,
+        )
 
-    def reset_env(
-        self, key: chex.PRNGKey, params: EnvParams3D
-    ) -> Tuple[chex.Array, EnvState3D]:
+    def fixed_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
         """Reset environment state by sampling theta, theta_dot."""
         traj_key, disturb_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
@@ -320,7 +379,7 @@ class Quad3D(BaseEnvironment):
         vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
         omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
         action_hist = jnp.zeros((self.default_params.adapt_horizon+2, 4), dtype=jnp.float32)
-        state = EnvState3D(
+        return EnvState3D(
             # drone
             pos=zeros3,
             vel=zeros3,
@@ -348,6 +407,12 @@ class Quad3D(BaseEnvironment):
             # control parameters
             control_params=self.default_control_params,
         )
+
+
+    def reset_env(
+        self, key: chex.PRNGKey, params: EnvParams3D
+    ) -> Tuple[chex.Array, EnvState3D]:
+        state = self.get_init_state(key, params)
         info = {
             "discount": self.discount(state, params),
             "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
@@ -379,6 +444,25 @@ class Quad3D(BaseEnvironment):
         ]  # 13+6=19
         obs = jnp.concatenate(obs_elements, axis=-1)
 
+        return obs
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_objonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        obs_elements = [
+            # object
+            state.pos_obj,
+            state.vel_obj,
+            # hook
+            state.pos_hook,
+            state.vel_hook,
+            # rope
+            jnp.expand_dims(state.l_rope, axis=0),
+            state.zeta,
+            state.zeta_dot,  # 3*3=9
+            state.f_rope,
+            jnp.expand_dims(state.f_rope_norm, axis=0),  # 3+1=4
+        ]
+        obs = jnp.concatenate(obs_elements, axis=-1)
         return obs
 
     @partial(jax.jit, static_argnums=(0,))
@@ -467,6 +551,12 @@ class Quad3D(BaseEnvironment):
         quad_obs = self.get_obs_quadonly(state, params)
         param_obs = self.get_obs_paramsonly(state, params)
         return jnp.concatenate([quad_obs, param_obs], axis=-1)
+    
+    @partial(jax.jit, static_argnums=(0,))
+    def get_obs_quad_obj(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        quad_obs = self.get_obs_quadonly(state, params)
+        obj_obs = self.get_obs_objonly(state, params)
+        return jnp.concatenate([quad_obs, obj_obs], axis=-1)
     
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_l1(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -736,6 +826,20 @@ def main(args: Args):
     elif args.controller == 'l1':
         control_params = controllers.L1Params()
         controller = controllers.L1Controller(env, control_params)
+    elif args.controller == 'debug':
+        class DebugController(controllers.BaseController):
+            def __call__(self, obs, state, env_params, rng_act, control_params, env_info) -> jnp.ndarray:
+                quat_desired = jnp.array([0.0, 0.0, 0.0, 1.0])
+                quat_err = geom.multiple_quat(geom.conjugate_quat(quat_desired), state.quat)
+                att_err = quat_err[:3]
+                omega_tar = - 3.0 * att_err
+                thrust = (env_params.m + env_params.mo) * env_params.g
+                omega_normed = omega_tar / env_params.max_omega
+                thrust_normed = thrust / env_params.max_thrust * 2.0 - 1.0
+                action = jnp.concatenate([jnp.asarray([thrust_normed]), omega_normed])
+                return action, None, None
+        control_params = None
+        controller = DebugController(env, control_params) 
     else:
         raise NotImplementedError
     if args.mode == 'eval':

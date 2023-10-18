@@ -1,4 +1,5 @@
 import sympy as sp
+import chex
 from sympy.physics.mechanics import (
     dynamicsymbols,
     ReferenceFrame,
@@ -174,7 +175,7 @@ def get_taut_dynamics():
     z_hook_dot_func = sp.lambdify(params + states_val, obs_eqs[7], "jax")
 
     # dynamics (params, states) -> states_dot
-    def taut_dynamics(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D):
+    def taut_dynamics(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D, key: chex.PRNGKey, sim_dt:float):
         params = [
             env_params.m,
             env_params.I,
@@ -201,14 +202,14 @@ def get_taut_dynamics():
         y_ddot, z_ddot, theta_ddot, phi_ddot, f_rope = states_dot
 
         # Calculate updated state variables
-        new_y_dot = env_state.y_dot + y_ddot * env_params.dt
-        new_z_dot = env_state.z_dot + z_ddot * env_params.dt
-        new_theta_dot = env_state.theta_dot + theta_ddot * env_params.dt
-        new_phi_dot = env_state.phi_dot + phi_ddot * env_params.dt
-        new_y = env_state.y + new_y_dot * env_params.dt
-        new_z = env_state.z + new_z_dot * env_params.dt
-        new_theta = angle_normalize(env_state.theta + new_theta_dot * env_params.dt)
-        new_phi = angle_normalize(env_state.phi + new_phi_dot * env_params.dt)
+        new_y_dot = env_state.y_dot + y_ddot * sim_dt
+        new_z_dot = env_state.z_dot + z_ddot * sim_dt
+        new_theta_dot = env_state.theta_dot + theta_ddot * sim_dt
+        new_phi_dot = env_state.phi_dot + phi_ddot * sim_dt
+        new_y = env_state.y + new_y_dot * sim_dt
+        new_z = env_state.z + new_z_dot * sim_dt
+        new_theta = angle_normalize(env_state.theta + new_theta_dot * sim_dt)
+        new_phi = angle_normalize(env_state.phi + new_phi_dot * sim_dt)
 
         # NOTE Update states list
         states = [
@@ -419,7 +420,7 @@ def get_taut_dynamics_3d():
     f_rope_func = sp.lambdify(params + states + states_dot + action, f_rope, "jax")
 
     def taut_dynamics_3d(
-        env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D
+        env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D, key: chex.PRNGKey, sim_dt: float
     ):
         params = [
             env_params.g,
@@ -487,12 +488,12 @@ def get_taut_dynamics_3d():
         zeta_ddot = jnp.array([zeta_ddot_x, zeta_ddot_y, zeta_ddot_z])
 
         # calculate updated state variables
-        new_vel = env_state.vel + acc * env_params.dt
-        new_pos = env_state.pos + new_vel * env_params.dt
-        new_omega = env_state.omega + alpha * env_params.dt
-        new_quat = geom.integrate_quat(env_state.quat, new_omega, env_params.dt)
-        new_zeta_dot = env_state.zeta_dot + zeta_ddot * env_params.dt
-        new_zeta = env_state.zeta + new_zeta_dot * env_params.dt
+        new_vel = env_state.vel + acc * sim_dt
+        new_pos = env_state.pos + new_vel * sim_dt
+        new_omega = env_state.omega + alpha * sim_dt
+        new_quat = geom.integrate_quat(env_state.quat, new_omega, sim_dt)
+        new_zeta_dot = env_state.zeta_dot + zeta_ddot * sim_dt
+        new_zeta = env_state.zeta + new_zeta_dot * sim_dt
         new_zeta = new_zeta / jnp.linalg.norm(new_zeta)
 
         # Update states list

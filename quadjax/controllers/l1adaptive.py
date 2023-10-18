@@ -99,7 +99,7 @@ class L1ControllerBodyrate(controllers.BaseController):
     
     @partial(jax.jit, static_argnums=(0,))
     def update_esitimate(self, state, control_params):
-        omega_hat_dot = state.last_torque / self.param.J + control_params.d_hat + control_params.As * (control_params.omega_hat - state.omega)
+        omega_hat_dot = jnp.linalg.inv(self.param.I) @ state.last_torque + control_params.d_hat + control_params.As * (control_params.omega_hat - state.omega)
         omega_hat = control_params.omega_hat + omega_hat_dot * self.param.dt
         phi = jnp.exp(control_params.As * self.param.dt)
         d_new = - 1.0 / (phi - 1.0) * control_params.As * phi * (omega_hat - state.omega)
@@ -114,6 +114,4 @@ class L1ControllerBodyrate(controllers.BaseController):
         # angular acceleration control with P controller 
         alpha = - control_params.Kp * (state.omega - state.omega_tar) - control_params.d_hat
 
-        torque = self.param.J @ alpha
-
-        return torque, control_params, None
+        return alpha, control_params, None
