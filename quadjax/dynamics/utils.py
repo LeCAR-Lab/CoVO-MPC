@@ -299,19 +299,30 @@ def hovering_reward_fn(state: EnvState3D):
 @jax.jit
 def get_hit_reward(pos, params):
     r = 3.0
-    gap_size = (1.0-params.curri_params)*1.0 + 0.1
+    gap_size = (1.0-params.curri_params)*2.0 + 0.1
     a = r - gap_size/2.0
     b = 0.06
     YZ = jnp.sqrt((pos[1])**2 + (pos[2])**2) - r
     l = jnp.sqrt(((pos[0])/b)**2 + (YZ/a)**2)
-    return -jnp.clip(jnp.log(1.0+100.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 2.0)
+    return -jnp.clip(jnp.log(1.0+50.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 2.0)
 
 @jax.jit
 def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
     rew_tracking = tracking_penyaw_obj_reward_fn(state, params)
     drone_hit_rew = get_hit_reward(state.pos, params)
     obj_hit_rew = get_hit_reward(state.pos_obj, params)
-    return rew_tracking + drone_hit_rew + obj_hit_rew
+    # extra term: encourage the object to pass through point [0.0, 0.0, 0.0] when its x is positive
+    obj_pass_rew = 0.5 * \
+        (
+            (1.0-jnp.linalg.norm(state.pos_obj)) * (state.pos_obj[0] > 0.0) + \
+            (state.pos_obj[0] < 0.0)
+        )
+    quad_pass_rew = 0.2 * \
+        (
+            (1.0-jnp.linalg.norm(state.pos)) * (state.pos_obj[0] > 0.0) + \
+            (state.pos_obj[0] < 0.0)
+        )
+    return rew_tracking + drone_hit_rew + obj_hit_rew + obj_pass_rew + quad_pass_rew
 
 @jax.jit
 def log_pos_fn(err_pos):
