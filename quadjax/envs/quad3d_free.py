@@ -194,7 +194,7 @@ class Quad3D(BaseEnvironment):
         if enable_randomizer:
             def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
                 param_key = jax.random.split(key)[0]
-                rand_val = jax.random.uniform(param_key, shape=(12,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
+                rand_val = jax.random.uniform(param_key, shape=(17,), minval=-1.0, maxval=1.0) # DEBUG * 0.0
 
                 params = self.default_params
                 m = params.m_mean + rand_val[0] * params.m_std
@@ -205,7 +205,11 @@ class Quad3D(BaseEnvironment):
 
                 disturb_params = rand_val[6:12] * params.disturb_scale
 
-                return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate, disturb_params=disturb_params)
+                mo = params.mo_mean + rand_val[12] * params.mo_std
+                l = params.l_mean + rand_val[13] * params.l_std
+                hook_offset = params.hook_offset_mean + rand_val[14:17] * params.hook_offset_std
+
+                return EnvParams3D(m=m, I=I, action_scale=action_scale, alpha_bodyrate=alpha_bodyrate, disturb_params=disturb_params, mo=mo, l=l, hook_offset=hook_offset)
             self.sample_params = sample_random_params
         else:
             def sample_default_params(key: chex.PRNGKey) -> EnvParams3D:
@@ -240,7 +244,7 @@ class Quad3D(BaseEnvironment):
         # RL parameters
         self.action_dim = 4
         self.adapt_obs_dim = 22 * self.default_params.adapt_horizon
-        self.param_obs_dim = 9
+        self.param_obs_dim = 17
 
 
     '''
@@ -517,6 +521,10 @@ class Quad3D(BaseEnvironment):
             (params.I.diagonal()- params.I_diag_mean)/params.I_diag_std,
             # disturbance
             (state.f_disturb)/params.disturb_scale,
+            # hook offset
+            (params.hook_offset - params.hook_offset_mean) / params.hook_offset_std, 
+            # disturbance parameters
+            params.disturb_params, 
             jnp.array(
                 [
                     # mass
@@ -525,6 +533,10 @@ class Quad3D(BaseEnvironment):
                     (params.action_scale - params.action_scale_mean)/params.action_scale_std,
                     # 1st order alpha
                     (params.alpha_bodyrate - params.alpha_bodyrate_mean)/params.alpha_bodyrate_std,
+                    # object mass
+                    (params.mo - params.mo_mean)/params.mo_std, 
+                    # rope length
+                    (params.l - params.l_mean) / params.l_std, 
                 ]
             )
         ]  # 13+6=19
