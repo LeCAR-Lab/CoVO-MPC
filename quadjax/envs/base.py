@@ -4,8 +4,8 @@ from typing import Tuple, Union, Optional, Any
 from functools import partial
 from flax import struct
 from gymnax.environments.environment import Environment, EnvParams, EnvState 
-from gymnax.wrappers.purerl import LogWrapper as PureLogWrapper
-from gymnax.wrappers.purerl import LogEnvState as PureLogEnvState
+from gymnax.wrappers.purerl import GymnaxWrapper
+# from gymnax.wrappers.purerl import LogEnvState as PureLogEnvState
 
 
 class BaseEnvironment(Environment):
@@ -50,10 +50,19 @@ class BaseEnvironment(Environment):
         return self.reset_env(key, params)
     
 
-class LogWrapper(PureLogWrapper):
+@struct.dataclass
+class LogEnvState:
+    env_state: EnvState
+    episode_returns: float
+    episode_lengths: int
+    returned_episode_returns: float
+    returned_episode_lengths: int
+    final_reward: float
+    
+class LogWrapper(GymnaxWrapper):
     """Log the episode returns and lengths."""
 
-    def __init__(self, env: BaseEnvironment):
+    def __init__(self, env: Environment):
         super().__init__(env)
 
     @partial(jax.jit, static_argnums=(0,))
@@ -64,5 +73,35 @@ class LogWrapper(PureLogWrapper):
         info["returned_episode_returns"] = 0.0
         info["returned_episode_lengths"] = 0
         info["returned_episode"] = False
-        state = PureLogEnvState(env_state, 0, 0, 0, 0)
+        info["final_reward"] = 0.0
+        state = LogEnvState(env_state, 0, 0, 0, 0, 0)
         return obs, info, state
+
+    @partial(jax.jit, static_argnums=(0,))
+    def step(
+        self,
+        key: chex.PRNGKey,
+        state: EnvState,
+        action: Union[int, float],
+        params: Optional[EnvParams] = None,
+    ) -> Tuple[chex.Array, EnvState, float, bool, dict]:
+        obs, env_state, reward, done, info = self._env.step(
+            key, state.env_state, action, params
+        )
+        new_episode_return = state.episode_returns + reward
+        new_episode_length = state.episode_lengths + 1
+        state = LogEnvState(
+            env_state=env_state,
+            episode_returns=new_episode_return * (1 - done),
+            episode_lengths=new_episode_length * (1 - done),
+            returned_episode_returns=state.returned_episode_returns * (1 - done)
+            + new_episode_return * done,
+            returned_episode_lengths=state.returned_episode_lengths * (1 - done)
+            + new_episode_length * done,
+            final_reward=reward * done + state.final_reward * (1 - done),
+        )
+        info["returned_episode_returns"] = state.returned_episode_returns
+        info["returned_episode_lengths"] = state.returned_episode_lengths
+        info["returned_episode"] = done
+        info["final_reward"] = state.final_reward
+        return obs, state, reward, done, info

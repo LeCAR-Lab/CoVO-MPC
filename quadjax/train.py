@@ -444,7 +444,7 @@ def make_train(env, config):
         obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
         rng, _rng = jax.random.split(rng)
         runner_state = (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state)
-        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([]), 'err_pos_last_10': jnp.array([]), 'success_rate': jnp.array([])}
+        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([]), 'err_pos_last_10': jnp.array([]), 'final_reward': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_PPO_UPDATES"]):
             runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
@@ -456,12 +456,12 @@ def make_train(env, config):
             metric_log['err_pos'] = metric_local['err_pos'].mean()
             metric_log['err_pos_last_10'] = metric_local['err_pos'][-10:].mean()
             metric_log['err_vel'] = metric_local['err_vel'].mean()
-            metric_log['success_rate'] = metric_local['success'].sum() / metric_local['returned_episode'].sum()
+            metric_log['final_reward'] = metric_local['final_reward'][-1].mean()
 
             # curriculum learning
             if config['enable_curri']: 
                 (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state) = runner_state
-                if (metric_log['success_rate'] > 0.7):
+                if (metric_log['final_reward'] > 0.7):
                     curri_params = jnp.clip(curri_params + 0.05, 0.0, 1.0)
                 print('curri_params: ', curri_params)
                                          

@@ -55,7 +55,7 @@ vis["obj_tar"].set_object(g.Sphere(0.02), material=g.MeshLambertMaterial(color=0
 vis["disturb"].set_object(g.StlMeshGeometry.from_file('../assets/arrow.stl'))
 
 # create a circle with small capacity
-vis["circle"].set_object(g.Cylinder(0.1, 0.1), material=g.MeshLambertMaterial(color=0x0000ff))
+vis["circle"].set_object(g.Cylinder(0.1, 0.8), material=g.MeshLambertMaterial(color=0x0000ff))
 vis["circle"].set_transform(tf.rotation_matrix(np.pi/2, [0, 0, 1]))
 
 for i in range(0, 300, 2):

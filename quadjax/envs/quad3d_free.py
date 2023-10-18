@@ -345,7 +345,7 @@ class Quad3D(BaseEnvironment):
                 "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
                 "obs_param": self.get_obs_paramsonly(state, params),
                 "obs_adapt": self.get_obs_adapt_hist(state, params),
-                "success": self.get_err_pos(state) < 0.1, 
+                # "success": self.get_err_pos(state) < 0.2, 
             },
         )
     
@@ -446,7 +446,7 @@ class Quad3D(BaseEnvironment):
             "err_vel": self.get_err_vel(state),
             "obs_param": self.get_obs_paramsonly(state, params),
             "obs_adapt": self.get_obs_adapt_hist(state, params),
-            "success": self.get_err_pos(state) < 0.1, 
+            # "success": self.get_err_pos(state) < 0.1, 
         }
         return self.get_obs(state, params), info, state
     
