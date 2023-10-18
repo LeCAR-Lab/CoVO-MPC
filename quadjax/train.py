@@ -448,9 +448,14 @@ def make_train(env, config):
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_PPO_UPDATES"]):
             runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
-            metric_local['step'] = jnp.array([(i+1)*step_per_log])
-            metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
-            metric_local['err_pos_last_10'] = metric_local['err_pos'][:, -10:]
+            metric_log = {}
+            metric_log['step'] = jnp.array([(i+1)*step_per_log])
+            metric_log['mean_episode_returns'] = jnp.mean(metric_local['returned_episode_returns'][-1] / (metric_local['returned_episode_lengths'][-1]+1.0))
+            metric_log['returned_episode_returns'] = metric_local['returned_episode_returns'][-1].mean()
+            metric_log['returned_episode_lengths'] = metric_local['returned_episode_lengths'][-1].mean()
+            metric_log['err_pos'] = metric_local['err_pos'].mean()
+            metric_log['err_pos_last_10'] = metric_local['err_pos'][-10:].mean()
+            metric_log['err_vel'] = metric_local['err_vel'].mean()
 
             # curriculum learning
             if config['enable_curri']: 
@@ -462,9 +467,9 @@ def make_train(env, config):
             print('====================')
             print(f'PPO update {i+1}/{config["NUM_PPO_UPDATES"]}')
             for k in metric.keys():
-                v_mean = metric_local[k].mean()
+                v_mean = metric_log[k].mean()
                 metric[k] = jnp.append(metric[k], v_mean)
-                print(f'{k}: {v_mean:.2e}')
+                print(f'{k}: {v_mean:.3e}')
             GPUtil.showUtilization()
 
         # train adaptor

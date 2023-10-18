@@ -155,10 +155,11 @@ class Quad3D(BaseEnvironment):
                 action = jnp.concatenate([thrust_normed, torque_normed])
                 return action, None, state
             self.control_fn = pid_controller_fn
-            self.substeps=5
+            self.sub_steps=5
         elif lower_controller == 'l1_bodyrate':
+            self.sub_steps=5
             self.default_control_params = controllers.L1ParamsBodyrate()
-            controller = controllers.L1ControllerBodyrate(self, self.default_control_params)
+            controller = controllers.L1ControllerBodyrate(self, self.default_control_params, sim_dt=self.default_params.dt/self.sub_steps)
             def l1_controller_fn(obs, state, env_params, rng_act, input_action):
                 thrust_normed = input_action[:1]
                 omega_tar = input_action[1:] * self.default_params.max_omega
@@ -173,10 +174,9 @@ class Quad3D(BaseEnvironment):
 
                 return action, None, state
             self.control_fn = l1_controller_fn
-            self.substeps=5
         else:
             raise NotImplementedError
-        self.sim_dt = self.default_params.dt / self.substeps
+        self.sim_dt = self.default_params.dt / self.sub_steps
         # sampling function
         if enable_randomizer:
             def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
@@ -278,7 +278,7 @@ class Quad3D(BaseEnvironment):
             next_state = self.raw_step(key, state, sub_action, params)
             return (key, next_state, action, params), None
         # call lax.scan to get next_state
-        (_, next_state, _, params), _ = lax.scan(step_once, (key, state, action, params), jnp.arange(self.substeps))
+        (_, next_state, _, params), _ = lax.scan(step_once, (key, state, action, params), jnp.arange(self.sub_steps))
         return self.get_obs_state_reward_done_info(state, next_state, params)
 
     def step_env_wocontroller(
@@ -583,7 +583,8 @@ class Quad3D(BaseEnvironment):
         done = (state.time >= params.max_steps_in_episode) \
             | (jnp.abs(state.pos) > 3.0).any() \
             | (jnp.abs(state.pos_obj) > 3.0).any() \
-            | (jnp.abs(state.omega) > 100.0).any()
+            | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) 
+            # | (jnp.abs(state.omega) > 100.0).any()
         return done
 
 def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = '', debug=False):
@@ -731,6 +732,10 @@ class Args:
     name: str = ''
 
 def main(args: Args):
+    # if args.debug is True, enable NaN detection
+    if args.debug:
+        jax.config.update("jax_debug_nans", True)
+
     env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, lower_controller=args.lower_controller, enable_randomizer=not args.noDR, disturb_type=args.disturb_type)
 
     print("starting test...")
@@ -849,7 +854,7 @@ def main(args: Args):
     else:
         raise NotImplementedError
     if args.mode == 'eval':
-        eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name)
+        eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name, debug=args.debug)
     elif args.mode == 'render':
         render_env(env, controller=controller, control_params=control_params, repeat_times=5, filename=args.name)
     else:
