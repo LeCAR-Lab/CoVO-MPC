@@ -444,12 +444,13 @@ def make_train(env, config):
         obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
         rng, _rng = jax.random.split(rng)
         runner_state = (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state)
-        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([])}
+        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([]), 'err_pos_last_10': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_PPO_UPDATES"]):
             runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
             metric_local['step'] = jnp.array([(i+1)*step_per_log])
             metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
+            metric_local['err_pos_last_10'] = metric_local['err_pos'][:, -10:]
 
             # curriculum learning
             if config['enable_curri']: 
@@ -557,7 +558,7 @@ def main(args: Args):
     # plot in three subplots of returned_episode_returns, err_pos, err_vel
     fig, axs = plt.subplots(4, 1)
     for _, (ax, data, title) in enumerate(
-        zip(axs, [metric["returned_episode_returns"], metric["err_pos"], metric["err_vel"]], ["returns", "err_pos", "err_vel"])
+        zip(axs, [metric["returned_episode_returns"], metric["err_pos"], metric["err_pos_last_10"], metric["err_vel"]], ["returns", "err_pos", "err_vel"])
     ):
         if data.shape[0] <=0: 
             continue

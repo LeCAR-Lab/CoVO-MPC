@@ -12,5 +12,5 @@ class RandomController(controllers.BaseController):
     def update_params(self, env_params, control_params):
         return control_params
     
-    def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
+    def __call__(self, obs, state, env_params, rng_act, control_params, env_info=None) -> jnp.ndarray:
         return jax.random.normal(rng_act, (self.env.action_dim,))*0.3, control_params, None

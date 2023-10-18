@@ -370,14 +370,17 @@ def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
 def tracking_penyaw_obj_reward_fn(state: EnvState3D, params):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos_obj)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel_obj)
-    reward = 1.5 - \
+    reward = 0.0 - \
+        0.05 * jnp.linalg.norm(state.vel) - \
         0.05 * err_vel - \
         err_pos * 0.4 - \
         jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 - \
         jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 - \
         jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 - \
         jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1 - \
+        jnp.linalg.norm(state.omega) * 0.05 - \
         jnp.abs(state.omega[2]) * 0.05
+    reward = 1.0 + reward/2.5
 
     return reward
 

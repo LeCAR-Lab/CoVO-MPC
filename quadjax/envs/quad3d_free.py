@@ -745,6 +745,9 @@ def main(args: Args):
             K = jnp.zeros((4, 12)),
         )
         controller = controllers.LQRController(env, control_params = control_params)
+    elif args.controller == 'random':
+        control_params = None
+        controller = controllers.RandomController(env, control_params)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
             u = jnp.asarray([0.0, 0.0, 0.0, 0.0]),
@@ -848,7 +851,7 @@ def main(args: Args):
     if args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name)
     elif args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=args.name)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=5, filename=args.name)
     else:
         raise NotImplementedError
 
