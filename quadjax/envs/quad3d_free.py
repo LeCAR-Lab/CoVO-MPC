@@ -241,7 +241,7 @@ class Quad3D(BaseEnvironment):
             self.obs_dim = 42 + self.default_params.traj_obs_len * 6
         elif obs_type == 'quad_obj_params':
             self.get_obs = self.get_obs_quad_obj_params
-            self.obs_dim = 59 + self.default_params.traj_obs_len * 6
+            self.obs_dim = 62 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
@@ -626,7 +626,9 @@ class Quad3D(BaseEnvironment):
             | (jnp.abs(state.pos_obj) > 3.0).any() \
             | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) \
             | (jnp.abs(state.omega) > 100.0).any() \
-            | (jnp.abs(state.zeta_dot) > 100.0).any()
+            | (jnp.abs(state.zeta_dot) > 100.0).any() \
+            | (utils.get_hit_reward(state.pos_obj, params) < -1.0) \
+            | (utils.get_hit_reward(state.pos, params) < -1.0)
         return done
 
 def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = '', debug=False):

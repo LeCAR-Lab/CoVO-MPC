@@ -459,8 +459,8 @@ def make_train(env, config):
 
             # curriculum learning
             if config['enable_curri']: 
-                (ppo_train_state, env_state, obsv, rng, env_params) = runner_state
-                if (metric_local['err_pos'].mean() < 0.2):
+                (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state) = runner_state
+                if (metric_local['err_pos'].mean() < 0.7):
                     curri_params = jnp.clip(curri_params + 0.05, 0.0, 1.0)
                 print('curri_params: ', curri_params)
                                          

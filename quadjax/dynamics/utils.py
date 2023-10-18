@@ -68,19 +68,6 @@ def generate_given_fixed_traj(
     vel_traj = zeros
     return pos_traj, vel_traj
 
-def generate_jumping_fixed_traj(
-    max_steps: int, dt:float, key: chex.PRNGKey
-) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
-    zeros = jnp.zeros((max_steps, 3))
-    key_pos = jax.random.split(key)[0]
-    pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
-    # for pos[0]>0 add 0.3 to x, else add -0.3 to x
-    # pos = jnp.where(pos[0]>0, pos + jnp.array([0.3, 0.0, 0.0]), pos + jnp.array([-0.3, 0.0, 0.0]))
-    pos = pos.at[0].set(jnp.abs(pos[0]) + 0.3)
-    pos_traj = zeros + pos
-    vel_traj = zeros
-    return pos_traj, vel_traj
-
 def generate_given_fixed_traj(
     pos: jnp.ndarray, max_steps: int, dt:float, key: chex.PRNGKey
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
@@ -317,7 +304,7 @@ def get_hit_reward(pos, params):
     b = 0.06
     YZ = jnp.sqrt((pos[1])**2 + (pos[2])**2) - r
     l = jnp.sqrt(((pos[0])/b)**2 + (YZ/a)**2)
-    return -jnp.clip(jnp.log(1.0+10.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 2.0)
+    return -jnp.clip(jnp.log(1.0+100.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 2.0)
 
 @jax.jit
 def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
