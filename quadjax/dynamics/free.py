@@ -160,8 +160,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
     @jax.jit
     def period_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, state: EnvState3D):
         time = state.time
-        disturb = jnp.where(time % params.disturb_period == 0, jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale)
-                            , state.f_disturb)
+        disturb = jnp.where(time % params.disturb_period == 0, jax.random.uniform(disturb_key, shape=(3,), minval=-params.disturb_scale, maxval=params.disturb_scale), state.f_disturb)
         return disturb
     
     @jax.jit

@@ -219,7 +219,7 @@ class Quad3D(BaseEnvironment):
             self.obs_dim = 37 + self.default_params.traj_obs_len * 6
         elif obs_type == 'quad_obj':
             self.get_obs = self.get_obs_quad_obj
-            self.obs_dim = 30 + self.default_params.traj_obs_len * 6
+            self.obs_dim = 42 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
         # equibrium point
@@ -586,8 +586,11 @@ class Quad3D(BaseEnvironment):
             | (jnp.abs(state.omega) > 100.0).any()
         return done
 
-def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = ''):
-    env_num = 8192
+def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = '', debug=False):
+    if debug: 
+        env_num = 1
+    else:
+        env_num = 8192
 
     # running environment
     rng = jax.random.PRNGKey(1)

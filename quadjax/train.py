@@ -596,7 +596,7 @@ def main(args: Args):
     controller = NetworkController(apply_fn, env, control_params=params)
 
     # test policy
-    eval_fn(env = env, controller = controller, control_params = params, total_steps= 3e3, filename=filename)
+    eval_fn(env = env, controller = controller, control_params = params, total_steps= 3e3, filename=filename, debug=args.debug)
     render_fn(env = env, controller = controller, control_params = params, repeat_times = 3, filename=filename)
 
 if __name__ == "__main__":
