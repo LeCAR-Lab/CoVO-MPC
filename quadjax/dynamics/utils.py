@@ -312,15 +312,15 @@ def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
     drone_hit_rew = get_hit_reward(state.pos, params)
     obj_hit_rew = get_hit_reward(state.pos_obj, params)
     # extra term: encourage the object to pass through point [0.0, 0.0, 0.0] when its x is positive
-    obj_pass_rew = 0.5 * \
+    obj_pass_rew = 0.2 * \
         (
             (1.0-jnp.linalg.norm(state.pos_obj)) * (state.pos_obj[0] > 0.0) + \
             (state.pos_obj[0] < 0.0)
         )
-    quad_pass_rew = 0.2 * \
+    quad_pass_rew = 0.1 * \
         (
-            (1.0-jnp.linalg.norm(state.pos)) * (state.pos_obj[0] > 0.0) + \
-            (state.pos_obj[0] < 0.0)
+            (1.0-jnp.linalg.norm(state.pos)) * (state.pos[0] > 0.0) + \
+            (state.pos[0] < 0.0)
         )
     return rew_tracking + drone_hit_rew + obj_hit_rew + obj_pass_rew + quad_pass_rew
 
