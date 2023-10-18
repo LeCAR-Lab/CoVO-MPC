@@ -55,12 +55,18 @@ class Quad3D(BaseEnvironment):
         if dynamics == 'free':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d()
             self.update_time = lambda x: x
+            self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
+            self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel)
         elif dynamics == 'dist_constant':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_disturbance(utils.constant_disturbance)
             self.update_time = lambda x: x
+            self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
+            self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel)
         elif dynamics == 'bodyrate':
             self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(disturb_type=disturb_type)
             self.update_time = lambda x: x
+            self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
+            self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel)
         elif dynamics == 'slung':
             taut_dynamics, self.update_time = quad_dyn.get_taut_dynamics_3d()
             loose_dynamics, _update_time = quad_dyn.get_loose_dynamics_3d()
@@ -74,6 +80,8 @@ class Quad3D(BaseEnvironment):
                 return new_state
             self.step_fn = step_fn
             self.dynamics_fn = None
+            self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos_obj)
+            self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel_obj)
         else:
             raise NotImplementedError
         # lower-level controller
@@ -420,8 +428,8 @@ class Quad3D(BaseEnvironment):
         state = self.get_init_state(key, params)
         info = {
             "discount": self.discount(state, params),
-            "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
-            "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
+            "err_pos": self.get_err_pos(state),
+            "err_vel": self.get_err_vel(state),
             "obs_param": self.get_obs_paramsonly(state, params),
             "obs_adapt": self.get_obs_adapt_hist(state, params),
         }
