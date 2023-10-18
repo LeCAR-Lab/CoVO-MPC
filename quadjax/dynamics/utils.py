@@ -375,7 +375,7 @@ def tracking_penyaw_obj_reward_fn(state: EnvState3D, params:EnvParams3D):
         log_pos_fn(err_pos_obj) - \
         jnp.linalg.norm(state.omega) * 0.01 - \
         jnp.abs(state.omega[2]) * 0.05
-    reward = 1.0 + reward/3.5
+    reward = 1.0 + reward/3.0
 
     return reward
 
