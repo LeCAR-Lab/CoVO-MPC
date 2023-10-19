@@ -315,14 +315,14 @@ def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
     obj_pass_rew = 0.25 * \
         (
             (1.0-jnp.linalg.norm(state.pos_obj)) * (state.pos_obj[0] > 0.0) + \
-            1.0 *( (state.pos_obj[0] < 0.0) & (state.pos_obj[0] > -0.1)) + \
-            (2.0-jnp.clip(jnp.linalg.norm(state.vel_obj)*0.3, 0.0, 1.0)) * (state.pos_obj[0] < -0.1)
+            1.0 *( (state.pos_obj[0] < 0.0) & (state.pos_obj[0] > -0.05)) + \
+            (3.0-jnp.clip(jnp.linalg.norm(state.vel_obj)*0.25, 0.0, 2.0)) * (state.pos_obj[0] < -0.05)
         )
     quad_pass_rew = 0.25 * \
         (
             (1.0-jnp.linalg.norm(state.pos)) * (state.pos[0] > 0.0) + \
-            1.0 *( (state.pos[0] < 0.0) & (state.pos[0] > -0.1)) + \
-            (2.0-jnp.clip(jnp.linalg.norm(state.vel)*0.3, 0.0, 1.0)) * (state.pos[0] < -0.1)
+            1.0 *( (state.pos[0] < 0.0) & (state.pos[0] > -0.05)) + \
+            (3.0-jnp.clip(jnp.linalg.norm(state.vel)*0.25, 0.0, 2.0)) * (state.pos[0] < -0.05)
         )
     return drone_hit_rew + obj_hit_rew + obj_pass_rew + quad_pass_rew
 

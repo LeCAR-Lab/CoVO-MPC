@@ -454,8 +454,8 @@ def make_train(env, config):
             metric_log['err_pos_last_10'] = metric_local['err_pos'][-10:].mean()
             metric_log['err_vel'] = metric_local['err_vel'].mean()
             metric_log['final_reward'] = metric_local['final_reward'][-1].mean()
-            metric_log['hit_wall_rate'] = metric_local['hit_wall'].sum() / metric_local['returned_episode'].sum()
-            metric_log['pass_wall_rate'] = metric_local['pass_wall'].sum() / metric_local['returned_episode'].sum()
+            metric_log['hit_wall_rate'] = (metric_local['hit_wall'] & metric_local['returned_episode']).sum() / metric_local['returned_episode'].sum()
+            metric_log['pass_wall_rate'] = (metric_local['pass_wall'] & metric_local['returned_episode']).sum() / metric_local['returned_episode'].sum()
 
             # curriculum learning
             if config['enable_curri']: 

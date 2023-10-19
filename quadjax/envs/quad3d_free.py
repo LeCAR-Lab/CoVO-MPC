@@ -441,7 +441,7 @@ class Quad3D(BaseEnvironment):
             "obs_adapt": self.get_obs_adapt_hist(state, params),
             "hit_wall": (utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
                 (utils.get_hit_reward(state.pos, params) < -0.5),
-            "pass_wall": (state.pos[0] < 0 and state.pos_obj[0] < 0),
+            "pass_wall": ((state.pos[0] < 0) & (state.pos_obj[0] < 0)),
         }
         return info
 
@@ -630,9 +630,12 @@ class Quad3D(BaseEnvironment):
             | (jnp.abs(state.pos_obj) > 3.0).any() \
             | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) \
             | (jnp.abs(state.omega) > 100.0).any() \
-            | (jnp.abs(state.zeta_dot) > 100.0).any() \
-            | (utils.get_hit_reward(state.pos_obj, params) < -0.5) \
-            | (utils.get_hit_reward(state.pos, params) < -0.5)
+            | (jnp.abs(state.zeta_dot) > 100.0).any()
+        if self.task == 'jumping':
+            done = done \
+                | ((state.pos[0] < 0) & (state.pos_obj[0] < 0) & (jnp.linalg.norm(state.vel)<1.0) & (jnp.linalg.norm(state.vel_obj)<1.0)) \
+                | (utils.get_hit_reward(state.pos_obj, params) < -0.5) \
+                | (utils.get_hit_reward(state.pos, params) < -0.5)
         return done
 
 def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = '', debug=False):
