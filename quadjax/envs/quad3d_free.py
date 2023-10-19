@@ -439,9 +439,9 @@ class Quad3D(BaseEnvironment):
             "err_vel": self.get_err_vel(state),
             "obs_param": self.get_obs_paramsonly(state, params),
             "obs_adapt": self.get_obs_adapt_hist(state, params),
-            "hit_wall": (utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
-                (utils.get_hit_reward(state.pos, params) < -0.5),
-            "pass_wall": ((state.pos[0] < 0) & (state.pos_obj[0] < 0)),
+            "hit_wall": ((utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
+                (utils.get_hit_reward(state.pos, params) < -0.5)),
+            "pass_wall": ((state.pos[0] < -0.05) & (state.pos_obj[0] < -0.05)),
         }
         return info
 

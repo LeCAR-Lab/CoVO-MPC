@@ -55,15 +55,15 @@ vis["obj_tar"].set_object(g.Sphere(0.02), material=g.MeshLambertMaterial(color=0
 vis["disturb"].set_object(g.StlMeshGeometry.from_file('../assets/arrow.stl'))
 
 # create a circle with small capacity
-vis["circle"].set_object(g.Cylinder(0.02, 0.2), material=g.MeshLambertMaterial(color=0x0000ff))
+vis["circle"].set_object(g.Cylinder(0.02, 0.11), material=g.MeshLambertMaterial(color=0x0000ff))
 vis["circle"].set_transform(tf.rotation_matrix(np.pi/2, [0, 0, 1]))
 
 for i in range(0, 300, 2):
     vis[f"traj{i}"].set_object(g.Sphere(0.01), material=g.MeshLambertMaterial(color=0x00ff00))
 
 # load state sequence from pickle and check if load is successful
-file_path = "../../results/state_seq_quad3d_free_jumping_l1_bodyrate.pkl"
 # file_path = "../../results/state_seq_.pkl"
+file_path = "../../results/state_seq_quad3d_free_jumping_l1_bodyrate.pkl"
 with open(file_path, "rb") as f:
     state_seq = pickle.load(f)
 

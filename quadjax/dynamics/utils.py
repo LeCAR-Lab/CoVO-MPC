@@ -301,7 +301,7 @@ def get_hit_reward(pos, params):
     r = 3.0
     gap_size = (1.0-params.curri_params)*0.3 + 0.1
     a = r - gap_size/2.0
-    b = 0.06    
+    b = 0.06
     YZ = jnp.sqrt((pos[1])**2 + (pos[2])**2) - r
     l = jnp.sqrt(((pos[0])/b)**2 + (YZ/a)**2)
     return -jnp.clip(jnp.log(1.0+50.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 1.0)
@@ -312,17 +312,20 @@ def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
     drone_hit_rew = 0.5 * get_hit_reward(state.pos, params)
     obj_hit_rew = 0.5 * get_hit_reward(state.pos_obj, params)
     # extra term: encourage the object to pass through point [0.0, 0.0, 0.0] when its x is positive
-    obj_pass_rew = 0.25 * \
+    obj_pass_rew = 0.5 * \
         (
             (1.0-jnp.linalg.norm(state.pos_obj)) * (state.pos_obj[0] > 0.0) + \
             1.0 *( (state.pos_obj[0] < 0.0) & (state.pos_obj[0] > -0.05)) + \
-            (3.0-jnp.clip(jnp.linalg.norm(state.vel_obj)*0.25, 0.0, 2.0)) * (state.pos_obj[0] < -0.05)
+            (2.0-jnp.clip(jnp.linalg.norm(state.vel_obj)*0.2 + \
+                          jnp.linalg.norm(state.pos_obj - state.pos_tar)*0.5, 0.0, 1.0)) * (state.pos_obj[0] < -0.05)
         )
-    quad_pass_rew = 0.25 * \
+    pos_quad_tar = state.pos_tar + jnp.array([0.0, 0.0, params.l]) - params.hook_offset
+    quad_pass_rew = 0.5 * \
         (
             (1.0-jnp.linalg.norm(state.pos)) * (state.pos[0] > 0.0) + \
             1.0 *( (state.pos[0] < 0.0) & (state.pos[0] > -0.05)) + \
-            (3.0-jnp.clip(jnp.linalg.norm(state.vel)*0.25, 0.0, 2.0)) * (state.pos[0] < -0.05)
+            (2.0-jnp.clip(jnp.linalg.norm(state.vel)*0.2 + \
+                          jnp.linalg.norm(state.pos - pos_quad_tar)*0.5, 0.0, 1.0)) * (state.pos[0] < -0.05)
         )
     return drone_hit_rew + obj_hit_rew + obj_pass_rew + quad_pass_rew
 
