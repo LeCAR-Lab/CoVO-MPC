@@ -734,7 +734,6 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
             control_seq.append({'a_hat': control_params.a_hat})
         if hasattr(control_params, 'a_hat'):
             control_seq.append({'a_hat': control_params.a_hat})
-        env_params = env_params.replace(curri_params = 0.7)
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
