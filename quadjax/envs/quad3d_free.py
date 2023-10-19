@@ -339,16 +339,7 @@ class Quad3D(BaseEnvironment):
             lax.stop_gradient(next_state),
             reward,
             done,
-            {
-                "discount": self.discount(next_state, params),
-                "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
-                "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
-                "obs_param": self.get_obs_paramsonly(state, params),
-                "obs_adapt": self.get_obs_adapt_hist(state, params),
-                # "success": self.get_err_pos(state) < 0.2, 
-                "hit_wall": (utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
-                    (utils.get_hit_reward(state.pos, params) < -0.5),
-            },
+            self.get_info(state, params),
         )
     
     def sample_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
@@ -441,11 +432,7 @@ class Quad3D(BaseEnvironment):
             control_params=self.default_control_params,
         )
 
-
-    def reset_env(
-        self, key: chex.PRNGKey, params: EnvParams3D
-    ) -> Tuple[chex.Array, EnvState3D]:
-        state = self.get_init_state(key, params)
+    def get_info(self, state: EnvState3D, params: EnvParams3D) -> dict:
         info = {
             "discount": self.discount(state, params),
             "err_pos": self.get_err_pos(state),
@@ -454,7 +441,15 @@ class Quad3D(BaseEnvironment):
             "obs_adapt": self.get_obs_adapt_hist(state, params),
             "hit_wall": (utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
                 (utils.get_hit_reward(state.pos, params) < -0.5),
+            "pass_wall": (state.pos[0] < 0 and state.pos_obj[0] < 0),
         }
+        return info
+
+    def reset_env(
+        self, key: chex.PRNGKey, params: EnvParams3D
+    ) -> Tuple[chex.Array, EnvState3D]:
+        state = self.get_init_state(key, params)
+        info = self.get_info(state, params)
         return self.get_obs(state, params), info, state
     
     @partial(jax.jit, static_argnums=(0,))

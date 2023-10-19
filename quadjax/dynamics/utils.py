@@ -309,16 +309,16 @@ def get_hit_reward(pos, params):
 @jax.jit
 def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
     # rew_tracking = tracking_penyaw_obj_reward_fn(state, params)
-    drone_hit_rew = get_hit_reward(state.pos, params)
-    obj_hit_rew = get_hit_reward(state.pos_obj, params)
+    drone_hit_rew = 0.5 * get_hit_reward(state.pos, params)
+    obj_hit_rew = 0.5 * get_hit_reward(state.pos_obj, params)
     # extra term: encourage the object to pass through point [0.0, 0.0, 0.0] when its x is positive
-    obj_pass_rew = 0.5 * \
+    obj_pass_rew = 0.25 * \
         (
             (1.0-jnp.linalg.norm(state.pos_obj)) * (state.pos_obj[0] > 0.0) + \
             1.0 *( (state.pos_obj[0] < 0.0) & (state.pos_obj[0] > -0.1)) + \
             (2.0-jnp.clip(jnp.linalg.norm(state.vel_obj)*0.3, 0.0, 1.0)) * (state.pos_obj[0] < -0.1)
         )
-    quad_pass_rew = 0.5 * \
+    quad_pass_rew = 0.25 * \
         (
             (1.0-jnp.linalg.norm(state.pos)) * (state.pos[0] > 0.0) + \
             1.0 *( (state.pos[0] < 0.0) & (state.pos[0] > -0.1)) + \

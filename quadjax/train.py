@@ -135,9 +135,6 @@ def make_train(env, config):
         if config['enable_curri']:
             curri_params = 0.0
             env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
-        if config['enable_curri']:
-            curri_params = 0.0
-            env_params = env_params.replace(curri_params = jnp.ones(config["NUM_ENVS"])*curri_params)
 
         # INIT NETWORK
         network = ActorCritic(
@@ -444,7 +441,7 @@ def make_train(env, config):
         obsv, env_info, env_state = jax.vmap(env.reset)(reset_rng, env_params)
         rng, _rng = jax.random.split(rng)
         runner_state = (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state)
-        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([]), 'err_pos_last_10': jnp.array([]), 'final_reward': jnp.array([]), 'hit_wall_rate': jnp.array([])}
+        metric = {'step': jnp.array([]), 'returned_episode_returns': jnp.array([]), 'returned_episode_lengths': jnp.array([]), 'mean_episode_returns': jnp.array([]), 'err_pos': jnp.array([]), 'err_vel': jnp.array([]), 'err_pos_last_10': jnp.array([]), 'final_reward': jnp.array([]), 'hit_wall_rate': jnp.array([]), 'pass_wall_rate': jnp.array([])}
         step_per_log = config["NUM_STEPS"] * config["NUM_ENVS"]
         for i in range(config["NUM_PPO_UPDATES"]):
             runner_state, metric_local = jax.block_until_ready(_train_ppo(runner_state, None))
@@ -458,11 +455,12 @@ def make_train(env, config):
             metric_log['err_vel'] = metric_local['err_vel'].mean()
             metric_log['final_reward'] = metric_local['final_reward'][-1].mean()
             metric_log['hit_wall_rate'] = metric_local['hit_wall'].sum() / metric_local['returned_episode'].sum()
+            metric_log['pass_wall_rate'] = metric_local['pass_wall'].sum() / metric_local['returned_episode'].sum()
 
             # curriculum learning
             if config['enable_curri']: 
                 (ppo_train_state, env_state, obsv, _rng, env_params, env_info, adapt_train_state) = runner_state
-                if (metric_log['hit_wall_rate'] < 0.7):
+                if (metric_log['pass_wall_rate'] > 0.5):
                     curri_params = jnp.clip(curri_params + 0.05, 0.0, 1.0)
                 print('curri_params: ', curri_params)
                                          
@@ -520,7 +518,7 @@ def main(args: Args):
         jax.disable_jit()
     config = {
         "LR": 3e-4,
-        "NUM_ENVS": 4096 if not args.debug else 1,
+        "NUM_ENVS": 8192 if not args.debug else 1,
         "NUM_STEPS": 300 if not args.debug else 10,
         "PPO_TIMESTEPS": 1.6e8 if not args.debug else 1e2,
         "ADAPT_TIMESTEPS": 8e6 if not args.debug else 0.3e2,
