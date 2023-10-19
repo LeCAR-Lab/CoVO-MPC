@@ -346,6 +346,8 @@ class Quad3D(BaseEnvironment):
                 "obs_param": self.get_obs_paramsonly(state, params),
                 "obs_adapt": self.get_obs_adapt_hist(state, params),
                 # "success": self.get_err_pos(state) < 0.2, 
+                "hit_wall": (utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
+                    (utils.get_hit_reward(state.pos, params) < -0.5),
             },
         )
     
@@ -361,9 +363,13 @@ class Quad3D(BaseEnvironment):
             pos_hook = (pos_hook + jnp.array([1.6, 0.0, 0.0])) / jnp.array([2.0, 1.0, 1.0])
         pos = pos_hook - params.hook_offset
         # randomly sample object position from a sphere with radius params.l and center at hook_pos
-        pos_obj = utils.sample_sphere(key, params.l, pos_hook)
+        pos_obj = utils.sample_sphere(key, params.l*0.9, pos_hook)
         l_rope = jnp.linalg.norm(pos_obj - pos_hook)
+        # randomly sample object velocity, which is perpendicular to the rope
+        vel_key, key = jax.random.split(key)
+        vel_obj = jax.random.uniform(vel_key, shape=(3,), minval=-2.0, maxval=2.0)
         zeta = (pos_obj - pos_hook) / l_rope
+        zeta_dot = jnp.cross(zeta, vel_obj)
         zeros3 = jnp.zeros(3, dtype=jnp.float32)
         vel_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
         omega_hist = jnp.zeros((self.default_params.adapt_horizon+2, 3), dtype=jnp.float32)
@@ -376,11 +382,11 @@ class Quad3D(BaseEnvironment):
             omega_tar=zeros3,
             quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
             # object
-            pos_obj=pos_obj,vel_obj=zeros3,
+            pos_obj=pos_obj,vel_obj=vel_obj,
             # hook
             pos_hook=pos_hook,vel_hook=zeros3,
             # rope
-            l_rope=l_rope,zeta=zeta,zeta_dot=zeros3,
+            l_rope=l_rope,zeta=zeta,zeta_dot=zeta_dot,
             f_rope=zeros3,f_rope_norm=0.0,
             # trajectory
             pos_tar=pos_traj[0],vel_tar=vel_traj[0],acc_tar=acc_traj[0],
@@ -446,7 +452,8 @@ class Quad3D(BaseEnvironment):
             "err_vel": self.get_err_vel(state),
             "obs_param": self.get_obs_paramsonly(state, params),
             "obs_adapt": self.get_obs_adapt_hist(state, params),
-            # "success": self.get_err_pos(state) < 0.1, 
+            "hit_wall": (utils.get_hit_reward(state.pos_obj, params) < -0.5) | \
+                (utils.get_hit_reward(state.pos, params) < -0.5),
         }
         return self.get_obs(state, params), info, state
     
@@ -629,8 +636,8 @@ class Quad3D(BaseEnvironment):
             | (state.quat[3] < jnp.cos(jnp.pi / 4.0)) \
             | (jnp.abs(state.omega) > 100.0).any() \
             | (jnp.abs(state.zeta_dot) > 100.0).any() \
-            | (utils.get_hit_reward(state.pos_obj, params) < -1.0) \
-            | (utils.get_hit_reward(state.pos, params) < -1.0)
+            | (utils.get_hit_reward(state.pos_obj, params) < -0.5) \
+            | (utils.get_hit_reward(state.pos, params) < -0.5)
         return done
 
 def eval_env(env: Quad3D, controller, control_params, total_steps = 3000, filename = '', debug=False):
