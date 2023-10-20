@@ -224,7 +224,7 @@ class Quad3D(BaseEnvironment):
             print("Warning: enable domain randomziation without params in obs_type")
         if obs_type == 'quad_params':
             self.get_obs = self.get_obs_quad_params
-            self.obs_dim = 28 + self.default_params.traj_obs_len * 6
+            self.obs_dim = 39 + self.default_params.traj_obs_len * 6
         elif obs_type == 'quad':
             self.get_obs = self.get_obs_quadonly
             self.obs_dim = 19 + self.default_params.traj_obs_len * 6
@@ -249,7 +249,7 @@ class Quad3D(BaseEnvironment):
         # RL parameters
         self.action_dim = 4
         self.adapt_obs_dim = 22 * self.default_params.adapt_horizon
-        self.param_obs_dim = 17
+        self.param_obs_dim = 20
 
 
     '''
@@ -907,7 +907,7 @@ def main(args: Args):
     if args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name, debug=args.debug)
     elif args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=5, filename=args.name)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=10, filename=args.name)
     else:
         raise NotImplementedError
 

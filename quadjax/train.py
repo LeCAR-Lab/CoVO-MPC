@@ -488,13 +488,26 @@ def make_train(env, config):
             rng, _rng = jax.random.split(rng)
             for i in range(config["NUM_ADAPT_UPDATES"]):
                 runner_state, metric_local = jax.block_until_ready(_train_adaptor(runner_state, None))
-                metric_local['step'] = jnp.array([(i+config["NUM_PPO_UPDATES"]+1)*step_per_log])
-                metric_local['mean_episode_returns'] = metric_local['returned_episode_returns'] / metric_local['returned_episode_lengths']
+
+                metric_log = {}
+                metric_log['step'] = jnp.array([(i+1)*step_per_log])
+                metric_log['mean_episode_returns'] = jnp.mean(metric_local['returned_episode_returns'][-1] / (metric_local['returned_episode_lengths'][-1]+1.0))
+                metric_log['returned_episode_returns'] = metric_local['returned_episode_returns'][-1].mean()
+                metric_log['returned_episode_lengths'] = metric_local['returned_episode_lengths'][-1].mean()
+                metric_log['err_pos'] = metric_local['err_pos'].mean()
+                metric_log['err_pos_last_10'] = metric_local['err_pos'][-10:].mean()
+                metric_log['err_vel'] = metric_local['err_vel'].mean()
+                metric_log['final_reward'] = metric_local['final_reward'][-1].mean()
+                # shift metric_local['returned_episode']) one step to the left to get final_step_mask
+                metric_log['hit_wall_rate'] = (metric_local['hit_wall'] & metric_local['returned_episode']).sum() / metric_local['returned_episode'].sum()
+                final_step_mask = jnp.concatenate([metric_local['returned_episode'][1:], jnp.zeros_like(metric_local['returned_episode'][-1:])], axis=0)
+                metric_log['pass_wall_rate'] = (metric_local['pass_wall'] & final_step_mask).sum() / final_step_mask.sum()
+                metric_log['RMA_loss'] = metric_local['RMA_loss'].mean()
 
                 print('====================')
                 print(f'Adaptor update {i+1}/{config["NUM_ADAPT_UPDATES"]}')
                 for k in metric.keys():
-                    v_mean = metric_local[k].mean()
+                    v_mean = metric_log[k].mean()
                     metric[k] = jnp.append(metric[k], v_mean)
                     print(f'{k}: {v_mean:.2e}')
                 GPUtil.showUtilization()
@@ -515,7 +528,7 @@ class Args:
     curri: bool = False
     RMA: bool = False
     noDR: bool = False # no domain randomization
-    disturb_type: str = "periodic" # periodic, sin, drag
+    disturb_type: str = "periodic" # periodic, sin, drag, mixed
     name: str = "" # experiment name
 
 
@@ -524,9 +537,9 @@ def main(args: Args):
         jax.disable_jit()
     config = {
         "LR": 3e-4,
-        "NUM_ENVS": 8192 if not args.debug else 1,
+        "NUM_ENVS": 4096 if not args.debug else 1,
         "NUM_STEPS": 300 if not args.debug else 10,
-        "PPO_TIMESTEPS": 2.4e8 if not args.debug else 1e2,
+        "PPO_TIMESTEPS": 1.6e8 if not args.debug else 1e2,
         "ADAPT_TIMESTEPS": 8e6 if not args.debug else 0.3e2,
         "UPDATE_EPOCHS": 2,
         "NUM_MINIBATCHES": 320 if not args.debug else 1,
@@ -569,7 +582,7 @@ def main(args: Args):
     # plot in three subplots of returned_episode_returns, err_pos, err_vel
     fig, axs = plt.subplots(5, 1)
     for _, (ax, data, title) in enumerate(
-        zip(axs, [metric["returned_episode_returns"], metric["err_pos"], metric["pass_wall_rate"], metric["err_vel"]], ["returns", "err_pos", "err_vel", "pass_wall_rate"])
+        zip(axs, [metric["returned_episode_returns"], metric["err_pos"], metric["pass_wall_rate"], metric["err_vel"]], ["returns", "err_pos", "pass_wall_rate", "err_vel"])
     ):
         if data.shape[0] <=0: 
             continue
@@ -584,9 +597,9 @@ def main(args: Args):
             f"{last_value:.2f}",
             bbox=dict(facecolor="red", alpha=0.8),
         )
-    axs[3].plot(metric['RMA_loss'], label='RMA_loss')
-    axs[3].set_ylabel('RMA_loss')
-    axs[3].set_xlabel("steps")
+    axs[4].plot(metric['RMA_loss'], label='RMA_loss')
+    axs[4].set_ylabel('RMA_loss')
+    axs[4].set_xlabel("steps")
     # add training time to title
     fig.suptitle(f"training_time: {training_time:.2f} s")
     # save

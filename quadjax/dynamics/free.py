@@ -181,12 +181,21 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         disturb = -jnp.abs(params.disturb_scale) * rel_vel * jnp.abs(rel_vel) / (1.5**2)
         return disturb
     
+    @jax.jit
+    def mixed_disturb(disturb_key: chex.PRNGKey, params: EnvParams3D, state: EnvState3D):
+        d_drag = drag_disturb(disturb_key, params, state)
+        d_sin = sin_disturb(disturb_key, params, state)
+        d_period = period_disturb(disturb_key, params, state)
+        return (d_drag + d_sin + d_period)/3
+    
     if disturb_type == 'periodic':
         disturb_func = period_disturb
     elif disturb_type == 'sin':
         disturb_func = sin_disturb
     elif disturb_type == 'drag':
         disturb_func = drag_disturb
+    elif disturb_type == 'mixed':
+        disturb_func = mixed_disturb
 
     @jax.jit
     def quad_dynamics_bodyrate(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D, dt: float):
