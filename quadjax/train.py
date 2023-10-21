@@ -490,7 +490,7 @@ def make_train(env, config):
                 runner_state, metric_local = jax.block_until_ready(_train_adaptor(runner_state, None))
 
                 metric_log = {}
-                metric_log['step'] = jnp.array([(i+1)*step_per_log])
+                metric_log['step'] = jnp.array([(i+config["NUM_PPO_UPDATES"]+1)*step_per_log])
                 metric_log['mean_episode_returns'] = jnp.mean(metric_local['returned_episode_returns'][-1] / (metric_local['returned_episode_lengths'][-1]+1.0))
                 metric_log['returned_episode_returns'] = metric_local['returned_episode_returns'][-1].mean()
                 metric_log['returned_episode_lengths'] = metric_local['returned_episode_lengths'][-1].mean()

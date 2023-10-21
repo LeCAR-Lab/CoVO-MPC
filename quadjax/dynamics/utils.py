@@ -389,6 +389,10 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
         for i, state in enumerate(state_seq):
             rpy = quadjax.dynamics.qtorpy(state['quat'])
             state_seq[i]["rpy"] = rpy
+    if "quat_desired" in state_seq[0]:
+        for i, state in enumerate(state_seq):
+            rpy = quadjax.dynamics.qtorpy(state['quat_desired'])
+            state_seq[i]["rpy_tar"] = rpy
 
     # plot results
     num_figs = len(state_seq[0]) + 20
@@ -422,6 +426,19 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     for i, (name, value) in enumerate(state_seq[0].items()):
         if name in ["pos_traj", "vel_traj", "acc_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
             continue
+        elif "rpy" in name and "tar" not in name:
+            rpy = np.array([s[name] for s in state_seq])
+            if 'rpy_tar' in state_seq[0]:
+                rpy_tar = np.array([s[f"{name[:3]}_tar"] for s in state_seq])
+            scan_range = zip(range(3), ["roll", "pitch", "yaw"])
+            for i, subplot_name in scan_range:
+                current_fig += 1
+                plt.subplot(num_rows, plot_per_row, current_fig)
+                plt.plot(time, rpy[:, i], label=f"{subplot_name}")
+                if 'rpy_tar' in state_seq[0]:
+                    plt.plot(time, rpy_tar[:, i], "--", label=f"{subplot_name}_tar")
+                plt.ylabel(f"{name}_{subplot_name}")
+                plt.legend()
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
             xyz = np.array([s[name] for s in state_seq])
             if 'hat' in name:
@@ -456,6 +473,29 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
 
     plt.xlabel("time")
     plt.savefig(f"{quadjax.get_package_path()}/../results/render_plot_{filename}.png")
+
+    # plot another figure 
+    plt.figure(figsize=(6*3, 2*3))
+    # only plot pos, vel, rpy and their tar
+    plot_items = ["pos", "vel", "rpy"]
+    step_num = 100
+    for i, item in enumerate(plot_items):
+        item_tar = f"{item}_tar"
+        if item == 'rpy':
+            subitems = ["roll", "pitch", "yaw"]
+        else:
+            subitems = ["x", "y", "z"]
+        for j, subitem in enumerate(subitems):
+            current_fig = i * 3 + j + 1
+            plt.subplot(3, 3, current_fig)
+            plt.plot(time[:step_num], [s[f"{item}"][j] for s in state_seq[:step_num]], label=f"{subitem}")
+            if item_tar in state_seq[0]:
+                plt.plot(time[:step_num], [s[f"{item_tar}"][j] for s in state_seq[:step_num]], "--", label=f"{subitem} desired")
+            plt.ylabel(f"{item}_{subitem}")
+            plt.legend()
+    plt.xlabel("time")
+    plt.savefig(f"{quadjax.get_package_path()}/../results/compact_plot_{filename}.png")
+
 
 def sample_sphere(key: chex.PRNGKey, R, center):
     """Sample a point inside a sphere."""

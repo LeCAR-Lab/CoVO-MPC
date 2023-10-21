@@ -77,6 +77,16 @@ def qtoQ(q: jnp.ndarray) -> jnp.ndarray:
     return H.T @ T @ Lq @ T @ Lq @ H
 
 @jax.jit
+def Qtoq(Q: jnp.ndarray) -> jnp.ndarray:
+    '''
+    convert a 3x3 rotation matrix to a quaternion
+    '''
+    q = jnp.zeros(4)
+    q = q.at[3].set(0.5*jnp.sqrt(1+Q[0, 0]+Q[1, 1]+Q[2, 2]))
+    q = q.at[:3].set(0.5/jnp.sqrt(1+Q[0, 0]+Q[1, 1]+Q[2, 2])*jnp.array([Q[2, 1]-Q[1, 2], Q[0, 2]-Q[2, 0], Q[1, 0]-Q[0, 1]]))
+    return q
+
+@jax.jit
 def rptoq(phi: jnp.ndarray) -> jnp.ndarray:
     return 1/jnp.sqrt(1+jnp.dot(phi, phi))*jnp.concatenate((phi, jnp.array([1])))
 

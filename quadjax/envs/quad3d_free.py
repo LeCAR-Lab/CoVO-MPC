@@ -732,8 +732,8 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
             control_seq.append({'d_hat': control_params.d_hat, 'vel_hat': control_params.vel_hat})
         if hasattr(control_params, 'a_hat'):
             control_seq.append({'a_hat': control_params.a_hat})
-        if hasattr(control_params, 'a_hat'):
-            control_seq.append({'a_hat': control_params.a_hat})
+        if hasattr(control_params, 'quat_desired'):
+            control_seq.append({'quat_desired': control_params.quat_desired})
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         if done:
@@ -762,7 +762,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     # get package quadjax path
     
     with open(f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb") as f:
-        pickle.dump(state_seq, f)
+        pickle.dump(state_seq_dict, f)
 
 '''
 reward function here. 
@@ -801,6 +801,14 @@ def main(args: Args):
             K = jnp.zeros((4, 12)),
         )
         controller = controllers.LQRController(env, control_params = control_params)
+    elif args.controller == 'pid':
+        control_params = controllers.PIDParams(
+            Kp=1.0, 
+            Kd=0.0,  
+            Ki=0.0,
+            Kp_att=10.0, 
+        )
+        controller = controllers.PIDController(env, control_params = control_params)
     elif args.controller == 'random':
         control_params = None
         controller = controllers.RandomController(env, control_params)
@@ -907,7 +915,7 @@ def main(args: Args):
     if args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name, debug=args.debug)
     elif args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=10, filename=args.name)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=args.name)
     else:
         raise NotImplementedError
 

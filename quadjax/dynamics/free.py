@@ -196,6 +196,8 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         disturb_func = drag_disturb
     elif disturb_type == 'mixed':
         disturb_func = mixed_disturb
+    elif disturb_type == 'none':
+        disturb_func = lambda disturb_key, params, state: jnp.zeros(3)
 
     @jax.jit
     def quad_dynamics_bodyrate(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D, dt: float):

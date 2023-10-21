@@ -34,7 +34,7 @@ class MPPIController(controllers.BaseController):
 
 
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams) -> jnp.ndarray:
+    def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams, info = None) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov

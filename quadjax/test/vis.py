@@ -18,7 +18,10 @@ def origin_vec_to_transform(origin, vec, scale=1.0):
     # visualize the force with arrow
     vec_norm = np.linalg.norm(vec)
     if vec_norm == 0:
-        return
+        return np.array([[1, 0, 0, origin[0]],
+                            [0, 1, 0, origin[1]],
+                            [0, 0, 1, origin[2]],
+                            [0, 0, 0, 1]])
     vec = vec / vec_norm
     # gernerate two unit vectors perpendicular to the force vector
     if vec[0] == 0 and vec[1] == 0:
