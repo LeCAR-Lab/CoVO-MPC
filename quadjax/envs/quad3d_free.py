@@ -771,7 +771,7 @@ reward function here.
 @pydataclass
 class Args:
     task: str = "hovering" # tracking, tracking_zigzag, hovering
-    dynamics: str = 'free'
+    dynamics: str = 'bodyrate' # bodyrate, free, slung
     controller: str = 'lqr' # fixed
     controller_params: str = ''
     obs_type: str = 'quad'
@@ -779,7 +779,7 @@ class Args:
     mode: str = 'render' # eval, render
     lower_controller: str = 'base'
     noDR: bool = False
-    disturb_type: str = 'periodic' # periodic, sin, drag
+    disturb_type: str = 'periodic' # periodic, sin, drag, none
     name: str = ''
 
 def main(args: Args):
@@ -803,8 +803,8 @@ def main(args: Args):
         controller = controllers.LQRController(env, control_params = control_params)
     elif args.controller == 'pid':
         control_params = controllers.PIDParams(
-            Kp=1.0, 
-            Kd=0.0,  
+            Kp=10.0, 
+            Kd=5.0,  
             Ki=0.0,
             Kp_att=10.0, 
         )

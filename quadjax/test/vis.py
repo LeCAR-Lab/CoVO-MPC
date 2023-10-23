@@ -79,12 +79,12 @@ for i, state in enumerate(state_seq):
     if i % 20 == 0:
         # plot the trajectory by connecting the points in traj_x with lines
         for j in range(0, 300, 2):
-            set_frame(i, f'traj{j}', pos_quat_to_transform(state_seq[i].pos_traj[j], np.array([0,0,0,1])))
-    set_frame(i, 'drone', pos_quat_to_transform(state.pos, state.quat))
-    set_frame(i, 'drone_frame', pos_quat_to_transform(state.pos, state.quat))
-    set_frame(i, 'obj', pos_quat_to_transform(state.pos_obj, np.array([0,0,0,1])))
-    set_frame(i, 'obj_tar', pos_quat_to_transform(state.pos_tar, np.array([0,0,0,1])))
-    set_frame(i, 'disturb', origin_vec_to_transform(state.pos, state.f_disturb, 2.0))
+            set_frame(i, f'traj{j}', pos_quat_to_transform(state_seq[i]['pos_traj'][j], np.array([0,0,0,1])))
+    set_frame(i, 'drone', pos_quat_to_transform(state['pos'], state['quat']))
+    set_frame(i, 'drone_frame', pos_quat_to_transform(state['pos'], state['quat']))
+    set_frame(i, 'obj', pos_quat_to_transform(state['pos_obj'], np.array([0,0,0,1])))
+    set_frame(i, 'obj_tar', pos_quat_to_transform(state['pos_tar'], np.array([0,0,0,1])))
+    set_frame(i, 'disturb', origin_vec_to_transform(state['pos'], state['f_disturb'], 2.0))
     
 vis.set_animation(anim)
 time.sleep(5)

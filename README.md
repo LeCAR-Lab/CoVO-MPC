@@ -8,7 +8,7 @@ Play with the environment
 
 ```python
 cd quadjax/envs
-python quad3d_free.py --controller base --task hovering
+python quad3d_free.py --dynamics bodyrate --noDR --controller pid --task tracking_zigzag --mode render --disturb_type none
 ```
 
 This will generate tested state sequence `state_seq.pkl` and plot figure `plot.png`.
@@ -24,7 +24,7 @@ Trajectory tracking with max velocity 2m/s with 3d quadrotor environment.
 
 ```
 # tracking zigzag
-python train.py --env quad3d_free --task tracking_zigzag
+python train.py --env quad3d_free --dynamics bodyrate --noDR --name test
 
 # tracking smoooth trajectory
 python train.py --env quad3d_free --task tracking
@@ -45,7 +45,7 @@ run certain controller
 
 ```shell
 # L1 controller for quadrotor 3d free environment (NOTE: L1 currently only works for bodyrate dynamics)
-python quad3d_free.py --task tracking_zigzag --dynamics bodyrate --controller l1
+python quad3d_free.py --dynamics bodyrate --noDR --controller pid --task tracking_zigzag --mode render --disturb_type none
 ```
 
 ![ppo](https://github.com/jc-bao/quadjax/assets/60093981/48220814-8775-4539-b9bc-85f6236b077b)
