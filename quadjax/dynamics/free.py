@@ -114,7 +114,7 @@ def get_free_dynamics_3d():
         return x_new.at[3:7].set(x_new[3:7] / jnp.linalg.norm(x_new[3:7]))
 
     @jax.jit
-    def free_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D):
+    def free_dynamics_3d(env_params: EnvParams3D, env_state: EnvState3D, env_action: Action3D, key:chex.PRNGKey, sim_dt: float):
         # dynamics NOTE: u is normalized thrust and torque [-1, 1]
         # thrust_normed = env_action.thrust/env_params.max_thrust * 2.0 - 1.0
         # torque_normed = env_action.torque / env_params.max_torque

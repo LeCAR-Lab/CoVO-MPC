@@ -179,8 +179,8 @@ class EnvParams3D:
     dt: float = 0.02
     g: float = 9.81  # gravity
 
-    m: float = 0.03  # mass
-    m_mean: float = 0.03  # mass
+    m: float = 0.027  # mass
+    m_mean: float = 0.027  # mass
     m_std: float = 0.003  # mass
 
     I: jnp.ndarray = default_array([

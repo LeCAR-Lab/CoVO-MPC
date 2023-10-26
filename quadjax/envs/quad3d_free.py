@@ -764,9 +764,126 @@ def render_env(env: Quad3D, controller, control_params, repeat_times = 1, filena
     with open(f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb") as f:
         pickle.dump(state_seq_dict, f)
 
-'''
-reward function here. 
-'''
+def get_controller(env, controller_name, controller_params = None):
+    if controller_name == 'lqr':
+        control_params = controllers.LQRParams(
+            Q = jnp.diag(jnp.ones(12)),
+            R = 0.03 * jnp.diag(jnp.ones(4)),
+            K = jnp.zeros((4, 12)),
+        )
+        controller = controllers.LQRController(env, control_params = control_params)
+    elif controller_name == 'pid':
+        control_params = controllers.PIDParams(
+            Kp=10.0, 
+            Kd=5.0,  
+            Ki=0.0,
+            Kp_att=10.0, 
+        )
+        controller = controllers.PIDController(env, control_params = control_params)
+    elif controller_name == 'random':
+        control_params = None
+        controller = controllers.RandomController(env, control_params)
+    elif controller_name == 'fixed':
+        control_params = controllers.FixedParams(
+            u = jnp.asarray([0.0, 0.0, 0.0, 0.0]),
+        )
+        controller = controllers.FixedController(env, control_params = control_params)
+    elif controller_name == 'mppi':
+        sigma = 0.1
+        if controller_params == '':
+            N = 8192
+            H = 64
+            lam = 3e-3
+        else:
+            # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
+            N = int(controller_params.split('_')[0][1:])
+            H = int(controller_params.split('_')[1][1:])
+            lam = float(controller_params.split('_')[2][3:])
+            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}')
+        if args.debug:
+            N = 8
+            print(f'[DEBUG], override controller parameters to be: N={N}')
+        thrust_hover = env.default_params.m * env.default_params.g
+        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
+        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0]) 
+        a_mean = jnp.tile(a_mean_per_step, (H, 1))
+        a_cov_per_step = jnp.diag(jnp.array([sigma**2]*env.action_dim))
+        a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+        control_params = controllers.MPPIParams(
+            gamma_mean = 1.0,
+            gamma_sigma = 0.01,
+            discount = 0.9,
+            sample_sigma = sigma,
+            a_mean = a_mean,
+            a_cov = a_cov,
+        )
+        controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
+    elif controller_name == 'nn':
+        from quadjax.train import ActorCritic
+        network = ActorCritic(env.action_dim, activation='tanh')
+        if controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            return network.apply(train_params, last_obs)
+        controller = controllers.NetworkController(apply_fn, env, control_params)
+    elif controller_name == 'RMA':
+        from quadjax.train import ActorCritic, Compressor, Adaptor
+        network = ActorCritic(env.action_dim, activation='tanh')
+        compressor = Compressor()
+        adaptor = Adaptor()
+        if controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
+            obs = jnp.concatenate([last_obs, adapted_last_obs], axis=-1)
+            pi, value = network.apply(train_params[0], obs)
+            return pi, value
+        controller = controllers.NetworkController(apply_fn, env, control_params)
+    elif controller_name == 'RMA-expert':
+        from quadjax.train import ActorCritic, Compressor, Adaptor
+        network = ActorCritic(env.action_dim, activation='tanh')
+        compressor = Compressor()
+        adaptor = Adaptor()
+        if controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            compressed_last_obs = compressor.apply(train_params[1], env_info['obs_param'])
+            adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
+            jax.debug.print('compressed {com}', com = compressed_last_obs)
+            jax.debug.print('adapted {ada}', ada = adapted_last_obs)
+            obs = jnp.concatenate([last_obs, compressed_last_obs], axis=-1)
+            pi, value = network.apply(train_params[0], obs)
+            return pi, value
+        controller = controllers.NetworkController(apply_fn, env, control_params)
+    elif controller_name == 'l1':
+        control_params = controllers.L1Params()
+        controller = controllers.L1Controller(env, control_params)
+    elif controller_name == 'debug':
+        class DebugController(controllers.BaseController):
+            def __call__(self, obs, state, env_params, rng_act, control_params, env_info) -> jnp.ndarray:
+                quat_desired = jnp.array([0.0, 0.0, 0.0, 1.0])
+                quat_err = geom.multiple_quat(geom.conjugate_quat(quat_desired), state.quat)
+                att_err = quat_err[:3]
+                omega_tar = - 3.0 * att_err
+                thrust = (env_params.m + env_params.mo) * env_params.g
+                omega_normed = omega_tar / env_params.max_omega
+                thrust_normed = thrust / env_params.max_thrust * 2.0 - 1.0
+                action = jnp.concatenate([jnp.asarray([thrust_normed]), omega_normed])
+                return action, None, None
+        control_params = None
+        controller = DebugController(env, control_params) 
+    else:
+        raise NotImplementedError
+    return controller, control_params
 
 @pydataclass
 class Args:
@@ -788,130 +905,12 @@ def main(args: Args):
         jax.config.update("jax_debug_nans", True)
 
     env = Quad3D(task=args.task, dynamics=args.dynamics, obs_type=args.obs_type, lower_controller=args.lower_controller, enable_randomizer=not args.noDR, disturb_type=args.disturb_type)
-
     print("starting test...")
     # enable NaN value detection
     # from jax import config
     # config.update("jax_debug_nans", True)
     # with jax.disable_jit():
-    if args.controller == 'lqr':
-        control_params = controllers.LQRParams(
-            Q = jnp.diag(jnp.ones(12)),
-            R = 0.03 * jnp.diag(jnp.ones(4)),
-            K = jnp.zeros((4, 12)),
-        )
-        controller = controllers.LQRController(env, control_params = control_params)
-    elif args.controller == 'pid':
-        control_params = controllers.PIDParams(
-            Kp=10.0, 
-            Kd=5.0,  
-            Ki=0.0,
-            Kp_att=10.0, 
-        )
-        controller = controllers.PIDController(env, control_params = control_params)
-    elif args.controller == 'random':
-        control_params = None
-        controller = controllers.RandomController(env, control_params)
-    elif args.controller == 'fixed':
-        control_params = controllers.FixedParams(
-            u = jnp.asarray([0.0, 0.0, 0.0, 0.0]),
-        )
-        controller = controllers.FixedController(env, control_params = control_params)
-    elif args.controller == 'mppi':
-        sigma = 0.1
-        if args.controller_params == '':
-            N = 8192
-            H = 64
-            lam = 3e-3
-        else:
-            # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
-            N = int(args.controller_params.split('_')[0][1:])
-            H = int(args.controller_params.split('_')[1][1:])
-            lam = float(args.controller_params.split('_')[2][3:])
-            print(f'[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}')
-        if args.debug:
-            N = 8
-            print(f'[DEBUG], override controller parameters to be: N={N}')
-        thrust_hover = env.default_params.m * env.default_params.g
-        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
-        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0]) 
-        a_mean = jnp.tile(a_mean_per_step, (H, 1))
-        a_cov_per_step = jnp.diag(jnp.array([sigma**2]*env.action_dim))
-        a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
-        control_params = controllers.MPPIParams(
-            gamma_mean = 1.0,
-            gamma_sigma = 0.01,
-            discount = 0.9,
-            sample_sigma = sigma,
-            a_mean = a_mean,
-            a_cov = a_cov,
-        )
-        controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
-    elif args.controller == 'nn':
-        from quadjax.train import ActorCritic
-        network = ActorCritic(env.action_dim, activation='tanh')
-        if args.controller_params == '':
-            file_path = "ppo_params_"
-        else:
-            file_path = f'{args.controller_params}'
-        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
-        def apply_fn(train_params, last_obs, env_info):
-            return network.apply(train_params, last_obs)
-        controller = controllers.NetworkController(apply_fn, env, control_params)
-    elif args.controller == 'RMA':
-        from quadjax.train import ActorCritic, Compressor, Adaptor
-        network = ActorCritic(env.action_dim, activation='tanh')
-        compressor = Compressor()
-        adaptor = Adaptor()
-        if args.controller_params == '':
-            file_path = "ppo_params_"
-        else:
-            file_path = f'{args.controller_params}'
-        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
-        def apply_fn(train_params, last_obs, env_info):
-            adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
-            obs = jnp.concatenate([last_obs, adapted_last_obs], axis=-1)
-            pi, value = network.apply(train_params[0], obs)
-            return pi, value
-        controller = controllers.NetworkController(apply_fn, env, control_params)
-    elif args.controller == 'RMA-expert':
-        from quadjax.train import ActorCritic, Compressor, Adaptor
-        network = ActorCritic(env.action_dim, activation='tanh')
-        compressor = Compressor()
-        adaptor = Adaptor()
-        if args.controller_params == '':
-            file_path = "ppo_params_"
-        else:
-            file_path = f'{args.controller_params}'
-        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
-        def apply_fn(train_params, last_obs, env_info):
-            compressed_last_obs = compressor.apply(train_params[1], env_info['obs_param'])
-            adapted_last_obs = adaptor.apply(train_params[2], env_info['obs_adapt'])
-            jax.debug.print('compressed {com}', com = compressed_last_obs)
-            jax.debug.print('adapted {ada}', ada = adapted_last_obs)
-            obs = jnp.concatenate([last_obs, compressed_last_obs], axis=-1)
-            pi, value = network.apply(train_params[0], obs)
-            return pi, value
-        controller = controllers.NetworkController(apply_fn, env, control_params)
-    elif args.controller == 'l1':
-        control_params = controllers.L1Params()
-        controller = controllers.L1Controller(env, control_params)
-    elif args.controller == 'debug':
-        class DebugController(controllers.BaseController):
-            def __call__(self, obs, state, env_params, rng_act, control_params, env_info) -> jnp.ndarray:
-                quat_desired = jnp.array([0.0, 0.0, 0.0, 1.0])
-                quat_err = geom.multiple_quat(geom.conjugate_quat(quat_desired), state.quat)
-                att_err = quat_err[:3]
-                omega_tar = - 3.0 * att_err
-                thrust = (env_params.m + env_params.mo) * env_params.g
-                omega_normed = omega_tar / env_params.max_omega
-                thrust_normed = thrust / env_params.max_thrust * 2.0 - 1.0
-                action = jnp.concatenate([jnp.asarray([thrust_normed]), omega_normed])
-                return action, None, None
-        control_params = None
-        controller = DebugController(env, control_params) 
-    else:
-        raise NotImplementedError
+    controller, control_params = get_controller(env, args.controller, args.controller_params)
     if args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=3000, filename=args.name, debug=args.debug)
     elif args.mode == 'render':
