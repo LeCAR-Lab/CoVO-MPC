@@ -1,11 +1,19 @@
-# for N in 2 4 8 16 32 64 128 256 512 1024
-# do
-#     echo "Running with N = $N"
-#     python ../envs/quad2d_free.py --mode eval --controller mppi --controller_params "N${N}_H40"
-# done
+task=tracking_zigzag
 
-for H in 2 4 8 16 32 64 128
+for controller in mppi
 do
-    echo "Running with N = $N"
-    python ../envs/quad2d_free.py --mode eval --controller mppi --controller_params "N128_H${H}"
+    for N in 2 4 8 16 32 64 128 256 512 1024
+    do
+        echo "Running with N = $N"
+        python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N${N}_H32_lam0.01"
+    done
+done
+
+for controller in mppi
+do
+    for H in 2 4 8 16 32 64 128
+    do
+        echo "Running with H = $H"
+        python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N1024_H${H}_lam0.01"
+    done
 done

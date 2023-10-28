@@ -23,15 +23,34 @@ class MPPIZejiParams:
     a_cov: jnp.ndarray # covariance matrix of action
 
 class MPPIZejiController(controllers.BaseController):
-    def __init__(self, env, control_params, N: int, H: int, lam: float, cov_mode:str = 'dynamic') -> None:
+    def __init__(self, env, control_params, N: int, H: int, lam: float, expension_mode:str = 'lqr') -> None:
         super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of samples, set here as a static number
         self.H = H
         self.lam = lam
-        if cov_mode == 'dynamic':
-            self.get_sigma = self.get_sigma_zeji
-        elif cov_mode == 'static':
+        if expension_mode == 'mean':
+            def get_expension_mean(control_params, state, params, key):
+                return control_params.a_mean
+        elif expension_mode == 'lqr':
+            lqr_control_params = controllers.LQRParams(
+                Q = jnp.diag(jnp.ones(5)),
+                R = 0.03 * jnp.diag(jnp.ones(2)),
+                K = jnp.zeros((2, 5)),
+            )
+            lqr_controller = controllers.LQRController2D(env, lqr_control_params)
+            def lqr_rollout_fn(carry, unused):
+                state, params, key = carry
+                rng_act, key = jax.random.split(key)
+                action, _, _ = lqr_controller(None, state, params, rng_act, lqr_control_params)
+                rng_step, key = jax.random.split(key)
+                _, state, _, _, _ = self.env.step_env_wocontroller(rng_step, state, action, params)
+                return (state, params, key), action
+            def get_expension_mean(control_params, state, params, key):
+                _, a_mean = lax.scan(lqr_rollout_fn, (state, params, key), None, length=self.H)
+                return a_mean
+        else:
             raise NotImplementedError
+        self.get_expension_mean = get_expension_mean
         # network = ActorCritic(2, activation='tanh')
         # self.apply_fn = network.apply
         # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
@@ -78,24 +97,24 @@ class MPPIZejiController(controllers.BaseController):
 
         return u @ jnp.diag(sigma_eign) @ vh
 
-
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParams, info = None) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov
 
-        # DEBUG
-        R = self.get_dJ_du(state, env_params, control_params, a_mean_old, rng_act)
-        a_cov_zeji = self.get_sigma_zeji(R, control_params)
 
-        control_params = control_params.replace(a_mean=jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]]),
-                                                 a_cov=jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]]))
+        a_mean = jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]])
+        a_cov = jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]])
+        control_params = control_params.replace(a_mean=a_mean, a_cov=a_cov)
         
         # DEBUG
+        expension_mean = self.get_expension_mean(control_params, state, env_params, rng_act)
+        R = self.get_dJ_du(state, env_params, control_params, expension_mean, rng_act)
+        a_cov_zeji = self.get_sigma_zeji(R, control_params)
         control_params = control_params.replace(a_cov=a_cov_zeji)
         # jax.debug.print('a cov zeji {cov}', cov=control_params.a_cov)
-         
+        
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)
         rng_act, act_key = jax.random.split(rng_act)

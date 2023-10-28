@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import quadjax
+from quadjax.envs.base import BaseEnvironment
 from quadjax import controllers
 from quadjax.dynamics import utils
 from quadjax.dynamics.free import get_free_bodyrate_dynamics_2d
@@ -25,7 +26,7 @@ from icecream import install
 install()
 
 
-class Quad2D(environment.Environment):
+class Quad2D(BaseEnvironment):
     """
     JAX Compatible version of Quad2D-v0 OpenAI gym environment. 
     """
@@ -158,6 +159,8 @@ class Quad2D(environment.Environment):
                 "discount": self.discount(next_state, params),
                 "err_pos": jnp.linalg.norm(state.pos_tar - state.pos),
                 "err_vel": jnp.linalg.norm(state.vel_tar - state.vel),
+                "hit_wall": False, 
+                "pass_wall": False
             },
         )
 
@@ -183,7 +186,7 @@ class Quad2D(environment.Environment):
             # control parameters
             control_params=self.init_control_params,
         )
-        return self.get_obs(state, params), state
+        return self.get_obs(state, params), {"discount": 0.0, "err_pos": 0.0, "err_vel": 0.0, "hit_wall": False, "pass_wall": False}, state
 
     @partial(jax.jit, static_argnums=(0,))
     def sample_params(self, key: chex.PRNGKey) -> EnvParams2D:
@@ -230,14 +233,14 @@ class Quad2D(environment.Environment):
             | (jnp.abs(state.pos) > 3.0).any()
         return done
 
-def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filename = ''):
+def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filename = '', debug=False):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.default_params
     
     rng, rng_reset = jax.random.split(rng)
-    obs, env_state = env.reset(rng_reset, env_params)
+    obs, info, env_state = env.reset(rng_reset, env_params)
 
     control_params = controller.update_params(env_params, control_params)
 
@@ -277,7 +280,7 @@ def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filena
     state_seq, obs_seq, reward_seq, control_info_seq = [], [], [], []
     action_seq = []
     rng, rng_reset = jax.random.split(rng)
-    obs, env_state = env.reset(rng_reset, env_params)
+    obs, info, env_state = env.reset(rng_reset, env_params)
 
     # DEBUG set iniiial state here
     # env_state = env_state.replace(quat = jnp.array([jnp.sin(jnp.pi/4), 0.0, 0.0, jnp.cos(jnp.pi/4)]))
@@ -427,7 +430,7 @@ def main(args: Args):
             if args.controller == 'mppi':
                 a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
                 a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
-            elif args.controller == 'mppi_zeji':
+            elif 'mppi_zeji' in args.controller:
                 a_cov = jnp.diag(jnp.ones(H*2)*sigma**2)
         elif args.lower_controller == 'mppi':
             a_mean = jnp.zeros((H, env.action_dim))
@@ -442,7 +445,13 @@ def main(args: Args):
                 a_cov = a_cov,
             )
             controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
-        elif args.controller == 'mppi_zeji':
+        elif 'mppi_zeji' in args.controller:
+            if 'mean' in args.controller:
+                expension_mode = 'mean'
+            elif 'lqr' in args.controller:
+                expension_mode = 'lqr'
+            else:
+                expension_mode = 'mean'
             control_params = controllers.MPPIZejiParams(
                 gamma_mean = 1.0,
                 gamma_sigma = 0.01,
@@ -451,7 +460,7 @@ def main(args: Args):
                 a_mean = a_mean,
                 a_cov = a_cov,
             )
-            controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam)
+            controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam, expension_mode=expension_mode)
     else:
         raise NotImplementedError
     
