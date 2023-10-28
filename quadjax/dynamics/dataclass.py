@@ -24,7 +24,7 @@ class EnvState2D:
 @struct.dataclass
 class EnvParams2D:
     max_speed: float = 8.0
-    max_bodyrate: float = 60.0 # TODO check this value
+    max_bodyrate: float = 10.0 # TODO check this value
     max_thrust: float = 0.8
     dt: float = 0.02
     g: float = 9.81  # gravity

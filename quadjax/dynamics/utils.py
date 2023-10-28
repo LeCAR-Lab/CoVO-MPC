@@ -5,7 +5,7 @@ import chex
 from typing import Tuple
 
 import quadjax
-from quadjax.dynamics.dataclass import EnvState3D, EnvParams3D
+from quadjax.dynamics.dataclass import EnvState3D, EnvParams3D, EnvState2D, EnvParams2D
 
 
 @jax.jit
@@ -224,7 +224,7 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
 
 
 def generate_zigzag_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 20
+    point_per_seg = 50
     num_seg = max_steps // point_per_seg + 1
 
     key_keypoints = jax.random.split(key, num_seg)
@@ -336,6 +336,21 @@ def log_pos_fn(err_pos):
         jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 + \
         jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 + \
         jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1
+
+@jax.jit
+def tracking_2d_reward_fn(state: EnvState2D, params = None):
+    err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
+    err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
+    omega_panelty = jnp.abs(state.roll_dot)*0.05
+    omega_command_panelty = jnp.abs(state.last_roll_dot)*0.05
+    thrust_command_panelty = jnp.abs(state.last_thrust-0.03*9.81)*0.5
+    reward = 1.0 - \
+        0.1 * err_vel - \
+        omega_panelty - \
+        omega_command_panelty - \
+        thrust_command_panelty - \
+        log_pos_fn(err_pos)
+    return reward
 
 @jax.jit
 def tracking_reward_fn(state: EnvState3D, params = None):
@@ -480,6 +495,8 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     plot_items = ["pos", "vel", "rpy"]
     step_num = 100
     for i, item in enumerate(plot_items):
+        if item not in state_seq[0]:
+            continue
         item_tar = f"{item}_tar"
         if item == 'rpy':
             subitems = ["roll", "pitch", "yaw"]

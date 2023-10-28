@@ -36,10 +36,10 @@ class Quad2D(environment.Environment):
         # reference trajectory function
         if task == "tracking":
             self.generate_traj = partial(utils.generate_lissa_traj_2d, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.tracking_reward_fn
+            self.reward_fn = utils.tracking_2d_reward_fn
         elif task == "tracking_zigzag":
             self.generate_traj = partial(utils.generate_zigzag_traj_2d, self.default_params.max_steps_in_episode, self.default_params.dt)
-            self.reward_fn = utils.tracking_reward_fn
+            self.reward_fn = utils.tracking_2d_reward_fn
         else:
             raise NotImplementedError
         # dynamics function
@@ -311,7 +311,8 @@ def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filena
     print(f"env running time: {time_module.time()-t0:.2f}s")
 
     t0 = time_module.time()
-    utils.plot_states(state_seq, obs_seq, reward_seq, env_params)
+    state_seq_dict = [s.__dict__ for s in state_seq]
+    utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params)
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
     # plot animation
@@ -356,8 +357,9 @@ def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filena
     anim = FuncAnimation(plt.gcf(), update_plot, frames=len(state_seq), interval=1)
     anim.save(filename=f"{quadjax.get_package_path()}/../results/anim_{filename}.gif", writer="imagemagick", fps=int(1.0/env_params.dt))
     
+    # convert state into dict
     with open(f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb") as f:
-        pickle.dump(state_seq, f)
+        pickle.dump(state_seq_dict, f)
 
 '''
 reward function here. 
@@ -402,7 +404,7 @@ def main(args: Args):
     elif args.controller == 'random':
         control_params = None
         controller = controllers.RandomController(env, control_params)
-    elif args.controller == 'mppi':
+    elif 'mppi' in args.controller:
         sigma = 0.1
         if args.controller_params == '':
             N = 128
@@ -422,26 +424,40 @@ def main(args: Args):
             thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
             a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
             a_mean = jnp.tile(a_mean_per_step, (H, 1))
-            a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
-            a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+            if args.controller == 'mppi':
+                a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
+                a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+            elif args.controller == 'mppi_zeji':
+                a_cov = jnp.diag(jnp.ones(H*2)*sigma**2)
         elif args.lower_controller == 'mppi':
             a_mean = jnp.zeros((H, env.action_dim))
             a_cov = jnp.tile(jnp.diag(jnp.ones(env.action_dim)*(sigma**2)), (H, 1, 1))
-        control_params = controllers.MPPIParams(
-            gamma_mean = 1.0,
-            gamma_sigma = 0.01,
-            discount = 0.9,
-            sample_sigma = sigma,
-            a_mean = a_mean,
-            a_cov = a_cov,
-        )
-        controller = controllers.MPPIController2D(env=env, control_params=control_params, N=N, H=H, lam=lam)
+        if args.controller == 'mppi':
+            control_params = controllers.MPPIParams(
+                gamma_mean = 1.0,
+                gamma_sigma = 0.01,
+                discount = 0.9,
+                sample_sigma = sigma,
+                a_mean = a_mean,
+                a_cov = a_cov,
+            )
+            controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
+        elif args.controller == 'mppi_zeji':
+            control_params = controllers.MPPIZejiParams(
+                gamma_mean = 1.0,
+                gamma_sigma = 0.01,
+                discount = 0.9,
+                sample_sigma = sigma,
+                a_mean = a_mean,
+                a_cov = a_cov,
+            )
+            controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam)
     else:
         raise NotImplementedError
     
     filename = f'{args.controller}_{args.controller_params}'
     if args.mode == 'render':
-        render_env(env, controller=controller, control_params=control_params, repeat_times=2, filename=filename)
+        render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
     elif args.mode == 'eval':
         eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
     else:

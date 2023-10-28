@@ -5,6 +5,8 @@ from functools import partial
 from jax import lax
 from jax import numpy as jnp
 import pickle
+from jaxopt import ProjectedGradient
+from jaxopt.projection import projection_hyperplane
 
 from quadjax import controllers
 from quadjax.dynamics import EnvParams2D, EnvState2D, geom
@@ -31,8 +33,6 @@ class MPPIController(controllers.BaseController):
         # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
         #     self.network_params = pickle.load(f)
 
-
-
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams, info = None) -> jnp.ndarray:
         # shift operator
@@ -42,25 +42,15 @@ class MPPIController(controllers.BaseController):
         control_params = control_params.replace(a_mean=jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]]),
                                                  a_cov=jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]]))
         
-        # # rollout with given controller to get action mean
-        # rng_act, step_key = jax.random.split(rng_act)
-        # def reference_rollout_fn(carry, action):
-        #     obs, state, params = carry
-        #     action = self.apply_fn(self.network_params, obs)[0].mean()
-        #     obs, state, _, _, _ = self.env.step_env_wocontroller(step_key, state, action, params)
-        #     return (obs, state, params), action
-        # _, a_mean = lax.scan(reference_rollout_fn, (obs, state, env_params), None, length=self.H)
-        # control_params = control_params.replace(a_mean=a_mean,
-        #                                          a_cov=jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]]))
-
-
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)
         rng_act, act_key = jax.random.split(rng_act)
+        act_keys = jax.random.split(act_key, self.N)
+
+        # DEBUG
         def single_sample(key, traj_mean, traj_cov):
             return jax.vmap(lambda mean, cov: jax.random.multivariate_normal(key, mean, cov))(traj_mean, traj_cov)
         # repeat single_sample N times to get N samples
-        act_keys = jax.random.split(act_key, self.N)
         a_sampled = jax.vmap(single_sample, in_axes=(0, None, None))(act_keys, control_params.a_mean, control_params.a_cov)
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
         # rollout to get reward with lax.scan
