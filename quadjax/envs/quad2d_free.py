@@ -261,6 +261,22 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
         control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
         return (next_obs, next_env_state, rng, env_params, control_params), info['err_pos']
     
+    # def test_out_controller_once(env_state, env_params, control_params, rng_act):
+    #     action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+    #     return control_params.a_mean[:1]
+    # runing test_out_controller_once with batched input repeatedly
+    # batch_size = 1024
+    # rng, rng_act = jax.random.split(rng)
+    # rng_act_batch = jax.random.split(rng_act, batch_size)
+    # a_mean_batch = jax.vmap(test_out_controller_once, in_axes=(None, None, None, 0))(env_state, env_params, control_params, rng_act_batch)
+    # a_mean_batch = jnp.reshape(a_mean_batch, (batch_size, -1))*1000
+    # print(a_mean_batch[0], a_mean_batch[1], a_mean_batch[3])
+    # a_mean_batch_cov = jnp.cov(a_mean_batch, rowvar=False)
+    # print(a_mean_batch_cov)
+    # print('determinant of sampled action covariance matrix:')
+    # print(jnp.linalg.det(a_mean_batch_cov))
+    # exit()
+    
     t0 = time_module.time()
     (obs, env_state, rng, env_params, control_params), err_pos = lax.scan(
         run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))

@@ -82,7 +82,7 @@ class MPPIZejiController(controllers.BaseController):
 
         # Constraint: x1 + x2 = log(det(Sigma)), represented as a hyperplane
         def projection_fn(params, hyperparams_proj):
-            return projection_hyperplane(params, hyperparams=(hyperparams_proj, self.H*2*jnp.log(control_params.sample_sigma)))
+            return projection_hyperplane(params, hyperparams=(hyperparams_proj, self.H*2*2*jnp.log(control_params.sample_sigma)))
 
         # Initialize 'ProjectedGradient' solver
         solver = ProjectedGradient(fun=objective, projection=projection_fn)
