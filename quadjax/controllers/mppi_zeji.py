@@ -121,6 +121,15 @@ class MPPIZejiController(controllers.BaseController):
 
         sigma_eign = jnp.exp(sol.params)
 
+        # verify the solution
+        oo = s
+        ss = jnp.exp(sol.params)
+        cc = ((oo**2)*ss)/((1+2/self.lam*oo*ss)**3)
+        # jax.debug.print('R {R}', R=R)
+        # jax.debug.print('oo {oo}', oo=oo)
+        # jax.debug.print('ss {ss}', ss=ss)
+        # jax.debug.print('cc {cc}', cc=cc)
+
         return u @ jnp.diag(sigma_eign) @ vh
 
     @partial(jax.jit, static_argnums=(0,))
@@ -136,24 +145,17 @@ class MPPIZejiController(controllers.BaseController):
         
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
+        # jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
         control_params = control_params.replace(a_cov=a_cov_zeji)
-        # jax.debug.print('a cov zeji {cov}', cov=control_params.a_cov)
-        
+
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)
         rng_act, act_key = jax.random.split(rng_act)
         act_keys = jax.random.split(act_key, self.N)
 
-        # DEBUG
-        # def single_sample(key, traj_mean, traj_cov):
-        #     return jax.vmap(lambda mean, cov: jax.random.multivariate_normal(key, mean, cov))(traj_mean, traj_cov)
-        # # repeat single_sample N times to get N samples
-        # a_sampled = jax.vmap(single_sample, in_axes=(0, None, None))(act_keys, control_params.a_mean, control_params.a_cov)
-
         def single_sample(key):
             return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), control_params.a_cov)
         a_sampled_flattened = jax.vmap(single_sample)(act_keys)
-
         a_sampled = a_sampled_flattened.reshape(self.N, self.H, -1)
 
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)

@@ -439,7 +439,8 @@ def main(args: Args):
             lam = float(args.controller_params.split('_')[2][3:])
             print(f'[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}')
         if args.debug:
-            N  = 8
+            N = 8
+            H = 2
             print('[DEBUG] N = 8')
         if args.lower_controller == 'base':
             thrust_hover = env.default_params.m * env.default_params.g
@@ -457,7 +458,7 @@ def main(args: Args):
         if args.controller == 'mppi':
             control_params = controllers.MPPIParams(
                 gamma_mean = 1.0,
-                gamma_sigma = 0.01,
+                gamma_sigma = 0.01*0.0,
                 discount = 0.9,
                 sample_sigma = sigma,
                 a_mean = a_mean,

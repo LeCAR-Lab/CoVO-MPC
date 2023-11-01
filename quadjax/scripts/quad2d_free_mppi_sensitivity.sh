@@ -1,6 +1,6 @@
 task=tracking_zigzag
 
-for controller in mppi
+for controller in mppi mppi_zeji_mean mppi_zeji_lqr
 do
     for N in 2 4 8 16 32 64 128 256 512 1024
     do
