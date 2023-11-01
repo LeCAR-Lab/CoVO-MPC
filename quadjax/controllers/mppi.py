@@ -49,20 +49,19 @@ class MPPIController(controllers.BaseController):
         rng_act, act_key = jax.random.split(rng_act)
         act_keys = jax.random.split(act_key, self.N)
 
-        # def single_sample(key, traj_mean, traj_cov):
-        #     return jax.vmap(lambda mean, cov: jax.random.multivariate_normal(key, mean, cov))(traj_mean, traj_cov)
-        # # repeat single_sample N times to get N samples
-        # a_sampled = jax.vmap(single_sample, in_axes=(0, None, None))(act_keys, control_params.a_mean, control_params.a_cov)
-        # a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
-        # save a_sampled 
-        # with open('/home/pcy/Research/quadjax/results/a_sampled_old.pkl', 'wb') as f:
-        #     pickle.dump(a_sampled, f)
-
-        def single_sample(key):
-            return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), jnp.eye(2*self.H)*0.04)
-        a_sampled_flattened = jax.vmap(single_sample)(act_keys)
-        a_sampled = jnp.reshape(a_sampled_flattened, (self.N, self.H, 2))
+        def single_sample(key, traj_mean, traj_cov):
+            keys = jax.random.split(key, self.H)
+            return jax.vmap(lambda key, mean, cov: jax.random.multivariate_normal(key, mean, cov))(keys, traj_mean, traj_cov)
+        # repeat single_sample N times to get N samples
+        a_sampled = jax.vmap(single_sample, in_axes=(0, None, None))(act_keys, control_params.a_mean, control_params.a_cov)
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
+
+        # def single_sample(key):
+        #     return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), jnp.eye(2*self.H)*0.04)
+        # a_sampled_flattened = jax.vmap(single_sample)(act_keys)
+        # # calculate the mean and covariance of the sampled actions
+        # a_sampled = jnp.reshape(a_sampled_flattened, (self.N, self.H, 2))
+        # a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
 
         # rollout to get reward with lax.scan
         rng_act, step_key = jax.random.split(rng_act)
