@@ -427,7 +427,7 @@ def main(args: Args):
         control_params = None
         controller = controllers.RandomController(env, control_params)
     elif 'mppi' in args.controller:
-        sigma = 0.1
+        sigma = 0.2
         if args.controller_params == '':
             N = 128
             H = 32
