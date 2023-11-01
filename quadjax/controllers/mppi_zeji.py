@@ -34,7 +34,7 @@ class MPPIZejiController(controllers.BaseController):
             def get_sigma_zeji(control_params, env_state, env_params, key):
                 R = self.get_dJ_du(env_state, env_params, control_params, control_params.a_mean, key)
                 return self.get_sigma_from_R(R, control_params)
-            self.get_expension_mean = get_sigma_zeji
+            self.get_sigma_zeji = get_sigma_zeji
         elif expension_mode == 'lqr':
             lqr_control_params = controllers.LQRParams(
                 Q = jnp.diag(jnp.ones(5)),
@@ -64,7 +64,7 @@ class MPPIZejiController(controllers.BaseController):
                 _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.H)
                 return a_cov_offline
             def reset_a_cov_offline(env_state, env_params, control_params, key):
-                a_cov_offline = get_a_cov_offline(control_params, env_state, env_params, key)
+                a_cov_offline = get_a_cov_offline(env_state, env_params, key)
                 control_params = control_params.replace(a_cov_offline=a_cov_offline)
                 return control_params
 
@@ -119,7 +119,7 @@ class MPPIZejiController(controllers.BaseController):
         # Define the optimization problem
         sol = solver.run(params_init, hyperparams_proj=jnp.ones(self.H*2))
 
-        sigma_eign = jnp.exp(sol.env_params)
+        sigma_eign = jnp.exp(sol.params)
 
         return u @ jnp.diag(sigma_eign) @ vh
 

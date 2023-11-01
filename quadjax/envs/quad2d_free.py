@@ -471,6 +471,7 @@ def main(args: Args):
                 expension_mode = 'lqr'
             else:
                 expension_mode = 'mean'
+                print('[DEBUG] unset expansion mode, MPPI(zeji) expension_mode set to mean')
             control_params = controllers.MPPIZejiParams(
                 gamma_mean = 1.0,
                 gamma_sigma = 0.01,

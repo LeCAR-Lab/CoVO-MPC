@@ -21,6 +21,7 @@ setup(name='quadjax',
         'gymnax',
         'jax', 
         'distrax', 
-        'gputil'
+        'gputil', 
+        'jaxopt'
         ]
 )
