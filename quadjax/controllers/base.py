@@ -11,7 +11,7 @@ class BaseController:
     def update_params(self, env_params, control_params):
         return control_params
     
-    def reset(self):
+    def reset(self, env_state=None, env_params=None, control_params=None, key=None):
         return self.init_control_params
     
     @partial(jax.jit, static_argnums=(0,))

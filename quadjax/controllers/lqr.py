@@ -41,13 +41,16 @@ class LQRController2D(controllers.BaseController):
         # save K to csv
         control_params = control_params.replace(K=K)
         return control_params
+
+    def reset(self, env_state, env_params, control_params, key):
+        return self.update_params(env_params, control_params)
     
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs:jnp.ndarray, state: EnvState2D, env_params: EnvParams2D, rng_act: chex.PRNGKey, control_params: LQRParams) -> jnp.ndarray:
-        delta_pos = state.pos - state.pos_tar
+    def __call__(self, obs:jnp.ndarray, env_state: EnvState2D, env_params: EnvParams2D, rng_act: chex.PRNGKey, control_params: LQRParams) -> jnp.ndarray:
+        delta_pos = env_state.pos - env_state.pos_tar
         roll_tar = 0.0
-        delta_roll = state.roll - roll_tar
-        delta_v = state.vel - state.vel_tar
+        delta_roll = env_state.roll - roll_tar
+        delta_v = env_state.vel - env_state.vel_tar
 
         delta_x = jnp.asarray([*delta_pos, delta_roll, *delta_v])
         thrust_hover = env_params.m * env_params.g
@@ -90,13 +93,13 @@ class LQRController(controllers.BaseController):
         return control_params
     
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs:jnp.ndarray, state: EnvState3D, env_params: EnvParams3D, rng_act: chex.PRNGKey, control_params: LQRParams) -> jnp.ndarray:
-        delta_pos = state.pos - state.pos_tar
+    def __call__(self, obs:jnp.ndarray, env_state: EnvState3D, env_params: EnvParams3D, rng_act: chex.PRNGKey, control_params: LQRParams, info = None) -> jnp.ndarray:
+        delta_pos = env_state.pos - env_state.pos_tar
         quat_tar = jnp.asarray([0.0]*3 + [1.0])
-        delta_q = geom.L(quat_tar).T @ state.quat
+        delta_q = geom.L(quat_tar).T @ env_state.quat
         delta_phi = geom.qtorp(delta_q)
-        delta_v = state.vel - state.vel_tar
-        delta_w = state.omega - jnp.zeros(3)
+        delta_v = env_state.vel - env_state.vel_tar
+        delta_w = env_state.omega - jnp.zeros(3)
 
         delta_x = jnp.concatenate([delta_pos, delta_phi, delta_v, delta_w])
         thrust_hover = env_params.m * env_params.g

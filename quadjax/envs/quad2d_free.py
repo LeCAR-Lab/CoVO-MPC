@@ -233,7 +233,7 @@ class Quad2D(BaseEnvironment):
             | (jnp.abs(state.pos) > 3.0).any()
         return done
 
-def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filename = '', debug=False):
+def eval_env(env: Quad2D, controller:controllers.BaseController, control_params, total_steps = 30000, filename = '', debug=False):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -242,7 +242,8 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
     rng, rng_reset = jax.random.split(rng)
     obs, info, env_state = env.reset(rng_reset, env_params)
 
-    control_params = controller.update_params(env_params, control_params)
+    rng, rng_control = jax.random.split(rng)                      
+    control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params = carry
@@ -254,7 +255,8 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
         next_obs, next_env_state, reward, done, info = env.step(
             rng_step, env_state, action, env_params)
         # if done, reset controller parameters, aviod use if, use lax.cond instead
-        new_control_params = controller.reset()
+        rng, rng_control = jax.random.split(rng)
+        new_control_params = controller.reset(env_state, env_params, control_params, rng_control)
         # new_control_params = new_control_params.replace(
         #     a_mean = jax.random.uniform(rng_control, shape=control_params.a_mean.shape, minval=-1.0, maxval=1.0),
         # )
@@ -286,7 +288,7 @@ def eval_env(env: Quad2D, controller, control_params, total_steps = 30000, filen
     with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
         pickle.dump(np.array(err_pos), f)
 
-def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filename = ''):
+def render_env(env: Quad2D, controller:controllers.BaseController, control_params, repeat_times = 1, filename = ''):
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
@@ -300,8 +302,9 @@ def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filena
 
     # DEBUG set iniiial state here
     # env_state = env_state.replace(quat = jnp.array([jnp.sin(jnp.pi/4), 0.0, 0.0, jnp.cos(jnp.pi/4)]))
-                                  
-    control_params = controller.update_params(env_params, control_params)
+
+    rng, rng_control = jax.random.split(rng)                      
+    control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
     n_dones = 0
 
     t0 = time_module.time()
@@ -317,8 +320,8 @@ def render_env(env: Quad2D, controller, control_params, repeat_times = 1, filena
         if done:
             rng, rng_params = jax.random.split(rng)
             env_params = env.sample_params(rng_params)
-            control_params = controller.reset()
-            control_params = controller.update_params(env_params, control_params)
+            rng, rng_control = jax.random.split(rng)
+            control_params = controller.reset(env_state, env_params, control_params, rng_control)
             n_dones += 1
 
         control_info_seq.append(control_info)
@@ -475,6 +478,7 @@ def main(args: Args):
                 sample_sigma = sigma,
                 a_mean = a_mean,
                 a_cov = a_cov,
+                a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
             )
             controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam, expension_mode=expension_mode)
     else:

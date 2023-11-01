@@ -65,7 +65,7 @@ for i in range(0, 300, 2):
     vis[f"traj{i}"].set_object(g.Sphere(0.01), material=g.MeshLambertMaterial(color=0x00ff00))
 
 # load state sequence from pickle and check if load is successful
-file_path = "../../results/sim_state_seq_.pkl"
+file_path = "../../results/state_seq_.pkl"
 # file_path = "../../results/state_seq_quad3d_free_jumping_l1_bodyrate.pkl"
 with open(file_path, "rb") as f:
     state_seq = pickle.load(f)
