@@ -141,6 +141,16 @@ class Quad2D(BaseEnvironment):
         sub_action: jnp.ndarray,
         params: EnvParams2D,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
+        obs, state, reward, done, info = self.step_env_wocontroller_gradient(key, state, sub_action, params)
+        return obs, lax.stop_gradient(state), reward, done, info
+    
+    def step_env_wocontroller_gradient(
+        self,
+        key: chex.PRNGKey,
+        state: EnvState2D,
+        sub_action: jnp.ndarray,
+        params: EnvParams2D,
+    ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
         sub_action = jnp.clip(sub_action, -1.0, 1.0)
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
         roll_dot = sub_action[1] * params.max_bodyrate
@@ -152,7 +162,7 @@ class Quad2D(BaseEnvironment):
         done = self.is_terminal(state, params)
         return (
             lax.stop_gradient(self.get_obs(next_state, params)),
-            lax.stop_gradient(next_state),
+            next_state,
             reward,
             done,
             {
@@ -476,7 +486,7 @@ def main(args: Args):
             control_params = controllers.MPPIZejiParams(
                 gamma_mean = 1.0,
                 gamma_sigma = 0.01,
-                discount = 0.9,
+                discount = 1.0,
                 sample_sigma = sigma,
                 a_mean = a_mean,
                 a_cov = a_cov,

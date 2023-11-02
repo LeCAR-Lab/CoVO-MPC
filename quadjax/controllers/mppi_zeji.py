@@ -4,6 +4,7 @@ from flax import struct
 from functools import partial
 from jax import lax
 from jax import numpy as jnp
+import numpy as np
 import pickle
 from jaxopt import ProjectedGradient
 from jaxopt.projection import projection_hyperplane
@@ -26,14 +27,32 @@ class MPPIZejiParams:
 class MPPIZejiController(controllers.BaseController):
     def __init__(self, env, control_params, N: int, H: int, lam: float, expension_mode:str = 'lqr') -> None:
         super().__init__(env, control_params)
-        self.N = N # NOTE: N is the number of samples, set here as a static number
+        self.N = N # NOTE: N is the number of saples, set here as a static number
         self.H = H
         self.lam = lam
         if expension_mode == 'mean':
+            def get_sigma_from_R_approx(R: jnp.ndarray, control_params: MPPIZejiParams):
+                R = (R + R.T)/2.0
+                print('R eign', np.linalg.eigvals(R))
+                jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
+                u, eigns, vh = jnp.linalg.svd(R)
+                log_o = jnp.log(eigns)
+                log_const = (4 * H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*H)
+                log_s = 0.5 * log_const - 0.5 * log_o
+
+                # o = eigns
+                # s = jnp.exp(log_s)
+                # cc = ((o**2)*s)/((1+2/lam*o*s)**3)
+                # jax.debug.print('verified solution: log cc {cc}', cc=jnp.log(cc))
+                # jax.debug.print('log const {log_const}', log_const=log_const)
+                # jax.debug.print('approximated log cc {log_cc}', log_cc=2.0*log_s + 1.0 * log_o)
+                                
+                a_cov = u @ jnp.diag(jnp.exp(log_s)) @ vh
+                return (a_cov + a_cov.T) / 2.0 # make it symmetric
             # Key method
             def get_sigma_zeji(control_params, env_state, env_params, key):
                 R = self.get_dJ_du(env_state, env_params, control_params, control_params.a_mean, key)
-                return self.get_sigma_from_R(R, control_params)
+                return get_sigma_from_R_approx(R, control_params)
             self.get_sigma_zeji = get_sigma_zeji
         elif expension_mode == 'lqr':
             lqr_control_params = controllers.LQRParams(
@@ -47,7 +66,7 @@ class MPPIZejiController(controllers.BaseController):
                 rng_act, key = jax.random.split(key)
                 action, _, _ = lqr_controller(None, env_state, env_params, rng_act, lqr_control_params)
                 rng_step, key = jax.random.split(key)
-                _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
+                _, env_state, _, _, _ = self.env.step_env_wocontroller_gradient(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), action
             def get_single_a_cov_offline(carry, unused):
                 env_state, env_params, key = carry
@@ -86,17 +105,28 @@ class MPPIZejiController(controllers.BaseController):
         def single_rollout_fn(carry, action):
             env_state, env_params, reward_before, done_before, key, cumulated_reward = carry
             rng_act, key = jax.random.split(key)
-            _, env_state, reward, done, _ = self.env.step_env_wocontroller(rng_act, env_state, action, env_params)
-            reward = jnp.where(done_before, reward_before, reward)
+            _, env_state, reward, done, _ = self.env.step_env_wocontroller_gradient(rng_act, env_state, action, env_params)
+            # reward = jnp.where(done_before, reward_before, reward)
             cumulated_reward = cumulated_reward + reward
-            return (env_state, env_params, reward, done | done_before, key, cumulated_reward), None
+            return (env_state, env_params, reward, done | done_before, key, cumulated_reward), reward
         def get_cumulated_cost(a_mean_flattened, carry):
             a_mean = a_mean_flattened.reshape(self.H, -1)
             env_state, env_params, rng_act = carry
-            (_, _, _, _, rng_act, cumulated_reward), _ = lax.scan(single_rollout_fn, (env_state, env_params, 0.0, False, rng_act, 0.0), a_mean, length=self.H)
+            # (_, _, _, _, rng_act, cumulated_reward), rewards = lax.scan(single_rollout_fn, (env_state, env_params, 0.0, False, rng_act, 0.0), a_mean[:1])#self.H)
+            cumulated_reward = 0.0
+            carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
+            for i in range(self.H):
+                carry, reward = single_rollout_fn(carry, a_mean[i])
+                cumulated_reward = cumulated_reward + reward
+            env_state = carry[0]
+            cumulated_reward = cumulated_reward + self.env.reward_fn(env_state)
+            # carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
+            # (_, _, _, _, rng_act, cumulated_reward), _ = single_rollout_fn(carry, a_mean[0])
             return -cumulated_reward
         # calculate the hessian of get_cumulated_reward
-        hessian_fn = jax.jacfwd(jax.jacfwd(get_cumulated_cost, argnums=0), argnums=0)
+        jabobian_fn = jax.jacfwd(get_cumulated_cost, argnums=0)
+        hessian_fn = jax.jacfwd(jabobian_fn, argnums=0)
+        # jax.debug.print('H={H}', H=hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act)))
         return hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act))
     
     def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):
@@ -122,9 +152,9 @@ class MPPIZejiController(controllers.BaseController):
         sigma_eign = jnp.exp(sol.params)
 
         # verify the solution
-        oo = s
-        ss = jnp.exp(sol.params)
-        cc = ((oo**2)*ss)/((1+2/self.lam*oo*ss)**3)
+        # oo = s
+        # ss = jnp.exp(sol.params)
+        # cc = ((oo**2)*ss)/((1+2/self.lam*oo*ss)**3)
         # jax.debug.print('R {R}', R=R)
         # jax.debug.print('oo {oo}', oo=oo)
         # jax.debug.print('ss {ss}', ss=ss)
@@ -132,7 +162,7 @@ class MPPIZejiController(controllers.BaseController):
 
         return u @ jnp.diag(sigma_eign) @ vh
 
-    @partial(jax.jit, static_argnums=(0,))
+    # @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParams, info = None) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
@@ -140,13 +170,19 @@ class MPPIZejiController(controllers.BaseController):
 
 
         a_mean = jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]])
-        a_cov = jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]])
-        control_params = control_params.replace(a_mean=a_mean, a_cov=a_cov)
+        # a_cov = jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]])
+        control_params = control_params.replace(a_mean=a_mean)
         
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
-        # jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
         control_params = control_params.replace(a_cov=a_cov_zeji)
+        jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
+        jax.debug.print('a cov sym diff {x}', x = a_cov_zeji - a_cov_zeji.T)
+        jax.debug.print('a cov svd {s}', s=jnp.linalg.svd(a_cov_zeji)[1])
+        # eigenvalues of a_cov_zeji
+        print(np.linalg.eigvals(a_cov_zeji))
+        print(np.linalg.cholesky(a_cov_zeji))
+        jax.debug.print('a cov cholesky {L}', L=jnp.linalg.cholesky(a_cov_zeji))
 
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)
@@ -156,6 +192,7 @@ class MPPIZejiController(controllers.BaseController):
         def single_sample(key):
             return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), control_params.a_cov)
         a_sampled_flattened = jax.vmap(single_sample)(act_keys)
+        jax.debug.print('a sampled {a_sampled}', a_sampled=a_sampled_flattened)
         a_sampled = a_sampled_flattened.reshape(self.N, self.H, -1)
 
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)

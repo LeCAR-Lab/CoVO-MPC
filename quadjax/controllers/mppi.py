@@ -56,13 +56,6 @@ class MPPIController(controllers.BaseController):
         a_sampled = jax.vmap(single_sample, in_axes=(0, None, None))(act_keys, control_params.a_mean, control_params.a_cov)
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
 
-        # def single_sample(key):
-        #     return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), jnp.eye(2*self.H)*0.04)
-        # a_sampled_flattened = jax.vmap(single_sample)(act_keys)
-        # # calculate the mean and covariance of the sampled actions
-        # a_sampled = jnp.reshape(a_sampled_flattened, (self.N, self.H, 2))
-        # a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
-
         # rollout to get reward with lax.scan
         rng_act, step_key = jax.random.split(rng_act)
         def rollout_fn(carry, action):

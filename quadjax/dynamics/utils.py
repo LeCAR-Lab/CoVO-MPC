@@ -346,10 +346,10 @@ def tracking_2d_reward_fn(state: EnvState2D, params = None):
     thrust_command_panelty = jnp.abs(state.last_thrust-0.03*9.81)*0.5
     reward = 1.0 - \
         0.1 * err_vel - \
+        log_pos_fn(err_pos) -\
         0.1*omega_panelty - \
         0.5*omega_command_panelty - \
-        0.1*thrust_command_panelty - \
-        log_pos_fn(err_pos)
+        0.1*thrust_command_panelty 
     return reward
 
 @jax.jit
