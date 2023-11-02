@@ -74,7 +74,7 @@ def test_once(N=1024, H = 3, sig = 0.2, lam = 0.01, repeat_times=1024, env_steps
         return x
     
     def reward_fn(t, x):
-        # x_tar = jnp.sin(0.6*t)
+        x_tar = jnp.sin(0.6*t)
         x_tar = 0.0
         reward = 1.0-jnp.abs(x - x_tar)
         return reward
