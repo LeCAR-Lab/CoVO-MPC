@@ -32,9 +32,9 @@ class MPPIZejiController(controllers.BaseController):
         self.lam = lam
         if expension_mode == 'mean':
             def get_sigma_from_R_approx(R: jnp.ndarray, control_params: MPPIZejiParams):
-                R = (R + R.T)/2.0
-                print('R eign', np.linalg.eigvals(R))
-                jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
+                R = (R + R.T)/2.0 + jnp.eye(self.H*2) * 3e-2
+                # print('R eign', np.linalg.eigvals(R))
+                # jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
                 u, eigns, vh = jnp.linalg.svd(R)
                 log_o = jnp.log(eigns)
                 log_const = (4 * H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*H)
@@ -176,13 +176,13 @@ class MPPIZejiController(controllers.BaseController):
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
         control_params = control_params.replace(a_cov=a_cov_zeji)
-        jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
-        jax.debug.print('a cov sym diff {x}', x = a_cov_zeji - a_cov_zeji.T)
-        jax.debug.print('a cov svd {s}', s=jnp.linalg.svd(a_cov_zeji)[1])
+        # jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
+        # jax.debug.print('a cov sym diff {x}', x = a_cov_zeji - a_cov_zeji.T)
+        # jax.debug.print('a cov svd {s}', s=jnp.linalg.svd(a_cov_zeji)[1])
         # eigenvalues of a_cov_zeji
-        print(np.linalg.eigvals(a_cov_zeji))
-        print(np.linalg.cholesky(a_cov_zeji))
-        jax.debug.print('a cov cholesky {L}', L=jnp.linalg.cholesky(a_cov_zeji))
+        # print(np.linalg.eigvals(a_cov_zeji))
+        # print(np.linalg.cholesky(a_cov_zeji))
+        # jax.debug.print('a cov cholesky {L}', L=jnp.linalg.cholesky(a_cov_zeji))
 
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)
@@ -192,7 +192,7 @@ class MPPIZejiController(controllers.BaseController):
         def single_sample(key):
             return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), control_params.a_cov)
         a_sampled_flattened = jax.vmap(single_sample)(act_keys)
-        jax.debug.print('a sampled {a_sampled}', a_sampled=a_sampled_flattened)
+        # jax.debug.print('a sampled {a_sampled}', a_sampled=a_sampled_flattened)
         a_sampled = a_sampled_flattened.reshape(self.N, self.H, -1)
 
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)

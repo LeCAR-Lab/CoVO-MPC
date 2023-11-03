@@ -344,7 +344,7 @@ def render_env(env: Quad2D, controller:controllers.BaseController, control_param
 
     t0 = time_module.time()
     state_seq_dict = [s.__dict__ for s in state_seq]
-    utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params)
+    utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params, filename=filename)
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
     # plot animation
