@@ -31,28 +31,10 @@ class MPPIZejiController(controllers.BaseController):
         self.H = H
         self.lam = lam
         if expension_mode == 'mean':
-            def get_sigma_from_R_approx(R: jnp.ndarray, control_params: MPPIZejiParams):
-                R = (R + R.T)/2.0 + jnp.eye(self.H*2) * 3e-2
-                # print('R eign', np.linalg.eigvals(R))
-                # jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
-                u, eigns, vh = jnp.linalg.svd(R)
-                log_o = jnp.log(eigns)
-                log_const = (4 * H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*H)
-                log_s = 0.5 * log_const - 0.5 * log_o
-
-                # o = eigns
-                # s = jnp.exp(log_s)
-                # cc = ((o**2)*s)/((1+2/lam*o*s)**3)
-                # jax.debug.print('verified solution: log cc {cc}', cc=jnp.log(cc))
-                # jax.debug.print('log const {log_const}', log_const=log_const)
-                # jax.debug.print('approximated log cc {log_cc}', log_cc=2.0*log_s + 1.0 * log_o)
-                                
-                a_cov = u @ jnp.diag(jnp.exp(log_s)) @ vh
-                return (a_cov + a_cov.T) / 2.0 # make it symmetric
             # Key method
             def get_sigma_zeji(control_params, env_state, env_params, key):
                 R = self.get_dJ_du(env_state, env_params, control_params, control_params.a_mean, key)
-                return get_sigma_from_R_approx(R, control_params)
+                return self.get_sigma_from_R(R, control_params)
             self.get_sigma_zeji = get_sigma_zeji
         elif expension_mode == 'lqr':
             lqr_control_params = controllers.LQRParams(
@@ -100,6 +82,29 @@ class MPPIZejiController(controllers.BaseController):
         # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
         #     self.network_params = pickle.load(f)
 
+    def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):
+        R = (R + R.T)/2.0
+        # print('R eign', np.min(np.linalg.eigvals(R)))
+        # exit()
+        # jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
+        eigns, u = jnp.linalg.eigh(R)
+
+        eigns = eigns - jnp.min(eigns) + 1e-3
+
+        log_o = jnp.log(eigns)
+        log_const = (2 * 4 * self.H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*self.H)
+        log_s = 0.5 * log_const - 0.5 * log_o
+
+        # o = eigns
+        # s = jnp.exp(log_s)
+        # cc = ((o**2)*s)/((1+2/lam*o*s)**3)
+        # jax.debug.print('verified solution: log cc {cc}', cc=jnp.log(cc))
+        # jax.debug.print('log const {log_const}', log_const=log_const)
+        # jax.debug.print('approximated log cc {log_cc}', log_cc=2.0*log_s + 1.0 * log_o)
+                        
+        a_cov = u @ jnp.diag(jnp.exp(log_s)) @ u.T
+
+        return (a_cov + a_cov.T) / 2.0 # make it symmetric
 
     def get_dJ_du(self, env_state:EnvState2D, env_params:EnvParams2D, control_params:MPPIZejiParams, a_mean:jnp.ndarray, rng_act: chex.PRNGKey = None):
         def single_rollout_fn(carry, action):
@@ -129,40 +134,40 @@ class MPPIZejiController(controllers.BaseController):
         # jax.debug.print('H={H}', H=hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act)))
         return hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act))
     
-    def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):
-        u, s, vh = jnp.linalg.svd(R)
+    # def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):
+    #     u, s, vh = jnp.linalg.svd(R)
 
-        # Objective function
-        def objective(env_params):
-            return jnp.sum(s/(1+2/self.lam*s*jnp.exp(env_params))**2)
+    #     # Objective function
+    #     def objective(env_params):
+    #         return jnp.sum(s/(1+2/self.lam*s*jnp.exp(env_params))**2)
 
-        # Constraint: x1 + x2 = log(det(Sigma)), represented as a hyperplane
-        def projection_fn(env_params, hyperparams_proj):
-            return projection_hyperplane(env_params, hyperparams=(hyperparams_proj, self.H*2*2*jnp.log(control_params.sample_sigma)))
+    #     # Constraint: x1 + x2 = log(det(Sigma)), represented as a hyperplane
+    #     def projection_fn(env_params, hyperparams_proj):
+    #         return projection_hyperplane(env_params, hyperparams=(hyperparams_proj, self.H*2*2*jnp.log(control_params.sample_sigma)))
 
-        # Initialize 'ProjectedGradient' solver
-        solver = ProjectedGradient(fun=objective, projection=projection_fn)
+    #     # Initialize 'ProjectedGradient' solver
+    #     solver = ProjectedGradient(fun=objective, projection=projection_fn)
 
-        # Initial parameters
-        params_init = jnp.zeros(self.H*2)
+    #     # Initial parameters
+    #     params_init = jnp.zeros(self.H*2)
 
-        # Define the optimization problem
-        sol = solver.run(params_init, hyperparams_proj=jnp.ones(self.H*2))
+    #     # Define the optimization problem
+    #     sol = solver.run(params_init, hyperparams_proj=jnp.ones(self.H*2))
 
-        sigma_eign = jnp.exp(sol.params)
+    #     sigma_eign = jnp.exp(sol.params)
 
-        # verify the solution
-        # oo = s
-        # ss = jnp.exp(sol.params)
-        # cc = ((oo**2)*ss)/((1+2/self.lam*oo*ss)**3)
-        # jax.debug.print('R {R}', R=R)
-        # jax.debug.print('oo {oo}', oo=oo)
-        # jax.debug.print('ss {ss}', ss=ss)
-        # jax.debug.print('cc {cc}', cc=cc)
+    #     # verify the solution
+    #     # oo = s
+    #     # ss = jnp.exp(sol.params)
+    #     # cc = ((oo**2)*ss)/((1+2/self.lam*oo*ss)**3)
+    #     # jax.debug.print('R {R}', R=R)
+    #     # jax.debug.print('oo {oo}', oo=oo)
+    #     # jax.debug.print('ss {ss}', ss=ss)
+    #     # jax.debug.print('cc {cc}', cc=cc)
 
-        return u @ jnp.diag(sigma_eign) @ vh
+    #     return u @ jnp.diag(sigma_eign) @ vh
 
-    # @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParams, info = None) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
@@ -175,6 +180,9 @@ class MPPIZejiController(controllers.BaseController):
         
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
+        # jax.debug.print('det={det}', det=jnp.log(jnp.linalg.det(a_cov_zeji))/(4 * self.H * jnp.log(control_params.sample_sigma)))
+        # exit()
+
         control_params = control_params.replace(a_cov=a_cov_zeji)
         # jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
         # jax.debug.print('a cov sym diff {x}', x = a_cov_zeji - a_cov_zeji.T)
@@ -192,7 +200,6 @@ class MPPIZejiController(controllers.BaseController):
         def single_sample(key):
             return jax.random.multivariate_normal(key, control_params.a_mean.flatten(), control_params.a_cov)
         a_sampled_flattened = jax.vmap(single_sample)(act_keys)
-        # jax.debug.print('a sampled {a_sampled}', a_sampled=a_sampled_flattened)
         a_sampled = a_sampled_flattened.reshape(self.N, self.H, -1)
 
         a_sampled = jnp.clip(a_sampled, -1.0, 1.0) # (N, H, action_dim)
