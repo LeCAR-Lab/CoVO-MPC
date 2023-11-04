@@ -439,9 +439,9 @@ def main(args: Args):
     elif 'mppi' in args.controller:
         sigma = 0.2
         if args.controller_params == '':
-            N = 128
-            H = 32
-            lam = 3e-3
+            N = 512
+            H = 16
+            lam = 1e-2
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(args.controller_params.split('_')[0][1:])
@@ -480,6 +480,10 @@ def main(args: Args):
                 expension_mode = 'mean'
             elif 'lqr' in args.controller:
                 expension_mode = 'lqr'
+            elif 'zero' in args.controller:
+                expension_mode = 'zero'
+            elif 'ppo' in args.controller:
+                expension_mode = 'ppo'
             else:
                 expension_mode = 'mean'
                 print('[DEBUG] unset expansion mode, MPPI(zeji) expension_mode set to mean')

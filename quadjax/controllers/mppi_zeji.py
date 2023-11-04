@@ -36,34 +36,56 @@ class MPPIZejiController(controllers.BaseController):
                 R = self.get_dJ_du(env_state, env_params, control_params, control_params.a_mean, key)
                 return self.get_sigma_from_R(R, control_params)
             self.get_sigma_zeji = get_sigma_zeji
-        elif expension_mode == 'lqr':
-            lqr_control_params = controllers.LQRParams(
-                Q = jnp.diag(jnp.ones(5)),
-                R = 0.03 * jnp.diag(jnp.ones(2)),
-                K = jnp.zeros((2, 5)),
-            )
-            lqr_controller = controllers.LQRController2D(env, lqr_control_params)
-            def lqr_rollout_fn(carry, unused):
+        elif expension_mode in ['lqr', 'zero', 'ppo']:
+            if expension_mode == 'lqr':
+                expansion_control_params = controllers.LQRParams(
+                    Q = jnp.diag(jnp.ones(5)),
+                    R = 0.03 * jnp.diag(jnp.ones(2)),
+                    K = jnp.zeros((2, 5)),
+                )
+                expansion_controller = controllers.LQRController2D(env, expansion_control_params)
+            elif expension_mode == 'zero':
+                m = self.env.default_params.m
+                g = self.env.default_params.g
+                max_thrust = self.env.default_params.max_thrust
+                expansion_control_params = controllers.FixedParams(
+                    u = jnp.array([m*g/max_thrust * 2.0 - 1.0, 0.0]))
+                expansion_controller = controllers.FixedController(env, expansion_control_params)
+            elif expension_mode == 'ppo':
+                import quadjax
+                from quadjax.train import ActorCritic
+                network = ActorCritic(env.action_dim, activation='tanh')
+                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo.pkl", "rb"))
+                def apply_fn(train_params, last_obs, env_info):
+                    return network.apply(train_params, last_obs)
+                expansion_controller = controllers.NetworkController(apply_fn, env, expansion_control_params)
+            def mppi_rollout_fn(carry, unused):
                 env_state, env_params, key = carry
                 rng_act, key = jax.random.split(key)
-                action, _, _ = lqr_controller(None, env_state, env_params, rng_act, lqr_control_params)
+                action, _, _ = expansion_controller(None, env_state, env_params, rng_act, expansion_control_params)
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller_gradient(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), action
             def get_single_a_cov_offline(carry, unused):
                 env_state, env_params, key = carry
-                _, a_mean = lax.scan(lqr_rollout_fn, (env_state, env_params, key), None, length=self.H)
+                _, a_mean = lax.scan(mppi_rollout_fn, (env_state, env_params, key), None, length=self.H)
                 R = self.get_dJ_du(env_state, env_params, control_params, a_mean, key)
                 a_cov = self.get_sigma_from_R(R, control_params)
                 # step forward with lqr
                 rng_step, key = jax.random.split(key)
-                action, _, _ = lqr_controller(None, env_state, env_params, rng_step, lqr_control_params)
+                action, _, _ = expansion_controller(None, env_state, env_params, rng_step, expansion_control_params)
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), a_cov
-            def get_a_cov_offline(env_state, env_params, key):
-                _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.H)
-                return a_cov_offline
+            if expension_mode in ['lqr', 'ppo']:
+                def get_a_cov_offline(env_state, env_params, key):
+                    _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.H)
+                    return a_cov_offline
+            elif expension_mode == 'zero':
+                def get_a_cov_offline(env_state, env_params, key):
+                    _, a_cov = get_single_a_cov_offline((env_state, env_params, key), None)
+                    a_cov_offline = jnp.repeat(a_cov[None, ...], self.H, axis=0)
+                    return a_cov_offline
             def reset_a_cov_offline(env_state, env_params, control_params, key):
                 a_cov_offline = get_a_cov_offline(env_state, env_params, key)
                 control_params = control_params.replace(a_cov_offline=a_cov_offline)
@@ -180,6 +202,12 @@ class MPPIZejiController(controllers.BaseController):
         
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
+        # save a_cov_zeji as a heatmap
+        # import matplotlib.pyplot as plt
+        # plt.imshow(a_cov_zeji)
+        # plt.colorbar()
+        # plt.savefig('a_cov_zeji.png')
+        # exit()
         # jax.debug.print('det={det}', det=jnp.log(jnp.linalg.det(a_cov_zeji))/(4 * self.H * jnp.log(control_params.sample_sigma)))
         # exit()
 
