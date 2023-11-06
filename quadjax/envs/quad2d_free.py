@@ -293,6 +293,10 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     (obs, env_state, rng, env_params, control_params), err_pos = lax.scan(
         run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))
     print(f"env running time: {time_module.time()-t0:.2f}s")
+    # print mean and std of err_pos
+    pos_mean, pos_std = jnp.mean(err_pos), jnp.std(err_pos)
+    print(f'err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}')
+    print(f'${pos_mean*100:.2f} \pm {pos_std*100:.2f}$')
 
     # save data
     with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
@@ -316,6 +320,30 @@ def render_env(env: Quad2D, controller:controllers.BaseController, control_param
     rng, rng_control = jax.random.split(rng)                      
     control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
     n_dones = 0
+
+
+    # Profiling algorithms
+    # controller_jit = jax.jit(controller)
+    # controller_reset_jit = jax.jit(controller.reset)
+    # rng, rng_act, rng_step = jax.random.split(rng, 3)
+    # controller_jit(obs, env_state, env_params, rng_act, control_params)
+    # rng, rng_control = jax.random.split(rng)                      
+    # controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
+    # ts = []
+    # for i in range(100):
+    #     t0 = time_module.time()
+    #     rng, rng_act, rng_step = jax.random.split(rng, 3)
+    #     action, control_params, control_info = controller_jit(obs, env_state, env_params, rng_act, control_params)
+    #     ts.append((time_module.time()-t0)*1000)
+    # print(f'running time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
+    # ts = []
+    # for i in range(100):
+    #     t0 = time_module.time()
+    #     rng, rng_control = jax.random.split(rng)
+    #     control_params = controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
+    #     ts.append((time_module.time()-t0)*1000)
+    # print(f'reset time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
+    # exit()
 
     t0 = time_module.time()
     while n_dones < repeat_times:
