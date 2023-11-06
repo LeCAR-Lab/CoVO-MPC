@@ -55,14 +55,16 @@ class MPPIZejiController(controllers.BaseController):
                 import quadjax
                 from quadjax.train import ActorCritic
                 network = ActorCritic(env.action_dim, activation='tanh')
-                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo.pkl", "rb"))
+                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo_params_quad2d_free_tracking_zigzag_base.pkl", "rb"))
                 def apply_fn(train_params, last_obs, env_info):
                     return network.apply(train_params, last_obs)
                 expansion_controller = controllers.NetworkController(apply_fn, env, expansion_control_params)
             def mppi_rollout_fn(carry, unused):
                 env_state, env_params, key = carry
                 rng_act, key = jax.random.split(key)
-                action, _, _ = expansion_controller(None, env_state, env_params, rng_act, expansion_control_params)
+                obs = self.env.get_obs(env_state, env_params)
+                action, _, _ = expansion_controller(obs, env_state, env_params, rng_act, expansion_control_params)
+                action = lax.stop_gradient(action)
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller_gradient(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), action
@@ -73,7 +75,9 @@ class MPPIZejiController(controllers.BaseController):
                 a_cov = self.get_sigma_from_R(R, control_params)
                 # step forward with lqr
                 rng_step, key = jax.random.split(key)
-                action, _, _ = expansion_controller(None, env_state, env_params, rng_step, expansion_control_params)
+                obs = self.env.get_obs(env_state, env_params)
+                action, _, _ = expansion_controller(obs, env_state, env_params, rng_step, expansion_control_params)
+                action = lax.stop_gradient(action)
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), a_cov

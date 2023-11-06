@@ -433,6 +433,17 @@ def main(args: Args):
             u = jnp.zeros(env.action_dim)
         )
         controller = controllers.FixedController(env, control_params)
+    elif args.controller == 'ppo':
+        from quadjax.train import ActorCritic
+        network = ActorCritic(env.action_dim, activation='tanh')
+        if args.controller_params == '':
+            file_path = "ppo_params_"
+        else:
+            file_path = f'{args.controller_params}'
+        control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb"))
+        def apply_fn(train_params, last_obs, env_info):
+            return network.apply(train_params, last_obs)
+        controller = controllers.NetworkController(apply_fn, env, control_params)
     elif args.controller == 'random':
         control_params = None
         controller = controllers.RandomController(env, control_params)
