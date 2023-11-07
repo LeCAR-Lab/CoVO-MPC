@@ -46,11 +46,13 @@ class MPPIZejiController(controllers.BaseController):
                 )
                 expansion_controller = controllers.LQRController2D(env, expansion_control_params)
             elif expension_mode == 'zero':
-                m = self.env.default_params.m
-                g = self.env.default_params.g
-                max_thrust = self.env.default_params.max_thrust
+                # m = self.env.default_params.m
+                # g = self.env.default_params.g
+                # max_thrust = self.env.default_params.max_thrust
+                # expansion_control_params = controllers.FixedParams(
+                #     u = jnp.array([m*g/max_thrust * 2.0 - 1.0, 0.0]))
                 expansion_control_params = controllers.FixedParams(
-                    u = jnp.array([m*g/max_thrust * 2.0 - 1.0, 0.0]))
+                    u = control_params.a_mean[0])
                 expansion_controller = controllers.FixedController(env, expansion_control_params)
             elif expension_mode == 'ppo':
                 import quadjax
