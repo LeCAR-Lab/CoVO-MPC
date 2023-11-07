@@ -34,7 +34,8 @@ class MPPIZejiController(controllers.BaseController):
             # Key method
             def get_sigma_zeji(control_params, env_state, env_params, key):
                 R = self.get_dJ_du(env_state, env_params, control_params, control_params.a_mean, key)
-                return self.get_sigma_from_R(R, control_params)
+                sigma = self.get_sigma_from_R(R, control_params)
+                return sigma
             self.get_sigma_zeji = get_sigma_zeji
         elif expension_mode in ['lqr', 'zero', 'ppo']:
             if expension_mode == 'lqr':
@@ -84,6 +85,8 @@ class MPPIZejiController(controllers.BaseController):
             if expension_mode in ['lqr', 'ppo']:
                 def get_a_cov_offline(env_state, env_params, key):
                     _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.H)
+                    # a_cov_offline_mean = jnp.mean(a_cov_offline, axis=0)
+                    # a_cov_offline = jnp.repeat(a_cov_offline_mean[None, ...], self.H, axis=0)
                     return a_cov_offline
             elif expension_mode == 'zero':
                 def get_a_cov_offline(env_state, env_params, key):
@@ -206,14 +209,16 @@ class MPPIZejiController(controllers.BaseController):
         
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
-        # save a_cov_zeji as a heatmap
+
+        # save a_cov_offline as a heatmap
         # import matplotlib.pyplot as plt
-        # plt.imshow(a_cov_zeji)
-        # plt.colorbar()
-        # plt.savefig('a_cov_zeji.png')
-        # exit()
-        # jax.debug.print('det={det}', det=jnp.log(jnp.linalg.det(a_cov_zeji))/(4 * self.H * jnp.log(control_params.sample_sigma)))
-        # exit()
+        # import seaborn as sns
+        # for i in range(self.H):
+        #     plt.figure(figsize=(10, 10))
+        #     sns.heatmap(a_cov_zeji)
+        #     plt.savefig(f'../../results/a_cov_{env_state.time}.png')
+        # if env_state.time == 15:
+        #     exit()
 
         control_params = control_params.replace(a_cov=a_cov_zeji)
         # jax.debug.print('a cov zeji {cov}', cov=a_cov_zeji)
