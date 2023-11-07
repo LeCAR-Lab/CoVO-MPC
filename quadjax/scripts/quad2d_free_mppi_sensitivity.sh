@@ -10,11 +10,15 @@ task=tracking_zigzag
 # done
 
 N=8192
-for controller in mppi_zeji_ppo # mppi mppi_zeji_mean mppi_zeji_lqr mppi_zeji_zero mppi_zeji_ppo
-do
+task=tracking_zigzag
+for controller in mppi mppi_zeji_mean # mppi_zeji_zero mppi_zeji_mean mppi_zeji_lqr mppi_zeji_ppo
+do 
     for H in 16
     do
-        echo "Running with H = $H"
-        python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N${N}_H${H}_lam0.01"
+        for lam in 0.03
+        do
+            echo "Running with H = $H"
+            python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N${N}_H${H}_lam${lam}"
+        done
     done
 done

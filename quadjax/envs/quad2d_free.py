@@ -70,7 +70,7 @@ class Quad2D(BaseEnvironment):
             self.init_control_params = controllers.MPPIParams(
                 gamma_mean = 1.0,
                 gamma_sigma = 0.01,
-                discount = 0.9,
+                discount = 1.0,
                 sample_sigma = sigma,
                 a_mean = a_mean,
                 a_cov = a_cov,
@@ -271,7 +271,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
         #     a_mean = jax.random.uniform(rng_control, shape=control_params.a_mean.shape, minval=-1.0, maxval=1.0),
         # )
         control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
-        return (next_obs, next_env_state, rng, env_params, control_params), info['err_pos']
+        return (next_obs, next_env_state, rng, env_params, control_params), (info['err_pos'], done)
     
     # def test_out_controller_once(env_state, env_params, control_params, rng_act):
     #     action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
@@ -290,17 +290,25 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     # exit()
     
     t0 = time_module.time()
-    (obs, env_state, rng, env_params, control_params), err_pos = lax.scan(
+    (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
         run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))
     print(f"env running time: {time_module.time()-t0:.2f}s")
+    # calculate cumulative err_pos bewteen each done
+    err_pos_ep = []
+    last_ep_end = 0
+    for i in range(len(dones)):
+        if dones[i]:
+            err_pos_ep.append(err_pos[last_ep_end:i+1].mean())
+            last_ep_end = i+1
+    err_pos_ep = jnp.array(err_pos_ep)
     # print mean and std of err_pos
-    pos_mean, pos_std = jnp.mean(err_pos), jnp.std(err_pos)
+    pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
     print(f'err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}')
     print(f'${pos_mean*100:.2f} \pm {pos_std*100:.2f}$')
 
     # save data
     with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
-        pickle.dump(np.array(err_pos), f)
+        pickle.dump(np.array(err_pos_ep), f)
 
 def render_env(env: Quad2D, controller:controllers.BaseController, control_params, repeat_times = 1, filename = ''):
     # running environment
@@ -476,9 +484,9 @@ def main(args: Args):
         control_params = None
         controller = controllers.RandomController(env, control_params)
     elif 'mppi' in args.controller:
-        sigma = 0.2
+        sigma = 0.5
         if args.controller_params == '':
-            N = 512
+            N = 8192
             H = 16
             lam = 1e-2
         else:
@@ -507,8 +515,8 @@ def main(args: Args):
         if args.controller == 'mppi':
             control_params = controllers.MPPIParams(
                 gamma_mean = 1.0,
-                gamma_sigma = 0.01*0.0,
-                discount = 0.9,
+                gamma_sigma = 0.0,
+                discount = 1.0,
                 sample_sigma = sigma,
                 a_mean = a_mean,
                 a_cov = a_cov,
@@ -528,7 +536,7 @@ def main(args: Args):
                 print('[DEBUG] unset expansion mode, MPPI(zeji) expension_mode set to mean')
             control_params = controllers.MPPIZejiParams(
                 gamma_mean = 1.0,
-                gamma_sigma = 0.01,
+                gamma_sigma = 0.0,
                 discount = 1.0,
                 sample_sigma = sigma,
                 a_mean = a_mean,
