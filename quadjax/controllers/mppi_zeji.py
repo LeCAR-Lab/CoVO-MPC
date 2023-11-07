@@ -58,7 +58,7 @@ class MPPIZejiController(controllers.BaseController):
                 import quadjax
                 from quadjax.train import ActorCritic
                 network = ActorCritic(env.action_dim, activation='tanh')
-                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo_params_quad2d_free_tracking_zigzag_base.pkl", "rb"))
+                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo_params.pkl", "rb"))
                 def apply_fn(train_params, last_obs, env_info):
                     return network.apply(train_params, last_obs)
                 expansion_controller = controllers.NetworkController(apply_fn, env, expansion_control_params)
@@ -120,7 +120,7 @@ class MPPIZejiController(controllers.BaseController):
         # jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
         eigns, u = jnp.linalg.eigh(R)
 
-        eigns = eigns - jnp.min(eigns) + 1e-3
+        eigns = eigns - jnp.min(eigns) + 1e-2
 
         log_o = jnp.log(eigns)
         log_const = (2 * 4 * self.H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*self.H)

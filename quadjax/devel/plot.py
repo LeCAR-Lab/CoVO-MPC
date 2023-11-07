@@ -7,21 +7,28 @@ import seaborn as sns
 import pandas as pd
 
 # find all .pkl file in ../../results/init/
-os.chdir('../../results/rma/')
+os.chdir('../../results/')
 files = os.listdir()
 files = [f for f in files if f.endswith('.pkl')]
-files = [f for f in files if f.startswith('eval_err_pos')]
-files = [f for f in files if 'DR' not in f]
-files = ['eval_err_pos_A-DATT.pkl']
+files = [f for f in files if f.startswith('eval_err_pos_quad3d_tracking_zigzag_')]
 
 # load all files
 all_data = pd.DataFrame(
-    columns=['algo', 'error', 'mean', 'std']
+    columns=['method', 'error', 'N', 'H', 'lam']
 )
 
 for file in files:
-    file_name = file.split(".")[0]
-    exp_name = file_name[13:]
+    file_name, lam, _ = file.split(".")
+    exp_name = file_name.split("zigzag_")[-1]
+    method, rest = exp_name.split("_N")
+    if method == 'mppi_zeji_mean':
+        method = 'CoVO-MPC'
+    N = int(rest.split("_")[0])
+    H = int(rest.split("_")[1][1:])
+    lam = float(f'0.{lam}')
+    if lam != 0.01:
+        continue
+    print(f'loading N={N}, H={H}, lam={lam}')
     with open(file, 'rb') as f:
         data = pickle.load(f)
     data = np.array(data).flatten()
@@ -31,10 +38,11 @@ for file in files:
             all_data,
             pd.DataFrame(
                 {
-                    'algo': [f'{exp_name} \n mu:{np.mean(data):.2f} \n std:{np.std(data):.2f}']*len(data),
+                    'method': [method]*len(data),
+                    'N': [N]*len(data),
+                    'H': [H]*len(data),
+                    'lam': [lam]*len(data),
                     'error': data,
-                    'mean': [np.mean(data)]*len(data),
-                    'std': [np.std(data)]*len(data),
                 }
             )
         ]
@@ -44,7 +52,16 @@ for file in files:
 sns.set_theme(style="whitegrid")
 fig, ax = plt.subplots(figsize=(10, 5))
 print('start plotting...')
-sns.violinplot(x='algo', y='error', data=all_data, ax=ax)
+sns.boxplot(
+    x='N',
+    y='error',
+    hue='method',
+    data=all_data,
+    ax=ax,
+)
 print('done')
-ax.set_xlabel('algo')
+ax.set_xlabel('N')
 ax.set_ylabel('error')
+
+# save the figure
+fig.savefig('plot.png', dpi=300)
