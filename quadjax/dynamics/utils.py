@@ -364,7 +364,7 @@ def tracking_2d_quadratic_reward_fn(state: EnvState2D, params = None):
     x_tar = state.pos_tar
     vel_tar = state.vel_tar
 
-    k_x = 20.0
+    k_x = 50.0
     k_v = 0.1
     k_thrust = 0.1
     k_roll_dot = 0.02
