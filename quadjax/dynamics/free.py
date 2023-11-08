@@ -10,11 +10,14 @@ def get_free_bodyrate_dynamics_2d():
     @jax.jit
     def quad_dynamics(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams2D):
         thrust = u[0]
-        roll_dot = u[1]
+        roll_dot = u[1] 
 
         r = x[:2] # position in world frame
         q = x[2] # roll in world frame
         v = x[3:5] # velocity in world frame
+
+        # make the system unstable
+        # roll_dot = roll_dot + 10.0 * jnp.abs(jnp.sin(q))
 
         Q = jnp.array([[jnp.cos(q), -jnp.sin(q)], [jnp.sin(q), jnp.cos(q)]]) # quaternion to rotation matrix
 
