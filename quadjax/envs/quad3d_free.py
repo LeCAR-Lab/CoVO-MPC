@@ -1196,17 +1196,17 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         elif "mppi_zeji" in controller_name:
             a_cov = jnp.diag(jnp.ones(H*env.action_dim)*sigma**2)
             if "mean" in controller_name:
-                expension_mode = "mean"
+                expansion_mode = "mean"
             elif "lqr" in controller_name:
-                expension_mode = "lqr"
+                expansion_mode = "lqr"
             elif "zero" in controller_name:
-                expension_mode = "zero"
+                expansion_mode = "zero"
             elif "ppo" in controller_name:
-                expension_mode = "ppo"
+                expansion_mode = "ppo"
             else:
-                expension_mode = "mean"
+                expansion_mode = "mean"
                 print(
-                    "[DEBUG] unset expansion mode, MPPI(zeji) expension_mode set to mean"
+                    "[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean"
                 )
             control_params = controllers.MPPIZejiParams(
                 gamma_mean=1.0,
@@ -1223,7 +1223,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 N=N,
                 H=H,
                 lam=lam,
-                expension_mode=expension_mode,
+                expansion_mode=expansion_mode,
             )
     elif controller_name == "nn":
         from quadjax.train import ActorCritic

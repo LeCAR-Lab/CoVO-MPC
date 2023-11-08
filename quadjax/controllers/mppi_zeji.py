@@ -25,27 +25,86 @@ class MPPIZejiParams:
     a_cov_offline: jnp.ndarray # covariance matrix of action
 
 class MPPIZejiController(controllers.BaseController):
-    def __init__(self, env, control_params, N: int, H: int, lam: float, expension_mode:str = 'lqr') -> None:
+    def __init__(self, env, control_params, N: int, H: int, lam: float, expansion_mode:str = 'lqr') -> None:
         super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of saples, set here as a static number
         self.H = H
         self.lam = lam
-        if expension_mode == 'mean':
+        if expansion_mode == 'mean':
             # Key method
             def get_sigma_zeji(control_params, env_state, env_params, key):
                 R = self.get_dJ_du(env_state, env_params, control_params, control_params.a_mean, key)
                 sigma = self.get_sigma_from_R(R, control_params)
                 return sigma
             self.get_sigma_zeji = get_sigma_zeji
-        elif expension_mode in ['lqr', 'zero', 'ppo']:
-            if expension_mode == 'lqr':
+        elif expansion_mode == 'repeat':
+            # NOTE: now for 2D only
+            assert env.action_dim == 2, 'repeat only works for 2D'
+            def get_AB(env_state, env_params):
+                dt = env_params.dt
+                th = env_state.roll
+                m = env_params.m
+                I = env_params.I
+                A = jnp.array([
+                    [1.0, 0.0, dt, 0.0, 0.0, 0.0], 
+                    [0.0, 1.0, 0.0, dt, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0, 1.0, dt],
+                    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+                ])
+                B = jnp.array([
+                    [0.0, 0.0],
+                    [0.0, 0.0],
+                    [-dt/m*jnp.sin(th), 0.0],
+                    [0.0, dt/m*jnp.cos(th)],
+                    [0.0, 0.0],
+                    [0.0, 1/I*dt],
+                ])
+                return A, B
+            def get_M(A, B):
+                # M is in the following form:
+                # [0, 0, ..., 0], 
+                # [B, 0, ..., 0],
+                # [AB, B, 0, ..., 0],
+                # [A^2B, AB, B, 0, ..., 0],
+                # ...
+                # [A^(H-1)B, A^(H-2)B, ..., AB, B]
+                state_dim = 6
+                M = jnp.zeros((self.H*state_dim, self.H*env.action_dim))
+                for i in range(self.H):
+                    for j in range(i+1):
+                        M = M.at[i*state_dim:(i+1)*state_dim, j*env.action_dim:(j+1)*env.action_dim].set(jnp.linalg.matrix_power(A, i-j) @ B)
+                return M
+            def get_R(M):
+                Q0 = jnp.diag(jnp.array([50.0, 50.0, 0.1, 0.1, 0.0, 0.0]))
+                # repeat Q for H times in the diagonal
+                state_dim = 6
+                Q = jnp.zeros((self.H*state_dim, self.H*state_dim))
+                for i in range(self.H):
+                    Q = Q.at[i*state_dim:(i+1)*state_dim, i*state_dim:(i+1)*state_dim].set(Q0)
+                R0 = jnp.diag(jnp.array([0.1, 0.02]))
+                # repeat R for H times in the diagonal
+                R = jnp.zeros((self.H*env.action_dim, self.H*env.action_dim))
+                for i in range(self.H):
+                    R = R.at[i*env.action_dim:(i+1)*env.action_dim, i*env.action_dim:(i+1)*env.action_dim].set(R0)
+                return M.T @ Q @ M + R
+            def get_sigma_zeji(control_params, env_state, env_params, key):
+                A, B = get_AB(env_state, env_params)
+                M = get_M(A, B)
+                R = get_R(M)
+                sigma = self.get_sigma_from_R(R, control_params)
+                return sigma
+            self.get_sigma_zeji = get_sigma_zeji
+        elif expansion_mode in ['lqr', 'zero', 'ppo']:
+            if expansion_mode == 'lqr':
                 expansion_control_params = controllers.LQRParams(
                     Q = jnp.diag(jnp.ones(5)),
                     R = 0.03 * jnp.diag(jnp.ones(2)),
                     K = jnp.zeros((2, 5)),
                 )
                 expansion_controller = controllers.LQRController2D(env, expansion_control_params)
-            elif expension_mode == 'zero':
+            elif expansion_mode == 'zero':
                 # m = self.env.default_params.m
                 # g = self.env.default_params.g
                 # max_thrust = self.env.default_params.max_thrust
@@ -54,7 +113,7 @@ class MPPIZejiController(controllers.BaseController):
                 expansion_control_params = controllers.FixedParams(
                     u = control_params.a_mean[0])
                 expansion_controller = controllers.FixedController(env, expansion_control_params)
-            elif expension_mode == 'ppo':
+            elif expansion_mode == 'ppo':
                 import quadjax
                 from quadjax.train import ActorCritic
                 network = ActorCritic(env.action_dim, activation='tanh')
@@ -84,13 +143,13 @@ class MPPIZejiController(controllers.BaseController):
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), a_cov
-            if expension_mode in ['lqr', 'ppo']:
+            if expansion_mode in ['lqr', 'ppo']:
                 def get_a_cov_offline(env_state, env_params, key):
                     _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.H)
                     # a_cov_offline_mean = jnp.mean(a_cov_offline, axis=0)
                     # a_cov_offline = jnp.repeat(a_cov_offline_mean[None, ...], self.H, axis=0)
                     return a_cov_offline
-            elif expension_mode == 'zero':
+            elif expansion_mode == 'zero':
                 def get_a_cov_offline(env_state, env_params, key):
                     _, a_cov = get_single_a_cov_offline((env_state, env_params, key), None)
                     a_cov_offline = jnp.repeat(a_cov[None, ...], self.H, axis=0)

@@ -353,6 +353,30 @@ def tracking_2d_reward_fn(state: EnvState2D, params = None):
     return reward
 
 @jax.jit
+def tracking_2d_quadratic_reward_fn(state: EnvState2D, params = None):
+    x = state.pos
+    vel = state.vel
+    roll = state.roll
+    roll_dot = state.roll_dot
+    thrust = state.last_thrust
+    torque = state.last_roll_dot
+
+    x_tar = state.pos_tar
+    vel_tar = state.vel_tar
+
+    k_x = 20.0
+    k_v = 0.1
+    k_thrust = 0.1
+    k_roll_dot = 0.02
+
+    reward = 1.0 - \
+        k_x * ((x - x_tar)**2).sum() - \
+        k_v * ((vel - vel_tar)**2).sum() - \
+        k_thrust * (thrust - 0.03*9.81)**2 - \
+        k_roll_dot * torque**2
+    return reward
+
+@jax.jit
 def tracking_reward_fn(state: EnvState3D, params = None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)

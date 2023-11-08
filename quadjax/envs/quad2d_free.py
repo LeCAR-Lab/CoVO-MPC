@@ -31,7 +31,7 @@ class Quad2D(BaseEnvironment):
     JAX Compatible version of Quad2D-v0 OpenAI gym environment. 
     """
 
-    def __init__(self, task: str = "tracking", dynamics: str = 'bodyrate', lower_controller: str = 'base'):
+    def __init__(self, task: str = "tracking", dynamics: str = 'bodyrate', lower_controller: str = 'base', reward_type = None):
         super().__init__()
         self.task = task
         # reference trajectory function
@@ -43,6 +43,9 @@ class Quad2D(BaseEnvironment):
             self.reward_fn = utils.tracking_2d_reward_fn
         else:
             raise NotImplementedError
+        if reward_type == 'quadratic':
+            self.reward_fn = utils.tracking_2d_quadratic_reward_fn
+            print('[DEBUG] reward function set to quadratic')
         # dynamics function
         if dynamics == 'bodyrate':
             self.step_fn, self.dynamics_fn = get_free_bodyrate_dynamics_2d()
@@ -443,9 +446,10 @@ class Args:
     controller_params: str = ''
     lower_controller: str = 'base' # mppi
     debug: bool = False
+    reward_type: str = ''
 
 def main(args: Args):
-    env = Quad2D(task=args.task, dynamics=args.dynamics, lower_controller=args.lower_controller)
+    env = Quad2D(task=args.task, dynamics=args.dynamics, lower_controller=args.lower_controller, reward_type=args.reward_type)
 
     print("starting test...")
     # enable NaN value detection
@@ -524,16 +528,18 @@ def main(args: Args):
             controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
         elif 'mppi_zeji' in args.controller:
             if 'mean' in args.controller:
-                expension_mode = 'mean'
+                expansion_mode = 'mean'
+            elif 'repeat' in args.controller:
+                expansion_mode = 'repeat'
             elif 'lqr' in args.controller:
-                expension_mode = 'lqr'
+                expansion_mode = 'lqr'
             elif 'zero' in args.controller:
-                expension_mode = 'zero'
+                expansion_mode = 'zero'
             elif 'ppo' in args.controller:
-                expension_mode = 'ppo'
+                expansion_mode = 'ppo'
             else:
-                expension_mode = 'mean'
-                print('[DEBUG] unset expansion mode, MPPI(zeji) expension_mode set to mean')
+                expansion_mode = 'mean'
+                print('[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean')
             control_params = controllers.MPPIZejiParams(
                 gamma_mean = 1.0,
                 gamma_sigma = 0.0,
@@ -543,7 +549,7 @@ def main(args: Args):
                 a_cov = a_cov,
                 a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
             )
-            controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam, expension_mode=expension_mode)
+            controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam, expansion_mode=expansion_mode)
     else:
         raise NotImplementedError
     

@@ -21,6 +21,8 @@ for file in files:
     file_name, lam, _ = file.split(".")
     exp_name = file_name.split("zigzag_")[-1]
     method, rest = exp_name.split("_N")
+    if ('ppo' in method) or ('zero' in method):
+        continue
     if method == 'mppi_zeji_mean':
         method = 'CoVO-MPC'
     N = int(rest.split("_")[0])
