@@ -13,6 +13,7 @@ import time as time_module
 from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import trange
 
 import quadjax
 from quadjax.envs.base import BaseEnvironment
@@ -269,11 +270,12 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
             rng_step, env_state, action, env_params)
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         rng, rng_control = jax.random.split(rng)
-        new_control_params = controller.reset(env_state, env_params, control_params, rng_control)
+        # if done:
+        #     control_params = controller.reset(env_state, env_params, control_params, rng_control)
         # new_control_params = new_control_params.replace(
         #     a_mean = jax.random.uniform(rng_control, shape=control_params.a_mean.shape, minval=-1.0, maxval=1.0),
         # )
-        control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
+        # control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
         return (next_obs, next_env_state, rng, env_params, control_params), (info['err_pos'], done)
     
     # def test_out_controller_once(env_state, env_params, control_params, rng_act):
@@ -293,16 +295,30 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     # exit()
     
     t0 = time_module.time()
-    (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
-        run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(total_steps))
+    def run_one_ep(rng):
+        env_params = env.default_params
+
+        rng, rng_reset = jax.random.split(rng)
+        obs, info, env_state = env.reset(rng_reset, env_params)
+
+        rng, rng_control = jax.random.split(rng)                      
+        control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
+
+        (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
+            run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(env.default_params.max_steps_in_episode))
+        return rng, err_pos
     print(f"env running time: {time_module.time()-t0:.2f}s")
     # calculate cumulative err_pos bewteen each done
+    num_eps = total_steps // env.default_params.max_steps_in_episode
     err_pos_ep = []
-    last_ep_end = 0
-    for i in range(len(dones)):
-        if dones[i]:
-            err_pos_ep.append(err_pos[last_ep_end:i+1].mean())
-            last_ep_end = i+1
+    for i in trange(num_eps):
+        rng, err_pos = run_one_ep(rng)
+        err_pos_ep.append(err_pos.mean())
+    # last_ep_end = 0
+    # for i in range(len(dones)):
+    #     if dones[i]:
+    #         err_pos_ep.append(err_pos[last_ep_end:i+1].mean())
+    #         last_ep_end = i+1
     err_pos_ep = jnp.array(err_pos_ep)
     # print mean and std of err_pos
     pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
@@ -537,6 +553,10 @@ def main(args: Args):
                 expansion_mode = 'zero'
             elif 'ppo' in args.controller:
                 expansion_mode = 'ppo'
+            elif '_mppizeji' in args.controller:
+                expansion_mode = 'mppizeji'
+            elif '_mppi' in args.controller:
+                expansion_mode = 'mppi'
             else:
                 expansion_mode = 'mean'
                 print('[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean')

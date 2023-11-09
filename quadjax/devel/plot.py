@@ -11,6 +11,7 @@ os.chdir('../../results/')
 files = os.listdir()
 files = [f for f in files if f.endswith('.pkl')]
 files = [f for f in files if f.startswith('eval_err_pos_quad3d_tracking_zigzag_')]
+# files = [f for f in files if 'zigzag' not in f]
 
 # load all files
 all_data = pd.DataFrame(
@@ -19,10 +20,10 @@ all_data = pd.DataFrame(
 
 for file in files:
     file_name, lam, _ = file.split(".")
-    exp_name = file_name.split("zigzag_")[-1]
+    exp_name = file_name.split("tracking_zigzag_")[-1]
     method, rest = exp_name.split("_N")
-    if ('ppo' in method) or ('zero' in method):
-        continue
+# if ('ppo' in[ method) or ('zero' in method):
+#     continue]
     if method == 'mppi_zeji_mean':
         method = 'CoVO-MPC'
     N = int(rest.split("_")[0])
@@ -30,7 +31,7 @@ for file in files:
     lam = float(f'0.{lam}')
     if lam != 0.01:
         continue
-    print(f'loading N={N}, H={H}, lam={lam}')
+    print(f'loading method={method} exp_name={exp_name} N={N}, H={H}, lam={lam}')
     with open(file, 'rb') as f:
         data = pickle.load(f)
     data = np.array(data).flatten()

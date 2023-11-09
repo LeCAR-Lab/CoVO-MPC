@@ -14,7 +14,7 @@ from quadjax.dynamics import EnvParams2D, EnvState2D, geom
 from quadjax.train import ActorCritic
 
 @struct.dataclass
-class MPPIZejiParams:
+class MPPIZejiParamsLegacy:
     gamma_mean: float # mean of gamma
     gamma_sigma: float # std of gamma
     discount: float # discount factor
@@ -24,7 +24,7 @@ class MPPIZejiParams:
     a_cov: jnp.ndarray # covariance matrix of action
     a_cov_offline: jnp.ndarray # covariance matrix of action
 
-class MPPIZejiController(controllers.BaseController):
+class MPPIZejiControllerLegacy(controllers.BaseController):
     def __init__(self, env, control_params, N: int, H: int, lam: float, expansion_mode:str = 'lqr') -> None:
         super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of saples, set here as a static number
@@ -117,7 +117,7 @@ class MPPIZejiController(controllers.BaseController):
                 import quadjax
                 from quadjax.train import ActorCritic
                 network = ActorCritic(env.action_dim, activation='tanh')
-                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo_params_quad2d_free_tracking_zigzag_base.pkl", "rb"))
+                expansion_control_params = pickle.load(open(f"{quadjax.get_package_path()}/../results/ppo_params.pkl", "rb"))
                 def apply_fn(train_params, last_obs, env_info):
                     return network.apply(train_params, last_obs)
                 expansion_controller = controllers.NetworkController(apply_fn, env, expansion_control_params)
@@ -164,14 +164,14 @@ class MPPIZejiController(controllers.BaseController):
                 return (env_state, env_params, key), a_cov
             if expansion_mode in ['lqr', 'ppo', 'mppi']:
                 def get_a_cov_offline(env_state, env_params, key):
-                    _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.env.default_params.max_steps_in_episode)
+                    _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.H)
                     # a_cov_offline_mean = jnp.mean(a_cov_offline, axis=0)
                     # a_cov_offline = jnp.repeat(a_cov_offline_mean[None, ...], self.H, axis=0)
                     return a_cov_offline
             elif expansion_mode == 'zero':
                 def get_a_cov_offline(env_state, env_params, key):
                     _, a_cov = get_single_a_cov_offline((env_state, env_params, key), None)
-                    a_cov_offline = jnp.repeat(a_cov[None, ...], self.env.default_params.max_steps_in_episode, axis=0)
+                    a_cov_offline = jnp.repeat(a_cov[None, ...], self.H, axis=0)
                     return a_cov_offline
             else:
                 raise NotImplementedError
@@ -186,42 +186,6 @@ class MPPIZejiController(controllers.BaseController):
             self.get_sigma_zeji = get_sigma_zeji
             # overwrite reset function
             self.reset = reset_a_cov_offline
-        elif expansion_mode in ['mppizeji']:
-            if expansion_mode == 'mppizeji':
-                expansion_control_params = controllers.MPPIZejiParams(
-                    gamma_mean = 1.0,
-                    gamma_sigma = 0.0,
-                    discount = 1.0,
-                    sample_sigma = 0.5, 
-                    a_mean = control_params.a_mean,
-                    a_cov = control_params.a_cov,
-                    a_cov_offline=control_params.a_cov_offline,
-                )
-                expansion_controller = controllers.MPPIZejiControllerLegacy(env, expansion_control_params, N=self.N, H=self.H, lam=self.lam, expansion_mode='mean')
-            else:
-                raise NotImplementedError
-            # rollout the trajectory with the current mean and covariance
-            def mppi_rollout_fn(carry, unused):
-                env_state, env_params, expansion_control_params, key = carry
-                rng_act, key = jax.random.split(key)
-                obs = self.env.get_obs(env_state, env_params)
-                a_cov = expansion_control_params.a_cov
-                action, expansion_control_params, _ = expansion_controller(obs, env_state, env_params, rng_act, expansion_control_params)
-                action = lax.stop_gradient(action)
-                rng_step, key = jax.random.split(key)
-                _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
-                return (env_state, env_params, expansion_control_params, key), a_cov
-            def reset_a_cov_offline(env_state, env_params, control_params, key):
-                expansion_control_params = expansion_controller.reset(env_state, env_params, key)
-                _, a_cov_offline = lax.scan(mppi_rollout_fn, (env_state, env_params, expansion_control_params, key), None, length=self.env.default_params.max_steps_in_episode)
-                control_params = control_params.replace(a_cov_offline=a_cov_offline)
-                return control_params
-            # Key method
-            def get_sigma_zeji(control_params, env_state, env_params, key):
-                return control_params.a_cov_offline[env_state.time]
-            self.get_sigma_zeji = get_sigma_zeji
-            # overwrite reset function
-            self.reset = reset_a_cov_offline
         else:
             raise NotImplementedError
         # network = ActorCritic(2, activation='tanh')
@@ -229,7 +193,7 @@ class MPPIZejiController(controllers.BaseController):
         # with open('/home/pcy/Research/quadjax/results/ppo_params_quad2d_free_tracking_zigzag_base.pkl', 'rb') as f:
         #     self.network_params = pickle.load(f)
 
-    def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):
+    def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParamsLegacy):
         R = (R + R.T)/2.0
         # print('R eign', np.min(np.linalg.eigvals(R)))
         # exit()
@@ -253,7 +217,7 @@ class MPPIZejiController(controllers.BaseController):
 
         return (a_cov + a_cov.T) / 2.0 # make it symmetric
 
-    def get_dJ_du(self, env_state:EnvState2D, env_params:EnvParams2D, control_params:MPPIZejiParams, a_mean:jnp.ndarray, rng_act: chex.PRNGKey = None):
+    def get_dJ_du(self, env_state:EnvState2D, env_params:EnvParams2D, control_params:MPPIZejiParamsLegacy, a_mean:jnp.ndarray, rng_act: chex.PRNGKey = None):
         def single_rollout_fn(carry, action):
             env_state, env_params, reward_before, done_before, key, cumulated_reward = carry
             rng_act, key = jax.random.split(key)
@@ -315,7 +279,7 @@ class MPPIZejiController(controllers.BaseController):
     #     return u @ jnp.diag(sigma_eign) @ vh
 
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParams, info = None) -> jnp.ndarray:
+    def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParamsLegacy, info = None) -> jnp.ndarray:
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov
