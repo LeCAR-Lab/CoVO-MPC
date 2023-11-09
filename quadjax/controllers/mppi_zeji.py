@@ -38,64 +38,17 @@ class MPPIZejiController(controllers.BaseController):
                 return sigma
             self.get_sigma_zeji = get_sigma_zeji
         elif expansion_mode == 'repeat':
-            # NOTE: now for 2D only
-            assert env.action_dim == 2, 'repeat only works for 2D'
-            def get_AB(env_state, env_params):
-                dt = env_params.dt
-                th = env_state.roll
-                m = env_params.m
-                I = env_params.I
-                A = jnp.array([
-                    [1.0, 0.0, dt, 0.0, 0.0, 0.0], 
-                    [0.0, 1.0, 0.0, dt, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0, 1.0, dt],
-                    [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
-                ])
-                B = jnp.array([
-                    [0.0, 0.0],
-                    [0.0, 0.0],
-                    [-dt/m*jnp.sin(th), 0.0],
-                    [0.0, dt/m*jnp.cos(th)],
-                    [0.0, 0.0],
-                    [0.0, 1/I*dt],
-                ])
-                return A, B
-            def get_M(A, B):
-                # M is in the following form:
-                # [0, 0, ..., 0], 
-                # [B, 0, ..., 0],
-                # [AB, B, 0, ..., 0],
-                # [A^2B, AB, B, 0, ..., 0],
-                # ...
-                # [A^(H-1)B, A^(H-2)B, ..., AB, B]
-                state_dim = 6
-                M = jnp.zeros((self.H*state_dim, self.H*env.action_dim))
-                for i in range(self.H):
-                    for j in range(i+1):
-                        M = M.at[i*state_dim:(i+1)*state_dim, j*env.action_dim:(j+1)*env.action_dim].set(jnp.linalg.matrix_power(A, i-j) @ B)
-                return M
-            def get_R(M):
-                Q0 = jnp.diag(jnp.array([50.0, 50.0, 0.1, 0.1, 0.0, 0.0]))
-                # repeat Q for H times in the diagonal
-                state_dim = 6
-                Q = jnp.zeros((self.H*state_dim, self.H*state_dim))
-                for i in range(self.H):
-                    Q = Q.at[i*state_dim:(i+1)*state_dim, i*state_dim:(i+1)*state_dim].set(Q0)
-                R0 = jnp.diag(jnp.array([0.1, 0.02]))
-                # repeat R for H times in the diagonal
-                R = jnp.zeros((self.H*env.action_dim, self.H*env.action_dim))
-                for i in range(self.H):
-                    R = R.at[i*env.action_dim:(i+1)*env.action_dim, i*env.action_dim:(i+1)*env.action_dim].set(R0)
-                return M.T @ Q @ M + R
-            def get_sigma_zeji(control_params, env_state, env_params, key):
-                A, B = get_AB(env_state, env_params)
-                M = get_M(A, B)
-                R = get_R(M)
-                sigma = self.get_sigma_from_R(R, control_params)
-                return sigma
-            self.get_sigma_zeji = get_sigma_zeji
+            raise NotImplementedError
+            # def get_AB(env_state, env_params):
+            #     # linearize the dynamic systems
+
+            # def get_sigma_zeji(control_params, env_state, env_params, key):
+            #     A, B = get_AB(env_state, env_params)
+            #     M = get_M(A, B)
+            #     R = get_R(M)
+            #     sigma = self.get_sigma_from_R(R, control_params)
+            #     return sigma
+            # self.get_sigma_zeji = get_sigma_zeji
         elif expansion_mode in ['lqr', 'zero', 'ppo', 'mppi', 'pid']:
             if expansion_mode == 'lqr':
                 if self.env.action_dim == 2:
