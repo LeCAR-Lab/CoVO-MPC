@@ -1076,29 +1076,29 @@ def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename
     n_dones = 0
 
     # Profiling algorithms
-    controller_jit = jax.jit(controller)
-    controller_reset_jit = jax.jit(controller.reset)
-    rng, rng_act, rng_step = jax.random.split(rng, 3)
-    controller_jit(obs, env_state, env_params, rng_act, control_params)
-    rng, rng_control = jax.random.split(rng)                      
-    controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
-    ts = []
-    for i in trange(101):
-        t0 = time_module.time()
-        rng, rng_act, rng_step = jax.random.split(rng, 3)
-        action, control_params, control_info = controller_jit(obs, env_state, env_params, rng_act, control_params)
-        ts.append((time_module.time()-t0)*1000)
-    ts = ts[1:]
-    print(f'running time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
-    ts = []
-    for i in trange(11):
-        t0 = time_module.time()
-        rng, rng_control = jax.random.split(rng)
-        control_params = controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
-        ts.append((time_module.time()-t0)*1000)
-    ts = ts[1:]
-    print(f'reset time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
-    exit()
+    # controller_jit = jax.jit(controller)
+    # controller_reset_jit = jax.jit(controller.reset)
+    # rng, rng_act, rng_step = jax.random.split(rng, 3)
+    # controller_jit(obs, env_state, env_params, rng_act, control_params)
+    # rng, rng_control = jax.random.split(rng)                      
+    # controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
+    # ts = []
+    # for i in trange(101):
+    #     t0 = time_module.time()
+    #     rng, rng_act, rng_step = jax.random.split(rng, 3)
+    #     action, control_params, control_info = controller_jit(obs, env_state, env_params, rng_act, control_params)
+    #     ts.append((time_module.time()-t0)*1000)
+    # ts = ts[1:]
+    # print(f'running time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
+    # ts = []
+    # for i in trange(11):
+    #     t0 = time_module.time()
+    #     rng, rng_control = jax.random.split(rng)
+    #     control_params = controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
+    #     ts.append((time_module.time()-t0)*1000)
+    # ts = ts[1:]
+    # print(f'reset time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
+    # exit()
 
     t0 = time_module.time()
     while n_dones < repeat_times:
