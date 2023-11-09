@@ -96,14 +96,35 @@ class MPPIZejiController(controllers.BaseController):
                 sigma = self.get_sigma_from_R(R, control_params)
                 return sigma
             self.get_sigma_zeji = get_sigma_zeji
-        elif expansion_mode in ['lqr', 'zero', 'ppo', 'mppi']:
+        elif expansion_mode in ['lqr', 'zero', 'ppo', 'mppi', 'pid']:
             if expansion_mode == 'lqr':
-                expansion_control_params = controllers.LQRParams(
-                    Q = jnp.diag(jnp.ones(5)),
-                    R = 0.03 * jnp.diag(jnp.ones(2)),
-                    K = jnp.zeros((2, 5)),
-                )
-                expansion_controller = controllers.LQRController2D(env, expansion_control_params)
+                if self.env.action_dim == 2:
+                    expansion_control_params = controllers.LQRParams(
+                        Q = jnp.diag(jnp.ones(5)),
+                        R = 0.03 * jnp.diag(jnp.ones(2)),
+                        K = jnp.zeros((2, 5)),
+                    )
+                    expansion_controller = controllers.LQRController2D(env, expansion_control_params)
+                elif self.env.action_dim == 4:
+                    expansion_control_params = controllers.LQRParams(
+                        Q = jnp.diag(jnp.ones(12)),
+                        R = 0.03 * jnp.diag(jnp.ones(4)),
+                        K = jnp.zeros((4, 12)),
+                    )
+                    expansion_controller = controllers.LQRController(env, expansion_control_params)
+                else:
+                    raise NotImplementedError
+            elif expansion_mode == 'pid':
+                if env.action_dim == 4:
+                    expansion_control_params = controllers.PIDParams(
+                        Kp=10.0,
+                        Kd=5.0,
+                        Ki=0.0,
+                        Kp_att=10.0,
+                    )
+                    expansion_controller = controllers.PIDController(env, control_params=control_params)
+                else:
+                    raise NotImplementedError
             elif expansion_mode == 'zero':
                 # m = self.env.default_params.m
                 # g = self.env.default_params.g
@@ -162,7 +183,7 @@ class MPPIZejiController(controllers.BaseController):
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), a_cov
-            if expansion_mode in ['lqr', 'ppo', 'mppi']:
+            if expansion_mode in ['lqr', 'ppo', 'mppi', 'pid']:
                 def get_a_cov_offline(env_state, env_params, key):
                     _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.env.default_params.max_steps_in_episode)
                     # a_cov_offline_mean = jnp.mean(a_cov_offline, axis=0)

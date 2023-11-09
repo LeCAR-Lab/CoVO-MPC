@@ -9,9 +9,9 @@ task=tracking_zigzag
 #     done
 # done
 
-for task in tracking_zigzag tracking; do
-    for controller in mppi mppi_zeji_zero mppi_zeji_mean mppi_zeji_ppo; do
-        for N in 16 32 64 128 256 512 1024; do
+for task in tracking_zigzag; do
+    for controller in mppi mppi_zeji_zero mppi_zeji_pid mppi_zeji_mean; do
+        for N in 8192; do
             for H in 32; do
                 for lam in 0.01; do
                     echo "Running with H = $H, lam = $lam, N = $N, controller = $controller, task = $task"

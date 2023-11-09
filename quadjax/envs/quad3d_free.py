@@ -10,6 +10,7 @@ import tyro
 import pickle
 import time as time_module
 import numpy as np
+from tqdm import trange
 
 import quadjax
 from quadjax import dynamics as quad_dyn
@@ -17,12 +18,6 @@ from quadjax import controllers
 from quadjax.dynamics import utils, geom
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.envs.base import BaseEnvironment
-
-# for debug purpose
-from icecream import install
-
-install()
-
 
 class Quad3D(BaseEnvironment):
     """
@@ -368,7 +363,7 @@ class Quad3D(BaseEnvironment):
         else:
             raise NotImplementedError
         # equibrium point
-        self.equib = jnp.array([0.0] * 6 + [1.0] + [0.0] * 6)
+        self.equib = jnp.array([0.0] * 6 + [1.0] + [0.0] * 9) # size=16
         # RL parameters
         self.action_dim = 4
         self.adapt_obs_dim = 22 * self.default_params.adapt_horizon
@@ -996,69 +991,66 @@ def eval_env(
 ):
     # running environment
     rng = jax.random.PRNGKey(1)
-    rng, rng_params = jax.random.split(rng)
-    env_params = env.default_params
+    # rng, rng_params = jax.random.split(rng)
+    # env_params = env.default_params
+    
+    # rng, rng_reset = jax.random.split(rng)
+    # obs, info, env_state = env.reset(rng_reset, env_params)
 
-    rng, rng_reset = jax.random.split(rng)
-    obs, info, env_state = env.reset(rng_reset, env_params)
-
-    rng, rng_control = jax.random.split(rng)
-    control_params = controller.reset(
-        env_state, env_params, controller.init_control_params, rng_control
-    )
+    # rng, rng_control = jax.random.split(rng)                      
+    # control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
-        action, control_params, control_info = controller(
-            obs, env_state, env_params, rng_act, control_params
-        )
+        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
         if control_info is not None:
-            if "a_mean" in control_info:
-                action = control_info["a_mean"]
+            if 'a_mean' in control_info:
+                action = control_info['a_mean']
         next_obs, next_env_state, reward, done, info = env.step(
-            rng_step, env_state, action, env_params
-        )
+            rng_step, env_state, action, env_params)
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         rng, rng_control = jax.random.split(rng)
-        new_control_params = controller.reset(
-            env_state, env_params, control_params, rng_control
-        )
-        # new_control_params = new_control_params.replace(
-        #     a_mean = jax.random.uniform(rng_control, shape=control_params.a_mean.shape, minval=-1.0, maxval=1.0),
-        # )
-        control_params = lax.cond(
-            done, lambda x: new_control_params, lambda x: x, control_params
-        )
-        return (next_obs, next_env_state, rng, env_params, control_params), (
-            info["err_pos"],
-            done,
-        )
-
+        return (next_obs, next_env_state, rng, env_params, control_params), (info['err_pos'], done)
+    
     t0 = time_module.time()
-    (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
-        run_one_step,
-        (obs, env_state, rng, env_params, control_params),
-        jnp.arange(total_steps),
-    )
-    print(f"env running time: {time_module.time()-t0:.2f}s")
+    def run_one_ep(rng_reset, rng):
+        env_params = env.default_params
+
+        obs, info, env_state = env.reset(rng_reset, env_params)
+
+        rng_control, rng = jax.random.split(rng)
+        control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
+
+        (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
+            run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(env.default_params.max_steps_in_episode))
+        return rng, err_pos
+    run_one_ep_jit = jax.jit(run_one_ep)
     # calculate cumulative err_pos bewteen each done
+    num_eps = total_steps // env.default_params.max_steps_in_episode
     err_pos_ep = []
-    last_ep_end = 0
-    for i in range(len(dones)):
-        if dones[i]:
-            err_pos_ep.append(err_pos[last_ep_end : i + 1].mean())
-            last_ep_end = i + 1
+    num_trajs = 4
+    rng, rng_reset_meta = jax.random.split(rng)
+    rng_reset_list = jax.random.split(rng_reset_meta, num_trajs)
+    for i, rng_reset in enumerate(rng_reset_list):
+        print(f'[DEBUG] test traj {i+1}')
+        for _ in trange(num_eps//num_trajs):
+            rng, err_pos = run_one_ep_jit(rng_reset, rng)
+            err_pos_ep.append(err_pos.mean())
+    # last_ep_end = 0
+    # for i in range(len(dones)):
+    #     if dones[i]:
+    #         err_pos_ep.append(err_pos[last_ep_end:i+1].mean())
+    #         last_ep_end = i+1
     err_pos_ep = jnp.array(err_pos_ep)
     # print mean and std of err_pos
     pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
-    print(f"err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}")
-    print(f"${pos_mean*100:.2f} \pm {pos_std*100:.2f}$")
+    print(f"env running time: {time_module.time()-t0:.2f}s")
+    print(f'err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}')
+    print(f'${pos_mean*100:.2f} \pm {pos_std*100:.2f}$')
 
     # save data
-    with open(
-        f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb"
-    ) as f:
+    with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
         pickle.dump(np.array(err_pos_ep), f)
 
 
@@ -1203,6 +1195,8 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 expansion_mode = "zero"
             elif "ppo" in controller_name:
                 expansion_mode = "ppo"
+            elif "pid" in controller_name:
+                expansion_mode = "pid"
             else:
                 expansion_mode = "mean"
                 print(
@@ -1358,7 +1352,7 @@ def main(args: Args):
             env,
             controller=controller,
             control_params=control_params,
-            total_steps=3000,
+            total_steps=300*4*10,
             filename=args.name,
             debug=args.debug,
         )

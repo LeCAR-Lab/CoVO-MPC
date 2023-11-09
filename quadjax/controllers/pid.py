@@ -32,7 +32,7 @@ class PIDController(controllers.BaseController):
         return control_params
     
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs, state, env_param, rng_act, control_params, info) -> jnp.ndarray:
+    def __call__(self, obs, state, env_param, rng_act, control_params, info=None) -> jnp.ndarray:
         # position control
         Q = geom.qtoQ(state.quat)
         f_d = self.param.m * (jnp.array([0.0, 0.0, self.param.g]) - control_params.Kp * (state.pos - state.pos_tar) - control_params.Kd * (state.vel - state.vel_tar) \

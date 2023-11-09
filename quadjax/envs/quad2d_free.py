@@ -22,10 +22,6 @@ from quadjax.dynamics import utils
 from quadjax.dynamics.free import get_free_bodyrate_dynamics_2d
 from quadjax.dynamics.dataclass import EnvParams2D, EnvState2D, Action2D
 
-# for debug purpose
-from icecream import install
-install()
-
 
 class Quad2D(BaseEnvironment):
     """
@@ -295,25 +291,29 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     # exit()
     
     t0 = time_module.time()
-    def run_one_ep(rng):
+    def run_one_ep(rng_reset, rng):
         env_params = env.default_params
 
-        rng, rng_reset = jax.random.split(rng)
         obs, info, env_state = env.reset(rng_reset, env_params)
 
-        rng, rng_control = jax.random.split(rng)                      
+        rng_control, rng = jax.random.split(rng)
         control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
         (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
             run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(env.default_params.max_steps_in_episode))
         return rng, err_pos
-    print(f"env running time: {time_module.time()-t0:.2f}s")
+    run_one_ep_jit = jax.jit(run_one_ep)
     # calculate cumulative err_pos bewteen each done
     num_eps = total_steps // env.default_params.max_steps_in_episode
     err_pos_ep = []
-    for i in trange(num_eps):
-        rng, err_pos = run_one_ep(rng)
-        err_pos_ep.append(err_pos.mean())
+    num_trajs = 4
+    rng, rng_reset_meta = jax.random.split(rng)
+    rng_reset_list = jax.random.split(rng_reset_meta, num_trajs)
+    for i, rng_reset in enumerate(rng_reset_list):
+        print(f'[DEBUG] test traj {i+1}')
+        for _ in trange(num_eps//num_trajs):
+            rng, err_pos = run_one_ep_jit(rng_reset, rng)
+            err_pos_ep.append(err_pos.mean())
     # last_ep_end = 0
     # for i in range(len(dones)):
     #     if dones[i]:
@@ -322,6 +322,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     err_pos_ep = jnp.array(err_pos_ep)
     # print mean and std of err_pos
     pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
+    print(f"env running time: {time_module.time()-t0:.2f}s")
     print(f'err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}')
     print(f'${pos_mean*100:.2f} \pm {pos_std*100:.2f}$')
 
@@ -577,7 +578,7 @@ def main(args: Args):
     if args.mode == 'render':
         render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
     elif args.mode == 'eval':
-        eval_env(env, controller=controller, control_params=control_params, total_steps=30000, filename=filename)
+        eval_env(env, controller=controller, control_params=control_params, total_steps=300*10*4, filename=filename)
     else:
         raise NotImplementedError
 

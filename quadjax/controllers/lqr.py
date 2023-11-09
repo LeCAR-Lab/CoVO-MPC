@@ -30,7 +30,7 @@ class LQRController2D(controllers.BaseController):
         self.A_func = jax.jacfwd(normed_dynamics_fn, argnums=0)
         self.B_func = jax.jacfwd(normed_dynamics_fn, argnums=1)
 
-    # @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,))
     def update_params(self, env_params: EnvParams2D, control_params: LQRParams) -> LQRParams:
         thrust_hover_normed = (env_params.m * env_params.g / env_params.max_thrust) * 2.0 - 1.0
         u_hover_normed = jnp.array([thrust_hover_normed, 0.0])
@@ -42,6 +42,7 @@ class LQRController2D(controllers.BaseController):
         control_params = control_params.replace(K=K)
         return control_params
 
+    @partial(jax.jit, static_argnums=(0,))
     def reset(self, env_state, env_params, control_params, key):
         return self.update_params(env_params, control_params)
     
@@ -70,14 +71,21 @@ class LQRController(controllers.BaseController):
             return self.env.dynamics_fn(x, jnp.concatenate([jnp.array([thrust]), torque]), env_params, dt)
         self.A_func = jax.jacfwd(normed_dynamics_fn, argnums=0)
         self.B_func = jax.jacfwd(normed_dynamics_fn, argnums=1)
-        self.E_q0 = geom.E(jnp.array([0.0]*3+[1.0]))
+
+        q = jnp.array([0.0]*3+[1.0])
+        # I3 = jnp.eye(3)
+        # I9 = jnp.eye(9)
+        # H = jnp.vstack((jnp.eye(3), jnp.zeros((1, 3))))
+        # G = geom.L(q) @ H
+        # self.E_q0 = jax.scipy.linalg.block_diag(I3, G, I9)
+        self.E_q0 = geom.E(q)
 
     # @partial(jax.jit, static_argnums=(0,))
     def update_params(self, env_params: EnvParams3D, control_params: LQRParams) -> LQRParams:
         thrust_hover_normed = (env_params.m * env_params.g / env_params.max_thrust) * 2.0 - 1.0
         u_hover_normed = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
-        A = self.A_func(self.env.equib, u_hover_normed, env_params, env_params.dt)
-        B = self.B_func(self.env.equib, u_hover_normed, env_params, env_params.dt)
+        A = self.A_func(self.env.equib, u_hover_normed, env_params, env_params.dt)[:13, :13]
+        B = self.B_func(self.env.equib, u_hover_normed, env_params, env_params.dt)[:13, :4]
 
         A_reduced = self.E_q0.T @ A @ self.E_q0
         B_reduced = self.E_q0.T @ B
@@ -91,6 +99,9 @@ class LQRController(controllers.BaseController):
         # update controller parameters
         control_params = control_params.replace(K=K)
         return control_params
+    
+    def reset(self, env_state, env_params, control_params, key):
+        return self.update_params(env_params, control_params)
     
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, env_state: EnvState3D, env_params: EnvParams3D, rng_act: chex.PRNGKey, control_params: LQRParams, info = None) -> jnp.ndarray:
