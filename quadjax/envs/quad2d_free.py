@@ -281,7 +281,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     # def test_out_controller_once(env_state, env_params, control_params, rng_act):
     #     action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
     #     return control_params.a_mean[:1]
-    # runing test_out_controller_once with batched input repeatedly
+    # # runing test_out_controller_once with batched input repeatedly
     # batch_size = 1024
     # rng, rng_act = jax.random.split(rng)
     # rng_act_batch = jax.random.split(rng_act, batch_size)
