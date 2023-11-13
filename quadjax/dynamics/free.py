@@ -14,25 +14,25 @@ from quadjax.dynamics.dataclass import (
 from quadjax.dynamics import geom, utils
 
 # force to rpm
-def force_to_rpm(force):
-    a, b, c = 2.55077341e-08, -4.92422570e-05, -1.51910248e-01
-    force_in_grams = jnp.clip(force * 1000.0 / 9.81, 0.0, 1000)
-    rpm = (-b + jnp.sqrt(b**2 - 4 * a * (c - force_in_grams))) / (2 * a)
-    return rpm
-def rpm_to_force(rpm):
-    a, b, c = 2.55077341e-08, -4.92422570e-05, -1.51910248e-01
-    force_in_grams = a * rpm**2 + b * rpm + c
-    force = force_in_grams * 9.81 / 1000.0
-    return force
-# force to pwm
-def rpm_to_pwm(rpm):
-    a, b = 3.26535711e-01, 3.37495115e03
-    pwm = 1 / a * (rpm - b)
-    return pwm
-def pwm_to_rpm(pwm):
-    a, b = 3.26535711e-01, 3.37495115e03
-    rpm = a * pwm + b
-    return rpm
+# def force_to_rpm(force):
+#     a, b, c = 2.55077341e-08, -4.92422570e-05, -1.51910248e-01
+#     force_in_grams = jnp.clip(force * 1000.0 / 9.81, 0.0, 1000)
+#     rpm = (-b + jnp.sqrt(b**2 - 4 * a * (c - force_in_grams))) / (2 * a)
+#     return rpm
+# def rpm_to_force(rpm):
+#     a, b, c = 2.55077341e-08, -4.92422570e-05, -1.51910248e-01
+#     force_in_grams = a * rpm**2 + b * rpm + c
+#     force = force_in_grams * 9.81 / 1000.0
+#     return force
+# # force to pwm
+# def rpm_to_pwm(rpm):
+#     a, b = 3.26535711e-01, 3.37495115e03
+#     pwm = 1 / a * (rpm - b)
+#     return pwm
+# def pwm_to_rpm(pwm):
+#     a, b = 3.26535711e-01, 3.37495115e03
+#     rpm = a * pwm + b
+#     return rpm
 
 
 def get_free_bodyrate_dynamics_2d():
@@ -155,21 +155,22 @@ def get_free_dynamics_2d():
         B0 = jnp.array([[1, 1], [-arm, arm]])
         F = jnp.linalg.inv(B0) @ u
         F = jnp.clip(F, 0, 1.0)
-        rpm = force_to_rpm(F)
-        pwm = rpm_to_pwm(rpm)
+        # rpm = force_to_rpm(F)
+        # pwm = rpm_to_pwm(rpm)
         # move all pwm down to make sure the max pwm is 2**16
-        reduction = jnp.clip(jnp.max(pwm) - 2 ** 16, 0, jnp.min(pwm)-1)
-        pwm = pwm - reduction
+        # jax.debug.print('scale {x}', x=pwm / 2 ** 16)
+        reduction = jnp.clip(jnp.max(F) - params.max_motor_force, 0.0, 10.0)
+        F = jnp.clip(F - reduction, 0.0, 10.0)
         # calculate the thrust and torque
-        rpm = pwm_to_rpm(pwm)
-        F = rpm_to_force(rpm)
+        # rpm = pwm_to_rpm(pwm)
+        # F = rpm_to_force(rpm)
 
         u_cap = B0 @ F
-        u_cap=u
+        # u_cap=u
         thrust = u_cap[0]
         torque = u_cap[1]
 
-        jax.debug.print('F scale = {a}, \n T scale = {b}', a=u_cap[0]/u[0], b=u_cap[1]/u[1])
+        # jax.debug.print('F scale = {a}, \n T scale = {b}', a=u_cap[0]/u[0], b=u_cap[1]/u[1])
 
         r = x[:2]  # position in world frame
         q = x[2]  # roll in world frame

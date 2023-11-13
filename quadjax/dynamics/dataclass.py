@@ -27,6 +27,7 @@ class EnvParams2D:
     max_speed: float = 8.0
     max_omega: float = 10.0 # TODO check this value
     max_thrust: float = 0.8
+    max_motor_force: float = 0.28
     max_torque: float = 1e-2
     dt: float = 0.02
     g: float = 9.81  # gravity
