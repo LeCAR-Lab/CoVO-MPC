@@ -25,7 +25,7 @@ class LQRController2D(controllers.BaseController):
             dynamics for controller (normalization, esitimation etc. )
             '''
             thrust = (u_normed[0] + 1.0) / 2.0 * self.env.default_params.max_thrust
-            roll_rate = u_normed[1] * self.env.default_params.max_bodyrate
+            roll_rate = u_normed[1] * self.env.default_params.max_omega
             return self.env.dynamics_fn(x, jnp.asarray([thrust, roll_rate]), env_params, dt)
         self.A_func = jax.jacfwd(normed_dynamics_fn, argnums=0)
         self.B_func = jax.jacfwd(normed_dynamics_fn, argnums=1)

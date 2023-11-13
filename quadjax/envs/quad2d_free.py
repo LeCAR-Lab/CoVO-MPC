@@ -53,6 +53,7 @@ class Quad2D(BaseEnvironment):
         else:
             raise NotImplementedError
         # controller function
+        # TODO: unify the interface of controller function
         if lower_controller == 'base':
             def base_controller_fn(obs, state, env_params, rng_act, input_action):
                 return input_action, state.control_params, state
@@ -60,6 +61,7 @@ class Quad2D(BaseEnvironment):
             self.control_fn = base_controller_fn
             self.default_control_params = None
         elif lower_controller == 'pid_bodyrate':
+            assert dynamics == 'base', 'pid_bodyrate controller only works with base dynamics'
             self.default_control_params = controllers.BodyratePIDParams(
                 kp=jnp.array([30.0]),
                 ki=jnp.array([3.0]) / self.default_params.dt,
@@ -72,7 +74,7 @@ class Quad2D(BaseEnvironment):
             )
             def pid_controller_fn(obs, state, env_params, rng_act, input_action):
                 thrust_normed = input_action[:1]
-                omega_tar = input_action[1:] * self.default_params.max_bodyrate
+                omega_tar = input_action[1:] * self.default_params.max_omega
                 state = state.replace(omega_tar=omega_tar)
 
                 u, control_params, _ = controller(
@@ -189,7 +191,7 @@ class Quad2D(BaseEnvironment):
         # TODO: make all the action in the environment a real action, scale happened in controller.
         sub_action = jnp.clip(sub_action, -1.0, 1.0)
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
-        omega = sub_action[1] * params.max_bodyrate
+        omega = sub_action[1] * params.max_omega
         env_action = Action2D(thrust=thrust, omega=omega)
 
         reward = self.reward_fn(state)
@@ -526,6 +528,15 @@ def main(args: Args):
         # print control_params.K with , delimiter
         # np.savetxt(f"{quadjax.get_package_path()}/../results/K_{args.controller_params}.csv", control_params.K, delimiter=",")
         # exit()
+    elif args.controller == 'pid':
+        control_params = controllers.PIDParams(
+            Kp=10.0,
+            Kd=5.0,
+            Ki=0.0,
+            Kp_att=10.0,
+            integral=jnp.zeros(2),
+        )
+        controller = controllers.PIDController2D(env, control_params=control_params)
     elif args.controller == 'fixed':
         control_params = controllers.FixedParams(
             u = jnp.zeros(env.action_dim)

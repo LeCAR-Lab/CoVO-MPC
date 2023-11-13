@@ -25,17 +25,19 @@ class EnvState2D:
 @struct.dataclass
 class EnvParams2D:
     max_speed: float = 8.0
-    max_bodyrate: float = 10.0 # TODO check this value
+    max_omega: float = 10.0 # TODO check this value
     max_thrust: float = 0.8
     max_torque: float = 1e-2
     dt: float = 0.02
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
     I: float = 2.0e-5  # moment of inertia
+    arm_length: float = 0.046  # length of the arm
     traj_obs_len: int = 8
     traj_obs_gap: int = 2
     max_steps_in_episode: int = 300
     dyn_noise_scale: float = 0.05
+    alpha_bodyrate: float = 0.5
 
 
 @struct.dataclass
