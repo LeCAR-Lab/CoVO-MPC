@@ -60,7 +60,7 @@ class MPPIController(controllers.BaseController):
         rng_act, step_key = jax.random.split(rng_act)
         def rollout_fn(carry, action):
             state, params, reward_before, done_before = carry
-            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env_wocontroller(step_key, s, a, p))(state, action, params)
+            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p, deterministic=True))(state, action, params)
             reward = jnp.where(done_before, reward_before, reward)
             return (state, params, reward, done | done_before), (reward, state.pos)
         # repeat state each element to match the sample size N

@@ -341,8 +341,8 @@ def log_pos_fn(err_pos):
 def tracking_2d_reward_fn(state: EnvState2D, params = None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    omega_panelty = jnp.abs(state.roll_dot)*0.02
-    omega_command_panelty = jnp.abs(state.last_roll_dot)*0.02
+    omega_panelty = jnp.abs(state.omega)*0.02
+    omega_command_panelty = jnp.abs(state.last_omega)*0.02
     thrust_command_panelty = jnp.abs(state.last_thrust-0.03*9.81)*0.5
     reward = 1.0 - \
         0.1 * err_vel - \
@@ -357,23 +357,23 @@ def tracking_2d_quadratic_reward_fn(state: EnvState2D, params = None):
     x = state.pos
     vel = state.vel
     roll = state.roll
-    roll_dot = state.roll_dot
+    omega = state.omega
     thrust = state.last_thrust
-    torque = state.last_roll_dot
+    torque = state.last_omega
 
     x_tar = state.pos_tar
     vel_tar = state.vel_tar
 
-    k_x = 50.0
+    k_x = 20.0
     k_v = 0.1
     k_thrust = 0.1
-    k_roll_dot = 0.02
+    k_omega = 0.02
 
     reward = 1.0 - \
         k_x * ((x - x_tar)**2).sum() - \
         k_v * ((vel - vel_tar)**2).sum() - \
         k_thrust * (thrust - 0.03*9.81)**2 - \
-        k_roll_dot * torque**2
+        k_omega * torque**2
     return reward
 
 @jax.jit
@@ -495,6 +495,23 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
                 plt.subplot(num_rows, plot_per_row, current_fig)
                 plt.plot(time, xyz[:, i], label=f"{subplot_name}")
                 plt.plot(time, xyz_tar[:, i], "--", label=f"{subplot_name}_tar")
+                plt.ylabel(f"{name}_{subplot_name}")
+                plt.legend()
+        elif name == 'omega_tar':
+            omega_tar = np.array([s[name] for s in state_seq])
+            omega = np.array([s['omega'] for s in state_seq])
+            if omega_tar.shape[1] == 3:
+                scan_range = zip(range(3), ["x", "y", "z"])
+            elif omega_tar.shape[1] == 1:
+                scan_range = zip(range(1), ["y"])
+                omega = omega[:, jnp.newaxis]
+            else:
+                raise NotImplementedError
+            for i, subplot_name in scan_range:
+                current_fig += 1
+                plt.subplot(num_rows, plot_per_row, current_fig)
+                plt.plot(time, omega[:, i], label=f"{subplot_name}")
+                plt.plot(time, omega_tar[:, i], "--", label=f"{subplot_name}_tar")
                 plt.ylabel(f"{name}_{subplot_name}")
                 plt.legend()
         elif "d_hat" in name:

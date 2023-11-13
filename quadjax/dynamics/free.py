@@ -8,16 +8,16 @@ from quadjax.dynamics import geom, utils
 
 def get_free_bodyrate_dynamics_2d():
     @jax.jit
-    def quad_dynamics(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams2D):
+    def quad_dynamics(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams2D, key: chex.PRNGKey):
         thrust = u[0]
-        roll_dot = u[1] 
+        omega = u[1] 
 
         r = x[:2] # position in world frame
         q = x[2] # roll in world frame
         v = x[3:5] # velocity in world frame
 
         # make the system unstable
-        # roll_dot = roll_dot + 10.0 * jnp.abs(jnp.sin(q))
+        # omega = omega + 10.0 * jnp.abs(jnp.sin(q))
 
         Q = jnp.array([[jnp.cos(q), -jnp.sin(q)], [jnp.sin(q), jnp.cos(q)]]) # quaternion to rotation matrix
 
@@ -25,33 +25,41 @@ def get_free_bodyrate_dynamics_2d():
         v_dot = jnp.asarray([0, -params.g]) + 1.0 / params.m * (Q @ jnp.asarray([0, thrust]))
 
         # return
-        x_dot = jnp.asarray([*v, roll_dot, *v_dot])
+        x_dot = jnp.asarray([*v, omega, *v_dot])
+
+        # generate noise
+        noise_key, key = jax.random.split(key)
+        x_dot_noise = params.dyn_noise_scale * jnp.array([1.0, 1.0, 5.0, 10.0, 10.0]) * jax.random.normal(noise_key, shape=(5,))
+
+        x_dot = x_dot + x_dot_noise
 
         return x_dot
 
     @jax.jit
-    def dynamics_fn(x: jnp.ndarray, u: jnp.ndarray, params: EnvParams2D, dt: float) -> jnp.ndarray:    
+    def dynamics_fn(x: jnp.ndarray, u: jnp.ndarray, params: EnvParams2D, dt: float, key: chex.PRNGKey) -> jnp.ndarray:    
         f = quad_dynamics
-        k1 = f(x, u, params)
-        k2 = f(x + k1 * dt / 2, u, params)
-        k3 = f(x + k2 * dt / 2, u, params)
-        k4 = f(x + k3 * dt, u, params)
+        key1, key2, key3, key4 = jax.random.split(key, 4)
+        k1 = f(x, u, params, key1)
+        k2 = f(x + k1 * dt / 2, u, params, key2)
+        k3 = f(x + k2 * dt / 2, u, params, key3)
+        k4 = f(x + k3 * dt, u, params, key4)
         x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6 * dt
         roll = x_new[2]
         roll_normed = utils.angle_normalize(roll)
         return x_new.at[2].set(roll_normed)
 
     @jax.jit
-    def step_fn(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D):
-        u = jnp.asarray([env_action.thrust, env_action.roll_dot])
+    def step_fn(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D, key:chex.PRNGKey):
+        u = jnp.asarray([env_action.thrust, env_action.omega])
         x = jnp.asarray([*env_state.pos, env_state.roll, *env_state.vel])
 
         # rk4
-        x_new = dynamics_fn(x, u, env_params, env_params.dt)
+        key, key_dyn = jax.random.split(key)
+        x_new = dynamics_fn(x, u, env_params, env_params.dt, key_dyn)
         pos = x_new[:2]
         roll = x_new[2]
         vel = x_new[3:5]
-        roll_rate = x_new[5]
+        omega = x_new[5]
 
         # step
         time = env_state.time + 1
@@ -62,15 +70,100 @@ def get_free_bodyrate_dynamics_2d():
 
         # debug value
         last_thrust = env_action.thrust
-        last_roll_dot = env_action.roll_dot
+        last_omega = env_action.omega
 
         env_state = env_state.replace(
             # drone
-            pos=pos, vel=vel, roll=roll, roll_dot=roll_rate,
+            pos=pos, vel=vel, roll=roll, omega=omega,
             # trajectory
             pos_tar=pos_tar, vel_tar=vel_tar,
             # debug value
-            last_thrust=last_thrust, last_roll_dot=last_roll_dot,
+            last_thrust=last_thrust, last_omega=last_omega,
+            # step
+            time=time,  
+        )
+
+        return env_state
+
+    return step_fn, dynamics_fn
+
+def get_free_dynamics_2d():
+    @jax.jit
+    def quad_dynamics(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams2D, key: chex.PRNGKey):
+        thrust = u[0]
+        torque = u[1] 
+
+        r = x[:2] # position in world frame
+        q = x[2] # roll in world frame
+        v = x[3:5] # velocity in world frame
+        omega = x[5] # roll rate in world frame
+
+        # make the system unstable
+        # omega = omega + 10.0 * jnp.abs(jnp.sin(q))
+
+        Q = jnp.array([[jnp.cos(q), -jnp.sin(q)], [jnp.sin(q), jnp.cos(q)]]) # quaternion to rotation matrix
+
+        # dynamics
+        v_dot = jnp.asarray([0, -params.g]) + 1.0 / params.m * (Q @ jnp.asarray([0, thrust]))
+        omega_dot = 1.0 / params.I * torque
+        
+
+        # return
+        x_dot = jnp.asarray([*v, omega, *v_dot, omega_dot])
+
+        # generate noise
+        noise_key, key = jax.random.split(key)
+        x_dot_noise = params.dyn_noise_scale * jnp.array([1.0, 1.0, 5.0, 10.0, 10.0, 50.0]) * jax.random.normal(noise_key, shape=(6,))
+
+        x_dot = x_dot + x_dot_noise
+
+        return x_dot
+
+    @jax.jit
+    def dynamics_fn(x: jnp.ndarray, u: jnp.ndarray, params: EnvParams2D, dt: float, key: chex.PRNGKey) -> jnp.ndarray:    
+        f = quad_dynamics
+        key1, key2, key3, key4 = jax.random.split(key, 4)
+        k1 = f(x, u, params, key1)
+        k2 = f(x + k1 * dt / 2, u, params, key2)
+        k3 = f(x + k2 * dt / 2, u, params, key3)
+        k4 = f(x + k3 * dt, u, params, key4)
+        x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6 * dt
+        roll = x_new[2]
+        roll_normed = utils.angle_normalize(roll)
+        return x_new.at[2].set(roll_normed)
+
+    @jax.jit
+    def step_fn(env_params: EnvParams2D, env_state: EnvState2D, env_action: Action2D, key:chex.PRNGKey):
+        torque = env_action.omega / env_params.max_bodyrate * env_params.max_torque
+        u = jnp.asarray([env_action.thrust, torque])
+        x = jnp.asarray([*env_state.pos, env_state.roll, *env_state.vel, env_state.omega])
+
+        # rk4
+        key, key_dyn = jax.random.split(key)
+        x_new = dynamics_fn(x, u, env_params, env_params.dt, key_dyn)
+        pos = x_new[:2]
+        roll = x_new[2]
+        vel = x_new[3:5]
+        omega = x_new[5]
+
+        # step
+        time = env_state.time + 1
+
+        # trajectory
+        pos_tar = env_state.pos_traj[time]
+        vel_tar = env_state.vel_traj[time]
+
+        # debug value
+        last_thrust = env_action.thrust
+        last_omega = env_action.omega
+
+        env_state = env_state.replace(
+            # drone
+            pos=pos, vel=vel, roll=roll, omega=omega,
+            # trajectory
+            pos_tar=pos_tar, vel_tar=vel_tar,
+            # debug value
+            last_thrust=last_thrust, last_omega=last_omega,
             # step
             time=time,  
         )
@@ -203,7 +296,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         disturb_func = lambda disturb_key, params, state: jnp.zeros(3)
 
     @jax.jit
-    def quad_dynamics_bodyrate(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D, dt: float):
+    def quad_dynamics_bodyrate(x:jnp.ndarray, u:jnp.ndarray, params: EnvParams3D, dt: float, key: chex.PRNGKey):
         # x: state [r, q, v, omega]
         # NOTE: u is normalized thrust and torque [-1, 1]
         # thrust = (u[0] + 1.0) / 2.0 * params.max_thrust
@@ -225,8 +318,19 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         q_dot = 0.5 * geom.L(q) @ geom.H @ omega
         v_dot = jnp.asarray([0, 0, -params.g]) + 1.0 / params.m * (Q @ jnp.asarray([0, 0, thrust]) + f_disturb)
 
+        # generate noise
+        noise_keys = jax.random.split(key, 4)
+        r_dot_noise = params.dyn_noise_scale * 1.0 * jax.random.normal(noise_keys[0], shape=(3,))
+        r_dot = r_dot + r_dot_noise
+        q_dot_noise = params.dyn_noise_scale * 2.5 * jax.random.normal(noise_keys[1], shape=(4,))
+        q_dot = q_dot + q_dot_noise
+        v_dot_noise = params.dyn_noise_scale * 10.0 * jax.random.normal(noise_keys[2], shape=(3,))
+        v_dot = v_dot + v_dot_noise
+        omega_tar_noise = params.dyn_noise_scale * 5.0 * jax.random.normal(noise_keys[3], shape=(3,))
+        omega_tar = omega_tar + omega_tar_noise
+
         # integrate
-        r_new = r + r_dot * dt
+        r_new = r + r_dot * dt 
         q_new = q + q_dot * dt
         v_new = v + v_dot * dt
         omega_new = params.alpha_bodyrate * (omega) + (1-params.alpha_bodyrate) * omega_tar
@@ -246,7 +350,8 @@ def get_free_dynamics_3d_bodyrate(disturb_type:str='periodic'):
         u = jnp.concatenate([jnp.array([env_action.thrust]), omega_tar])
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega, env_state.f_disturb])
 
-        x_new = quad_dynamics_bodyrate(x, u, env_params, sim_dt)
+        key, key_dyn = jax.random.split(key)
+        x_new = quad_dynamics_bodyrate(x, u, env_params, sim_dt, key_dyn)
         pos = x_new[:3]
         quat = x_new[3:7] / jnp.linalg.norm(x_new[3:7])
         vel = x_new[7:10]

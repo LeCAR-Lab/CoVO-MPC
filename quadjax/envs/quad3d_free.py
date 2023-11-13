@@ -432,7 +432,12 @@ class Quad3D(BaseEnvironment):
         state: EnvState3D,
         sub_action: jnp.ndarray,
         params: EnvParams3D,
+        deterministic: bool = True,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+        # TODO: merge into raw_step
+        # disable noise in parameters
+        dyn_noise_scale = params.dyn_noise_scale * (1.0-deterministic)
+        params = params.replace(dyn_noise_scale=dyn_noise_scale)
         return self.step_env(key, state, sub_action, params)
 
     def step_env_wocontroller_gradient(
@@ -441,7 +446,9 @@ class Quad3D(BaseEnvironment):
         state: EnvState3D,
         action: jnp.ndarray,
         params: EnvParams3D,
+        deterministic: bool = True, 
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+        # TODO: merge into raw_step
         action = jnp.clip(action, -1.0, 1.0)
 
         def step_once(carried, _):
@@ -450,6 +457,10 @@ class Quad3D(BaseEnvironment):
             sub_action, _, state = self.control_fn(None, state, params, key, action)
             next_state = self.raw_step(key, state, sub_action, params)
             return (key, next_state, action, params), None
+
+        # disable noise in parameters
+        dyn_noise_scale = params.dyn_noise_scale * (1.0-deterministic)
+        params = params.replace(dyn_noise_scale=dyn_noise_scale)
 
         # call lax.scan to get next_state
         (_, next_state, _, params), _ = lax.scan(
@@ -469,7 +480,8 @@ class Quad3D(BaseEnvironment):
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
         torque = sub_action[1:] * params.max_torque
         env_action = Action3D(thrust=thrust, torque=torque)
-        return self.step_fn(params, state, env_action, key, self.sim_dt)
+        key, step_key = jax.random.split(key)
+        return self.step_fn(params, state, env_action, step_key, self.sim_dt)
 
     def get_obs_state_reward_done_info_gradient(
         self,

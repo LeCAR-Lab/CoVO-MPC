@@ -10,13 +10,14 @@ class EnvState2D:
     pos: jnp.ndarray  # (x,y)
     roll: float # drone orientation
     vel: jnp.ndarray  # (x,y)
-    roll_dot: float
+    omega: float
     last_thrust: float  # Only needed for rendering
-    last_roll_dot: float  # Only needed for rendering
+    last_omega: float  # Only needed for rendering
     pos_traj: jnp.ndarray
     vel_traj: jnp.ndarray
     pos_tar: float
     vel_tar: float
+    omega_tar: float
     time: int
 
     control_params: Optional[struct.dataclass] = None
@@ -26,6 +27,7 @@ class EnvParams2D:
     max_speed: float = 8.0
     max_bodyrate: float = 10.0 # TODO check this value
     max_thrust: float = 0.8
+    max_torque: float = 1e-2
     dt: float = 0.02
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
@@ -33,12 +35,13 @@ class EnvParams2D:
     traj_obs_len: int = 8
     traj_obs_gap: int = 2
     max_steps_in_episode: int = 300
+    dyn_noise_scale: float = 0.05
 
 
 @struct.dataclass
 class Action2D:
     thrust: float
-    roll_dot: float
+    omega: float # TODO: change it to a more general name
 
 @struct.dataclass
 class EnvStateDual2D:
@@ -227,6 +230,9 @@ class EnvParams3D:
 
     # RMA related parameters
     adapt_horizon: int = 4
+
+    # noise related parameters
+    dyn_noise_scale: float = 0.05
 
 
 @struct.dataclass

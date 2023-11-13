@@ -19,7 +19,7 @@ import quadjax
 from quadjax.envs.base import BaseEnvironment
 from quadjax import controllers
 from quadjax.dynamics import utils
-from quadjax.dynamics.free import get_free_bodyrate_dynamics_2d
+from quadjax.dynamics import free
 from quadjax.dynamics.dataclass import EnvParams2D, EnvState2D, Action2D
 
 
@@ -45,17 +45,48 @@ class Quad2D(BaseEnvironment):
             print('[DEBUG] reward function set to quadratic')
         # dynamics function
         if dynamics == 'bodyrate':
-            self.step_fn, self.dynamics_fn = get_free_bodyrate_dynamics_2d()
+            self.step_fn, self.dynamics_fn = free.get_free_bodyrate_dynamics_2d()
+            self.get_obs = self.get_obs_quadonly
+        elif dynamics == 'base':
+            self.step_fn, self.dynamics_fn = free.get_free_dynamics_2d()
             self.get_obs = self.get_obs_quadonly
         else:
             raise NotImplementedError
         # controller function
         if lower_controller == 'base':
             def base_controller_fn(obs, state, env_params, rng_act, input_action):
-                return input_action, state.control_params, None
-            self.control_fn = base_controller_fn
+                return input_action, state.control_params, state
             self.action_dim = 2
-            self.init_control_params = None
+            self.control_fn = base_controller_fn
+            self.default_control_params = None
+        elif lower_controller == 'pid_bodyrate':
+            self.default_control_params = controllers.BodyratePIDParams(
+                kp=jnp.array([30.0]),
+                ki=jnp.array([3.0]) / self.default_params.dt,
+                kd=jnp.array([0.0]),
+                last_error=jnp.zeros(1),
+                integral=jnp.zeros(1),
+            )
+            controller = controllers.PIDControllerBodyrate(
+                self, self.default_control_params
+            )
+            def pid_controller_fn(obs, state, env_params, rng_act, input_action):
+                thrust_normed = input_action[:1]
+                omega_tar = input_action[1:] * self.default_params.max_bodyrate
+                state = state.replace(omega_tar=omega_tar)
+
+                u, control_params, _ = controller(
+                    obs, state, env_params, rng_act, state.control_params
+                )
+
+                state = state.replace(control_params=control_params)
+                torque = self.default_params.I * u
+                torque_normed = torque / self.default_params.max_torque
+                action = jnp.concatenate([thrust_normed, torque_normed])
+                return action, control_params, state
+
+            self.action_dim = 2
+            self.control_fn = pid_controller_fn
         elif lower_controller == 'mppi':
             H = 32
             N = 32
@@ -67,7 +98,7 @@ class Quad2D(BaseEnvironment):
             a_mean = jnp.tile(a_mean_per_step, (H, 1))
             a_cov_per_step = jnp.diag(jnp.array([sigma**2, sigma**2]))
             a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
-            self.init_control_params = controllers.MPPIParams(
+            self.default_control_params = controllers.MPPIParams(
                 gamma_mean = 1.0,
                 gamma_sigma = 0.01,
                 discount = 1.0,
@@ -75,7 +106,7 @@ class Quad2D(BaseEnvironment):
                 a_mean = a_mean,
                 a_cov = a_cov,
             )
-            mppi_controller = controllers.MPPIController(env=self, control_params=self.init_control_params, N=N, H=H, lam=3e-3)
+            mppi_controller = controllers.MPPIController(env=self, control_params=self.default_control_params, N=N, H=H, lam=3e-3)
             def mppi_controller_fn(obs, state, env_params, rng_act, input_action):
                 control_params = state.control_params
                 # convert action to control parameters
@@ -99,7 +130,7 @@ class Quad2D(BaseEnvironment):
                 control_info['a_mean'] = a_mean_compensated
                 control_info['a_cov'] = a_cov_scaled
 
-                return action, control_params, control_info
+                return action, control_params, state
             self.control_fn = mppi_controller_fn
             self.action_dim = 8
         else:
@@ -120,19 +151,21 @@ class Quad2D(BaseEnvironment):
     '''
     key methods
     '''
+
     def step_env(
         self,
         key: chex.PRNGKey,
         state: EnvState2D,
         action: jnp.ndarray,
         params: EnvParams2D,
+        deterministic: bool = False,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
         # call controller to get sub_action and new_control_params
-        sub_action, new_control_params, control_info = self.control_fn(None, state, params, key, action)
+        sub_action, new_control_params, state = self.control_fn(None, state, params, key, action)
         state = state.replace(control_params = new_control_params)
         # call substep_env to get next_obs, next_state, reward, done, info
-        return self.step_env_wocontroller(key, state, sub_action, params)
+        return self.step_env_wocontroller(key, state, sub_action, params, deterministic=deterministic)
 
     def step_env_wocontroller(
         self,
@@ -140,8 +173,9 @@ class Quad2D(BaseEnvironment):
         state: EnvState2D,
         sub_action: jnp.ndarray,
         params: EnvParams2D,
+        deterministic: bool = True,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
-        obs, state, reward, done, info = self.step_env_wocontroller_gradient(key, state, sub_action, params)
+        obs, state, reward, done, info = self.step_env_wocontroller_gradient(key, state, sub_action, params, deterministic)
         return obs, lax.stop_gradient(state), reward, done, info
     
     def step_env_wocontroller_gradient(
@@ -150,15 +184,22 @@ class Quad2D(BaseEnvironment):
         state: EnvState2D,
         sub_action: jnp.ndarray,
         params: EnvParams2D,
+        deterministic: bool = True,
     ) -> Tuple[chex.Array, EnvState2D, float, bool, dict]:
+        # TODO: make all the action in the environment a real action, scale happened in controller.
         sub_action = jnp.clip(sub_action, -1.0, 1.0)
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
-        roll_dot = sub_action[1] * params.max_bodyrate
-        env_action = Action2D(thrust=thrust, roll_dot=roll_dot)
+        omega = sub_action[1] * params.max_bodyrate
+        env_action = Action2D(thrust=thrust, omega=omega)
 
         reward = self.reward_fn(state)
 
-        next_state = self.step_fn(params, state, env_action)
+        # disable noise in parameters if deterministic
+        dyn_noise_scale = params.dyn_noise_scale * (1.0-deterministic)
+        params = params.replace(dyn_noise_scale=dyn_noise_scale)
+
+        key, step_key = jax.random.split(key)
+        next_state = self.step_fn(params, state, env_action, step_key)
         done = self.is_terminal(state, params)
         return (
             lax.stop_gradient(self.get_obs(next_state, params)),
@@ -185,16 +226,16 @@ class Quad2D(BaseEnvironment):
         state = EnvState2D(
             # drone
             pos=zeros2, vel=zeros2,
-            roll=0.0, roll_dot=0.0, 
+            roll=0.0, omega=0.0, 
             # trajectory
-            pos_tar=pos_traj[0],vel_tar=vel_traj[0],
+            pos_tar=pos_traj[0],vel_tar=vel_traj[0], omega_tar=jnp.zeros(1),
             pos_traj=pos_traj,vel_traj=vel_traj,
             # debug value
-            last_thrust=0.0,last_roll_dot=0.0,
+            last_thrust=0.0,last_omega=0.0,
             # step
             time=0,
             # control parameters
-            control_params=self.init_control_params,
+            control_params=self.default_control_params,
         )
         return self.get_obs(state, params), {"discount": 0.0, "err_pos": 0.0, "err_vel": 0.0, "hit_wall": False, "pass_wall": False}, state
 
@@ -224,7 +265,7 @@ class Quad2D(BaseEnvironment):
             *state.pos,
             *(state.vel / 4.0),
             state.roll,
-            state.roll_dot / 40.0,  # 3*3+4=13
+            state.omega / 40.0,  # 3*3+4=13
             # trajectory
             *(state.pos_tar),
             *(state.vel_tar / 4.0),  # 3*2=6
@@ -253,7 +294,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     obs, info, env_state = env.reset(rng_reset, env_params)
 
     rng, rng_control = jax.random.split(rng)                      
-    control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
+    control_params = controller.reset(env_state, env_params, controller.default_control_params, rng_control)
 
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params = carry
@@ -297,7 +338,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
         obs, info, env_state = env.reset(rng_reset, env_params)
 
         rng_control, rng = jax.random.split(rng)
-        control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
+        control_params = controller.reset(env_state, env_params, controller.default_control_params, rng_control)
 
         (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
             run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(env.default_params.max_steps_in_episode))
@@ -356,7 +397,7 @@ def render_env(env: Quad2D, controller:controllers.BaseController, control_param
     # rng, rng_act, rng_step = jax.random.split(rng, 3)
     # controller_jit(obs, env_state, env_params, rng_act, control_params)
     # rng, rng_control = jax.random.split(rng)                      
-    # controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
+    # controller_reset_jit(env_state, env_params, controller.default_control_params, rng_control)
     # ts = []
     # for i in range(100):
     #     t0 = time_module.time()
@@ -368,7 +409,7 @@ def render_env(env: Quad2D, controller:controllers.BaseController, control_param
     # for i in range(100):
     #     t0 = time_module.time()
     #     rng, rng_control = jax.random.split(rng)
-    #     control_params = controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
+    #     control_params = controller_reset_jit(env_state, env_params, controller.default_control_params, rng_control)
     #     ts.append((time_module.time()-t0)*1000)
     # print(f'reset time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
     # exit()
@@ -481,7 +522,7 @@ def main(args: Args):
         )
         controller = controllers.LQRController2D(env, control_params)
         control_params = controller.update_params(env.default_params, control_params)
-        controller.init_control_params = control_params
+        controller.default_control_params = control_params
         # print control_params.K with , delimiter
         # np.savetxt(f"{quadjax.get_package_path()}/../results/K_{args.controller_params}.csv", control_params.K, delimiter=",")
         # exit()
@@ -520,7 +561,10 @@ def main(args: Args):
             N = 8
             H = 2
             print('[DEBUG] N = 8')
-        if args.lower_controller == 'base':
+        elif args.lower_controller == 'mppi':
+            a_mean = jnp.zeros((H, env.action_dim))
+            a_cov = jnp.tile(jnp.diag(jnp.ones(env.action_dim)*(sigma**2)), (H, 1, 1))
+        else:
             thrust_hover = env.default_params.m * env.default_params.g
             thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
             a_mean_per_step = jnp.array([thrust_hover_normed, 0.0]) 
@@ -530,9 +574,6 @@ def main(args: Args):
                 a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
             elif 'mppi_zeji' in args.controller:
                 a_cov = jnp.diag(jnp.ones(H*2)*sigma**2)
-        elif args.lower_controller == 'mppi':
-            a_mean = jnp.zeros((H, env.action_dim))
-            a_cov = jnp.tile(jnp.diag(jnp.ones(env.action_dim)*(sigma**2)), (H, 1, 1))
         if args.controller == 'mppi':
             control_params = controllers.MPPIParams(
                 gamma_mean = 1.0,
