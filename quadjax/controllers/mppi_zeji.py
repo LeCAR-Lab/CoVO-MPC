@@ -76,6 +76,15 @@ class MPPIZejiController(controllers.BaseController):
                         Kp_att=10.0,
                     )
                     expansion_controller = controllers.PIDController(env, control_params=control_params)
+                elif env.action_dim == 2:
+                    expansion_control_params = controllers.PIDParams(
+                        Kp=10.0,
+                        Kd=5.0,
+                        Ki=0.0,
+                        Kp_att=10.0,
+                        integral=jnp.zeros(2),
+                    )
+                    expansion_controller = controllers.PIDController2D(env, control_params=control_params)
                 else:
                     raise NotImplementedError
             elif expansion_mode == 'zero':

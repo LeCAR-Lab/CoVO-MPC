@@ -10,12 +10,12 @@ task=tracking_zigzag
 # done
 
 for task in tracking_zigzag; do
-    for controller in mppi mppi_zeji_zero mppi_zeji_pid mppi_zeji_mean; do
+    for controller in mppi mppi_zeji_zero mppi_zeji_mean; do
         for N in 8192; do
-            for H in 32; do
+            for H in 16; do
                 for lam in 0.01; do
                     echo "Running with H = $H, lam = $lam, N = $N, controller = $controller, task = $task"
-                    python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N${N}_H${H}_lam${lam}" --name "quad3d_${task}_${controller}_N${N}_H${H}_lam${lam}"
+                    python ../envs/quad2d_free.py --task ${task} --dynamics base --controller ${controller} --mode eval --controller_params "N${N}_H${H}_lam${lam}" --reward-type quadratic
                 done
             done
         done

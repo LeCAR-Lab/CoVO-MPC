@@ -117,11 +117,16 @@ class PIDController2D(controllers.BaseController):
         # generate desired angular velocity
         omega_d = control_params.Kp_att * angle_err
 
+        # attitude rate control
+        error = omega_d - state.omega
+        torque = 30.0 * error * self.param.I
+
         # generate action
         action = jnp.array(
             [
                 (thrust / self.param.max_thrust) * 2.0 - 1.0,
-                omega_d / self.param.max_omega,
+                torque / self.param.max_torque,
+                # omega_d / self.param.max_omega,
             ]
         )
 

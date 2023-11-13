@@ -296,7 +296,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
     obs, info, env_state = env.reset(rng_reset, env_params)
 
     rng, rng_control = jax.random.split(rng)                      
-    control_params = controller.reset(env_state, env_params, controller.default_control_params, rng_control)
+    control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params = carry
@@ -340,7 +340,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
         obs, info, env_state = env.reset(rng_reset, env_params)
 
         rng_control, rng = jax.random.split(rng)
-        control_params = controller.reset(env_state, env_params, controller.default_control_params, rng_control)
+        control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
         (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
             run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(env.default_params.max_steps_in_episode))
@@ -602,6 +602,8 @@ def main(args: Args):
                 expansion_mode = 'repeat'
             elif 'lqr' in args.controller:
                 expansion_mode = 'lqr'
+            elif 'pid' in args.controller:
+                expansion_mode = 'pid'
             elif 'zero' in args.controller:
                 expansion_mode = 'zero'
             elif 'ppo' in args.controller:

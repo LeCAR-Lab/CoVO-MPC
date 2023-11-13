@@ -188,7 +188,9 @@ def get_free_dynamics_2d():
         v_dot = jnp.asarray([0, -params.g]) + 1.0 / params.m * (
             Q @ jnp.asarray([0, thrust])
         )
-        omega_dot = 1.0 / params.I * torque
+
+        extra_torque = params.extra_torque * jnp.cos(q)
+        omega_dot = 1.0 / params.I * (torque+extra_torque)
 
         # return
         x_dot = jnp.asarray([*v, omega, *v_dot, omega_dot])

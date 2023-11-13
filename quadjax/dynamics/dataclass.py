@@ -29,6 +29,7 @@ class EnvParams2D:
     max_thrust: float = 0.8
     max_motor_force: float = 0.28
     max_torque: float = 1e-2
+    extra_torque: float = 0.0e-2
     dt: float = 0.02
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
