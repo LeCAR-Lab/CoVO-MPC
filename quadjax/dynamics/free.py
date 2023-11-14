@@ -49,8 +49,8 @@ def get_free_bodyrate_dynamics_2d():
         omega = x[5]  # roll rate in world frame
 
         # make the system unstable
-        # omega = omega + 10.0 * jnp.abs(jnp.sin(q))
         omega_new = params.alpha_bodyrate * omega_tar + (1 - params.alpha_bodyrate) * omega
+        omega_new = omega_new + 0.0 * jnp.abs(jnp.sin(q))
 
         Q = jnp.array(
             [[jnp.cos(q), -jnp.sin(q)], [jnp.sin(q), jnp.cos(q)]]
@@ -189,7 +189,7 @@ def get_free_dynamics_2d():
             Q @ jnp.asarray([0, thrust])
         )
 
-        extra_torque = params.extra_torque * jnp.cos(q)
+        extra_torque = params.extra_torque * jnp.abs(jnp.sin(q))
         omega_dot = 1.0 / params.I * (torque+extra_torque)
 
         # return

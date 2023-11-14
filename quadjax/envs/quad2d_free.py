@@ -507,6 +507,7 @@ class Args:
     lower_controller: str = 'base' # mppi
     debug: bool = False
     reward_type: str = ''
+    eval_repeat_times: int = 10
 
 def main(args: Args):
     env = Quad2D(task=args.task, dynamics=args.dynamics, lower_controller=args.lower_controller, reward_type=args.reward_type)
@@ -632,7 +633,7 @@ def main(args: Args):
     if args.mode == 'render':
         render_env(env, controller=controller, control_params=control_params, repeat_times=1, filename=filename)
     elif args.mode == 'eval':
-        eval_env(env, controller=controller, control_params=control_params, total_steps=300*10*4, filename=filename)
+        eval_env(env, controller=controller, control_params=control_params, total_steps=300*args.eval_repeat_times*4, filename=filename)
     else:
         raise NotImplementedError
 
