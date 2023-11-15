@@ -1175,10 +1175,10 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         controller = controllers.LQRController(env, control_params=control_params)
     elif controller_name == "pid":
         control_params = controllers.PIDParams(
-            Kp=10.0,
-            Kd=5.0,
+            Kp=8.0,
+            Kd=4.0,
             Ki=0.0,
-            Kp_att=10.0,
+            Kp_att=10.0, 
         )
         controller = controllers.PIDController(env, control_params=control_params)
     elif controller_name == "random":
@@ -1218,6 +1218,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 sample_sigma=sigma,
                 a_mean=a_mean,
                 a_cov=a_cov,
+                obs_noise_scale=0.05,
             )
             controller = controllers.MPPIController(
                 env=env, control_params=control_params, N=N, H=H, lam=lam
@@ -1349,7 +1350,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
 
 @pydataclass
 class Args:
-    task: str = "tracking_zigzag"  # tracking, tracking_zigzag, hovering
+    task: str = "tracking"  # tracking, tracking_zigzag, hovering
     dynamics: str = "bodyrate"  # bodyrate, free, slung
     controller: str = "lqr"  # fixed
     controller_params: str = ""
@@ -1358,9 +1359,8 @@ class Args:
     mode: str = "render"  # eval, render
     lower_controller: str = "base"
     noDR: bool = False
-    disturb_type: str = "none"  # periodic, sin, drag, none
+    disturb_type: str = "gaussian"  # periodic, sin, drag, gaussian, none
     name: str = ""
-
 
 def main(args: Args):
     # if args.debug is True, enable NaN detection

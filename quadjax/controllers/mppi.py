@@ -22,6 +22,8 @@ class MPPIParams:
     a_mean: jnp.ndarray # mean of action
     a_cov: jnp.ndarray # covariance matrix of action
 
+    obs_noise_scale: float
+
 class MPPIController(controllers.BaseController):
     def __init__(self, env, control_params, N: int, H: int, lam: float) -> None:
         super().__init__(env, control_params)
@@ -35,6 +37,15 @@ class MPPIController(controllers.BaseController):
 
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams, info = None) -> jnp.ndarray:
+        # inject noise to state elements
+        # TODO: this part should be moved to environment actually, but we use state for lazy evaluation
+        rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)
+        pos_noise = jax.random.normal(rng_pos, shape=state.pos.shape) * control_params.obs_noise_scale
+        vel_noise = jax.random.normal(rng_vel, shape=state.vel.shape) * control_params.obs_noise_scale * 2.0
+        quat_noise = jax.random.normal(rng_quat, shape=state.quat.shape) * control_params.obs_noise_scale * 0.1
+        omega_noise = jax.random.normal(rng_omega, shape=state.omega.shape) * control_params.obs_noise_scale * 2.0
+        state = state.replace(pos=state.pos + pos_noise, vel=state.vel + vel_noise, quat=state.quat + quat_noise, omega=state.omega + omega_noise)
+
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov
@@ -60,7 +71,7 @@ class MPPIController(controllers.BaseController):
         rng_act, step_key = jax.random.split(rng_act)
         def rollout_fn(carry, action):
             state, params, reward_before, done_before = carry
-            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p, deterministic=True))(state, action, params)
+            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p))(state, action, params)
             reward = jnp.where(done_before, reward_before, reward)
             return (state, params, reward, done | done_before), (reward, state.pos)
         # repeat state each element to match the sample size N

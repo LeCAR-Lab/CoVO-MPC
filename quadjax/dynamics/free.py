@@ -439,6 +439,8 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
         disturb_func = drag_disturb
     elif disturb_type == "mixed":
         disturb_func = mixed_disturb
+    elif disturb_type == "gaussian":
+        disturb_func = lambda disturb_key, params, state: params.dyn_noise_scale * jax.random.normal(disturb_key, shape=(3,))
     elif disturb_type == "none":
         disturb_func = lambda disturb_key, params, state: jnp.zeros(3)
 
@@ -474,23 +476,23 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
         )
 
         # generate noise
-        noise_keys = jax.random.split(key, 4)
-        r_dot_noise = (
-            params.dyn_noise_scale * 1.0 * jax.random.normal(noise_keys[0], shape=(3,))
-        )
-        r_dot = r_dot + r_dot_noise
-        q_dot_noise = (
-            params.dyn_noise_scale * 2.5 * jax.random.normal(noise_keys[1], shape=(4,))
-        )
-        q_dot = q_dot + q_dot_noise
-        v_dot_noise = (
-            params.dyn_noise_scale * 10.0 * jax.random.normal(noise_keys[2], shape=(3,))
-        )
-        v_dot = v_dot + v_dot_noise
-        omega_tar_noise = (
-            params.dyn_noise_scale * 5.0 * jax.random.normal(noise_keys[3], shape=(3,))
-        )
-        omega_tar = omega_tar + omega_tar_noise
+        # noise_keys = jax.random.split(key, 4)
+        # r_dot_noise = (
+        #     params.dyn_noise_scale * 1.0 * jax.random.normal(noise_keys[0], shape=(3,))
+        # )
+        # r_dot = r_dot + r_dot_noise
+        # q_dot_noise = (
+        #     params.dyn_noise_scale * 2.5 * jax.random.normal(noise_keys[1], shape=(4,))
+        # )
+        # q_dot = q_dot + q_dot_noise
+        # v_dot_noise = (
+        #     params.dyn_noise_scale * 10.0 * jax.random.normal(noise_keys[2], shape=(3,))
+        # )
+        # v_dot = v_dot + v_dot_noise
+        # omega_tar_noise = (
+        #     params.dyn_noise_scale * 5.0 * jax.random.normal(noise_keys[3], shape=(3,))
+        # )
+        # omega_tar = omega_tar + omega_tar_noise
 
         # integrate
         r_new = r + r_dot * dt

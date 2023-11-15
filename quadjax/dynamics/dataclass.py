@@ -236,7 +236,8 @@ class EnvParams3D:
     adapt_horizon: int = 4
 
     # noise related parameters
-    dyn_noise_scale: float = 0.05
+    dyn_noise_scale: float = 0.02
+    obs_noise_scale: float = 0.05
 
 
 @struct.dataclass
