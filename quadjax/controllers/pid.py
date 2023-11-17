@@ -14,10 +14,12 @@ class PIDParams:
     Kd: float = 4.0
     Ki: float = 1.0
     Kp_att: float = 4.0
+    Ki_att: float = 1.0
 
     integral: jnp.ndarray = default_array([0.0, 0.0, 0.0])
     quat_desired: jnp.ndarray = default_array([0.0, 0.0, 0.0, 1.0])
 
+    att_integral: jnp.ndarray = default_array([0.0, 0.0, 0.0])
 
 class PIDController(controllers.BaseController):
     """L1 controller for path following
@@ -53,7 +55,7 @@ class PIDController(controllers.BaseController):
         z_d = f_d / jnp.linalg.norm(f_d)
         axis_angle = jnp.cross(jnp.array([0.0, 0.0, 1.0]), z_d)
         angle = jnp.linalg.norm(axis_angle)
-        small_angle = jnp.abs(angle) < 1e-4
+        small_angle = (jnp.abs(angle) < 1e-3)
         axis = jnp.where(small_angle, jnp.array([0.0, 0.0, 1.0]), axis_angle / angle)
         R_d = geom.axisangletoR(axis, angle)
         quat_desired = geom.Qtoq(R_d)
@@ -132,11 +134,30 @@ class PIDController2D(controllers.BaseController):
 
         # update control_params
         integral = control_params.integral + (state.pos - state.pos_tar) * env_param.dt
-        control_params = control_params.replace(integral=integral)
+        control_params = control_params.replace(quat_desired=quat_desired, integral=integral, att_integral=atti_integral)
 
-        return action, control_params, None
+        info = {}
+        info["pos_err"]=(control_params.Kp * (state.pos - state.pos_tar))
+        info["vel_err"]=(control_params.Kd * (state.vel - state.vel_tar))
+        info["err_i"]=(control_params.Ki * control_params.integral)
+        info["angle_err"]=(control_params.Kp_att * angle_err)
+        info["err_i_att"]=(jnp.zeros_like(angle_err))
+        info["time"]=state.time
+        info["pos_cur"]=(state.pos)
+        info["vel_cur"]=(state.vel)
+        info["omega_cur"]=(state.omega)
+        info["ang_cur"]=geom.qtorpy(geom.Qtoq(Q))
+        info["pos_tar"]=state.pos_tar
+        info["vel_tar"]=state.vel_tar
+        info["omega_tar"]=(omega_d)
+        info["ang_tar"]=(geom.qtorpy(geom.Qtoq(R_d)))
+        info["f_d"]=(f_d)
+        info["thrust"]=(thrust)
 
 
+
+        return action, control_params, info
+    
 @struct.dataclass
 class BodyratePIDParams:
     kp: jnp.ndarray

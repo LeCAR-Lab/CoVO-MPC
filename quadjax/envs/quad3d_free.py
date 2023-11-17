@@ -48,6 +48,10 @@ class Quad3D(BaseEnvironment):
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
             self.get_init_state = self.fixed_init_state
+        elif task == "tracking_slow":
+            self.generate_traj = partial(utils.generate_lissa_traj_slow, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.reward_fn = utils.tracking_realworld_reward_fn
+            self.get_init_state = self.fixed_init_state
         elif task == "tracking_zigzag":
             self.generate_traj = partial(
                 utils.generate_zigzag_traj,
@@ -1175,10 +1179,10 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         controller = controllers.LQRController(env, control_params=control_params)
     elif controller_name == "pid":
         control_params = controllers.PIDParams(
-            Kp=8.0,
-            Kd=4.0,
-            Ki=0.0,
-            Kp_att=10.0, 
+            Kp=8.0, 
+            Kd=4.0,  
+            Ki=3.0,
+            Kp_att=1.0, 
         )
         controller = controllers.PIDController(env, control_params=control_params)
     elif controller_name == "random":

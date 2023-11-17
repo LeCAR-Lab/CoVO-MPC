@@ -119,6 +119,51 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
 
     return pos_traj, vel_traj, acc_traj
 
+def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
+    # get random amplitude and phase
+    key_amp, key_phase = jax.random.split(key, 2)
+    rand_amp = jax.random.uniform(key_amp, shape=(3, 2), minval=-1.0, maxval=1.0)
+    rand_phase = jax.random.uniform(
+        key_phase, shape=(3, 2), minval=-jnp.pi, maxval=jnp.pi
+    )
+    # get trajectory
+    scale = 1.0
+    ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
+    w1 = 2 * jnp.pi * 0.1
+    w2 = 2 * jnp.pi * 0.1
+    # w1 = 2 * jnp.pi * 0.2
+    # w2 = 2 * jnp.pi * 0.4
+
+    pos_traj = scale * jnp.stack(
+        [
+            rand_amp[i, 0] * jnp.sin(w1 * ts + rand_phase[i, 0])
+            + rand_amp[i, 1] * jnp.sin(w2 * ts + rand_phase[i, 1])
+            for i in range(3)
+        ], 
+        axis=1
+    )
+    pos_traj = pos_traj - pos_traj[0]
+
+    vel_traj = scale * jnp.stack(
+        [
+            rand_amp[i, 0] * w1 * jnp.cos(w1 * ts + rand_phase[i, 0])
+            + rand_amp[i, 1] * w2 * jnp.cos(w2 * ts + rand_phase[i, 1])
+            for i in range(3)
+        ], 
+        axis=1
+    )
+
+    acc_traj = scale * jnp.stack(
+        [
+            -rand_amp[i, 0] * w1**2 * jnp.sin(w1 * ts + rand_phase[i, 0])
+            - rand_amp[i, 1] * w2**2 * jnp.sin(w2 * ts + rand_phase[i, 1])
+            for i in range(3)
+        ], 
+        axis=1
+    )
+
+    return pos_traj, vel_traj, acc_traj
+
 def generate_lissa_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
     # get random amplitude and phase
     key_amp, key_phase = jax.random.split(key, 2)
@@ -396,6 +441,35 @@ def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
         log_pos_fn(err_pos) - \
         jnp.abs(yaw) * 0.2
         # jnp.abs(state.omega[2]) * 0.02 - \
+
+    return reward
+
+@jax.jit
+def tracking_realworld_reward_fn(state: EnvState3D, params = None):
+    # err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
+    # err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
+    # q = state.quat
+    # yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
+    # action_hist = state.action_hist
+    # action_diff = action_hist[-1] - action_hist[-2]
+    # thrust_action_diff = action_diff[0]**2
+    # omega_action_diff = jnp.sum(action_diff[1:]**2)
+    # reward = 1.3 - \
+    #     0.2 * err_vel - \
+    #     log_pos_fn(err_pos) - \
+    #     jnp.abs(yaw) * 0.2 - \
+    #     jnp.sum(state.omega**2) * 0.01 - \
+    #     thrust_action_diff * 1.0 - \
+    #     omega_action_diff * 0.1
+
+    # reward function from
+    alpha_p = 5.0
+    alpha_R = 3.0
+    pos_err = state.pos - state.pos_tar
+    quat_err = 1 - state.quat[3] ** 2
+    cost = alpha_p * jnp.linalg.norm(pos_err) + alpha_R * jnp.sum(quat_err)
+    cost = cost * 0.02
+    reward = -cost
 
     return reward
 

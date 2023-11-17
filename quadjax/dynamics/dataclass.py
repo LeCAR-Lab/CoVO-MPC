@@ -215,6 +215,7 @@ class EnvParams3D:
 
     # 1st order dynamics
     alpha_bodyrate: float = 0.5
+    alpha_thrust: float = 0.6
     alpha_bodyrate_mean: float = 0.5
     alpha_bodyrate_std: float = 0.1
 

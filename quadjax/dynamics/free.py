@@ -520,16 +520,23 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
         # torque_normed = env_action.torque / env_params.max_torque
         # NOTE hack here, just convert torque to omega
         omega_tar = env_action.torque / env_params.max_torque * env_params.max_omega
-        u = jnp.concatenate([jnp.array([env_action.thrust]), omega_tar])
-        x = jnp.concatenate(
-            [
-                env_state.pos,
-                env_state.quat,
-                env_state.vel,
-                env_state.omega,
-                env_state.f_disturb,
-            ]
-        )
+
+        # only allow 20% change in omega_tar
+        last_omega_tar = env_state.omega_tar
+        max_omega_tar = last_omega_tar + env_params.max_omega * 0.2
+        min_omega_tar = last_omega_tar - env_params.max_omega * 0.2
+        omega_tar = jnp.clip(omega_tar, min_omega_tar, max_omega_tar)
+
+        # only allow 20% change in thrust
+        last_thrust = env_state.last_thrust
+        # thrust first-order delay
+        thrust = last_thrust + (env_action.thrust - last_thrust) * env_params.alpha_thrust
+        max_thrust = last_thrust + env_params.max_thrust * 0.2
+        min_thrust = last_thrust - env_params.max_thrust * 0.2
+        thrust = jnp.clip(thrust, min_thrust, max_thrust)
+
+        u = jnp.concatenate([jnp.array([thrust]), omega_tar])
+        x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega, env_state.f_disturb])
 
         key, key_dyn = jax.random.split(key)
         x_new = quad_dynamics_bodyrate(x, u, env_params, sim_dt, key_dyn)
@@ -560,7 +567,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
         acc_tar = env_state.acc_traj[time]
 
         # debug value
-        last_thrust = env_action.thrust
+        last_thrust = thrust
         last_torque = env_action.torque
 
         # adaptation trajectory history information
@@ -587,9 +594,7 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
             omega=omega,
             quat=quat,
             # trajectory
-            pos_tar=pos_tar,
-            vel_tar=vel_tar,
-            acc_tar=acc_tar,
+            pos_tar=pos_tar, vel_tar=vel_tar, acc_tar=acc_tar, omega_tar=omega_tar,
             # debug value
             last_thrust=last_thrust,
             last_torque=last_torque,
