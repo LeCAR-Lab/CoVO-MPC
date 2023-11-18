@@ -37,6 +37,7 @@ class MPPIController(controllers.BaseController):
 
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams, info = None) -> jnp.ndarray:
+        # env_params = env_params.replace(m=0.04)
         # inject noise to state elements
         # TODO: this part should be moved to environment actually, but we use state for lazy evaluation
         rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)

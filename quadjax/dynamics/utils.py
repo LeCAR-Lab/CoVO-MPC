@@ -465,9 +465,11 @@ def tracking_realworld_reward_fn(state: EnvState3D, params = None):
     # reward function from
     alpha_p = 5.0
     alpha_R = 3.0
+    alpha_vel = 0.0
+    alpha_omega = 0.0
     pos_err = state.pos - state.pos_tar
     quat_err = 1 - state.quat[3] ** 2
-    cost = alpha_p * jnp.linalg.norm(pos_err) + alpha_R * jnp.sum(quat_err)
+    cost = alpha_p * jnp.linalg.norm(pos_err) + alpha_R * jnp.sum(quat_err) + alpha_vel * jnp.sum(state.vel ** 2) + alpha_omega * jnp.sum(state.omega ** 2)
     cost = cost * 0.02
     reward = -cost
 
@@ -608,7 +610,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     plt.figure(figsize=(6*3, 2*3))
     # only plot pos, vel, rpy and their tar
     plot_items = ["pos", "vel", "rpy"]
-    step_num = 100
+    step_num = 300
     for i, item in enumerate(plot_items):
         if item not in state_seq[0]:
             continue

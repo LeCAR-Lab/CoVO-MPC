@@ -520,20 +520,21 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
         # torque_normed = env_action.torque / env_params.max_torque
         # NOTE hack here, just convert torque to omega
         omega_tar = env_action.torque / env_params.max_torque * env_params.max_omega
+        thrust = env_action.thrust
 
-        # only allow 20% change in omega_tar
-        last_omega_tar = env_state.omega_tar
-        max_omega_tar = last_omega_tar + env_params.max_omega * 0.2
-        min_omega_tar = last_omega_tar - env_params.max_omega * 0.2
-        omega_tar = jnp.clip(omega_tar, min_omega_tar, max_omega_tar)
+        # # only allow 20% change in omega_tar
+        # last_omega_tar = env_state.omega_tar
+        # max_omega_tar = last_omega_tar + env_params.max_omega * 0.2
+        # min_omega_tar = last_omega_tar - env_params.max_omega * 0.2
+        # omega_tar = jnp.clip(omega_tar, min_omega_tar, max_omega_tar)
 
-        # only allow 20% change in thrust
-        last_thrust = env_state.last_thrust
-        # thrust first-order delay
-        thrust = last_thrust + (env_action.thrust - last_thrust) * env_params.alpha_thrust
-        max_thrust = last_thrust + env_params.max_thrust * 0.2
-        min_thrust = last_thrust - env_params.max_thrust * 0.2
-        thrust = jnp.clip(thrust, min_thrust, max_thrust)
+        # # only allow 20% change in thrust
+        # last_thrust = env_state.last_thrust
+        # # thrust first-order delay
+        # thrust = last_thrust + (env_action.thrust - last_thrust) * env_params.alpha_thrust
+        # max_thrust = last_thrust + env_params.max_thrust * 0.2
+        # min_thrust = last_thrust - env_params.max_thrust * 0.2
+        # thrust = jnp.clip(thrust, min_thrust, max_thrust)
 
         u = jnp.concatenate([jnp.array([thrust]), omega_tar])
         x = jnp.concatenate([env_state.pos, env_state.quat, env_state.vel, env_state.omega, env_state.f_disturb])
