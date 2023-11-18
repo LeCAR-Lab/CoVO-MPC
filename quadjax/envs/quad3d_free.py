@@ -75,7 +75,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_realworld_reward_fn
-            self.get_init_state = self.sample_init_state
+            self.get_init_state = self.fixed_init_state
         else:
             raise NotImplementedError
         # dynamics function
@@ -1198,7 +1198,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         if controller_params == "":
             N = 8192
             H = 32
-            lam = 1e-2
+            lam = 0.05 #1e-2
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(controller_params.split("_")[0][1:])
@@ -1206,23 +1206,27 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             lam = float(controller_params.split("_")[2][3:])
             print(f"[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}")
         if debug:
-            N = 8
-            print(f"[DEBUG], override controller parameters to be: N={N}")
+            N = 4
+            H = 2
+            print(f"[DEBUG], override controller parameters to be: N={N}, H={H}")
         thrust_hover = env.default_params.m * env.default_params.g
         thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
         a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
         a_mean = jnp.tile(a_mean_per_step, (H, 1))
         if controller_name == "mppi":
-            a_cov_per_step = jnp.diag(jnp.array([sigma**2] * env.action_dim))
+            # DEBUG here
+            sigma = jnp.array([0.05, 0.15, 0.15, 0.3])
+            a_cov_per_step = jnp.diag(sigma**2)
+            # a_cov_per_step = jnp.diag(jnp.array([sigma**2] * env.action_dim))
             a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
             control_params = controllers.MPPIParams(
                 gamma_mean=1.0,
                 gamma_sigma=0.0,
-                discount=1.0,
+                discount= 1.0,
                 sample_sigma=sigma,
                 a_mean=a_mean,
                 a_cov=a_cov,
-                obs_noise_scale=0.05,
+                obs_noise_scale=0.00,
             )
             controller = controllers.MPPIController(
                 env=env, control_params=control_params, N=N, H=H, lam=lam

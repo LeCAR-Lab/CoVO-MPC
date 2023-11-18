@@ -147,11 +147,7 @@ class MPPIZejiController(controllers.BaseController):
                 return (env_state, env_params, key), a_cov
             if expansion_mode in ['lqr', 'ppo', 'mppi', 'pid']:
                 def get_a_cov_offline(env_state, env_params, key):
-                    a_cov_offline = jnp.zeros((self.env.default_params.max_steps_in_episode, self.env.action_dim, self.env.action_dim))
-                    for i in range(self.env.default_params.max_steps_in_episode):
-                        _, a_cov = get_single_a_cov_offline((env_state, env_params, key), None)
-                        a_cov_offline = a_cov_offline.at[i].set(a_cov)
-                    # _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.env.default_params.max_steps_in_episode)
+                    _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.env.default_params.max_steps_in_episode)
                     # a_cov_offline_mean = jnp.mean(a_cov_offline, axis=0)
                     # a_cov_offline = jnp.repeat(a_cov_offline_mean[None, ...], self.H, axis=0)
                     return a_cov_offline
@@ -223,9 +219,7 @@ class MPPIZejiController(controllers.BaseController):
         # jax.debug.print('R eign jax {e}', e=jnp.linalg.eigh(R))
         eigns, u = jnp.linalg.eigh(R)
 
-        min_eign = jnp.min(eigns)
-        offset = jnp.where(min_eign <= 0.0, -min_eign*1.5, 0.0)
-        eigns = eigns + offset
+        eigns = eigns - jnp.min(eigns) + 1e-2
 
         log_o = jnp.log(eigns)
         log_const = (2 * 4 * self.H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*self.H)
@@ -267,8 +261,7 @@ class MPPIZejiController(controllers.BaseController):
         # calculate the hessian of get_cumulated_reward
         jabobian_fn = jax.jacfwd(get_cumulated_cost, argnums=0)
         hessian_fn = jax.jacfwd(jabobian_fn, argnums=0)
-        jax.debug.print('H={H}', H=hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act)))
-        # jax.debug.breakpoint()
+        # jax.debug.print('H={H}', H=hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act)))
         return hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act))
     
     # def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):

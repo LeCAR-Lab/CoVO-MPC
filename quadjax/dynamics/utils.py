@@ -44,9 +44,10 @@ def generate_fixed_traj(
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
     zeros = jnp.zeros((max_steps, 3))
     key_pos = jax.random.split(key)[0]
-    pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
-    pos_traj = zeros + pos
-    return pos_traj, zeros, zeros
+    # DEBUG: disable random pos
+    # pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
+    # pos_traj = zeros + pos
+    return zeros, zeros, zeros
 
 def generate_jumping_fixed_traj(
     max_steps: int, dt:float, key: chex.PRNGKey
@@ -465,11 +466,12 @@ def tracking_realworld_reward_fn(state: EnvState3D, params = None):
     # reward function from
     alpha_p = 5.0
     alpha_R = 3.0
-    alpha_vel = 0.0
-    alpha_omega = 0.0
+    # alpha_vel = 0.0
+    # alpha_omega = 0.0
     pos_err = state.pos - state.pos_tar
+    pos_err = jnp.mean(pos_err ** 2)
     quat_err = 1 - state.quat[3] ** 2
-    cost = alpha_p * jnp.linalg.norm(pos_err) + alpha_R * jnp.sum(quat_err) + alpha_vel * jnp.sum(state.vel ** 2) + alpha_omega * jnp.sum(state.omega ** 2)
+    cost = alpha_p * pos_err + alpha_R * quat_err # + alpha_vel * jnp.sum(state.vel ** 2) + alpha_omega * jnp.sum(state.omega ** 2)
     cost = cost * 0.02
     reward = -cost
 
