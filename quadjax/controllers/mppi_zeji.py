@@ -24,6 +24,8 @@ class MPPIZejiParams:
     a_cov: jnp.ndarray # covariance matrix of action
     a_cov_offline: jnp.ndarray # covariance matrix of action
 
+    obs_noise_scale: float
+
 class MPPIZejiController(controllers.BaseController):
     def __init__(self, env, control_params, N: int, H: int, lam: float, expansion_mode:str = 'lqr') -> None:
         super().__init__(env, control_params)
@@ -254,15 +256,15 @@ class MPPIZejiController(controllers.BaseController):
             a_mean = a_mean_flattened.reshape(self.H, -1)
             env_state, env_params, rng_act = carry
             # (_, _, _, _, rng_act, cumulated_reward), rewards = lax.scan(single_rollout_fn, (env_state, env_params, 0.0, False, rng_act, 0.0), a_mean[:1])#self.H)
-            cumulated_reward = 0.0
-            carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
-            for i in range(self.H):
-                carry, reward = single_rollout_fn(carry, a_mean[i])
-                cumulated_reward = cumulated_reward + reward
-            env_state = carry[0]
-            cumulated_reward = cumulated_reward + self.env.reward_fn(env_state)
+            # cumulated_reward = 0.0
             # carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
-            # (_, _, _, _, rng_act, cumulated_reward), _ = single_rollout_fn(carry, a_mean[0])
+            # for i in range(self.H):
+            #     carry, reward = single_rollout_fn(carry, a_mean[i])
+            #     cumulated_reward = cumulated_reward + reward
+            # env_state = carry[0]
+            # cumulated_reward = cumulated_reward + self.env.reward_fn(env_state, env_params)
+            carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
+            (_, _, _, _, rng_act, cumulated_reward), _ = single_rollout_fn(carry, a_mean[0])
             return -cumulated_reward
         # calculate the hessian of get_cumulated_reward
         jabobian_fn = jax.jacfwd(get_cumulated_cost, argnums=0)
@@ -306,6 +308,15 @@ class MPPIZejiController(controllers.BaseController):
 
     @partial(jax.jit, static_argnums=(0,))
     def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParams, info = None) -> jnp.ndarray:
+        # inject noise to state elements
+        # TODO: this part should be moved to environment actually, but we use state for lazy evaluation
+        rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)
+        pos_noise = jax.random.normal(rng_pos, shape=env_state.pos.shape) * control_params.obs_noise_scale * 0.5
+        vel_noise = jax.random.normal(rng_vel, shape=env_state.vel.shape) * control_params.obs_noise_scale 
+        quat_noise = jax.random.normal(rng_quat, shape=env_state.quat.shape) * control_params.obs_noise_scale * 0.05
+        omega_noise = jax.random.normal(rng_omega, shape=env_state.omega.shape) * control_params.obs_noise_scale
+        env_state = env_state.replace(pos=env_state.pos + pos_noise, vel=env_state.vel + vel_noise, quat=env_state.quat + quat_noise, omega=env_state.omega + omega_noise)
+
         # shift operator
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov

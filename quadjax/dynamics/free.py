@@ -44,13 +44,16 @@ def get_free_bodyrate_dynamics_2d():
         omega_tar = u[1]
 
         r = x[:2]  # position in world frame
-        q = x[2]  # roll in world frame
+        q = x[2]  # quat in world frame
         v = x[3:5]  # velocity in world frame
-        omega = x[5]  # roll rate in world frame
+        omega = x[5]  # quat rate in world frame
 
-        # make the system unstable
+        # first order delay
         omega_new = params.alpha_bodyrate * omega_tar + (1 - params.alpha_bodyrate) * omega
-        omega_new = omega_new + 0.0 * jnp.abs(jnp.sin(q))
+
+        # external torque due to hanging object
+        extra_omega_change = params.extra_torque / params.I * params.dt * jnp.abs(jnp.sin(q))
+        omega_new = omega_new + extra_omega_change
 
         Q = jnp.array(
             [[jnp.cos(q), -jnp.sin(q)], [jnp.sin(q), jnp.cos(q)]]
@@ -91,8 +94,8 @@ def get_free_bodyrate_dynamics_2d():
     #     k3 = f(x + k2 * dt / 2, u, params, key3, dt/3)
     #     k4 = f(x + k3 * dt, u, params, key4)
     #     x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6 * dt
-    #     roll = x_new[2]
-    #     roll_normed = utils.angle_normalize(roll)
+    #     quat = x_new[2]
+    #     roll_normed = utils.angle_normalize(quat)
     #     return x_new.at[2].set(roll_normed)
 
     @jax.jit
@@ -103,13 +106,13 @@ def get_free_bodyrate_dynamics_2d():
         key: chex.PRNGKey,
     ):
         u = jnp.asarray([env_action.thrust, env_action.omega])
-        x = jnp.asarray([*env_state.pos, env_state.roll, *env_state.vel, env_state.omega])
+        x = jnp.asarray([*env_state.pos, env_state.quat, *env_state.vel, env_state.omega])
 
         # rk4
         key, key_dyn = jax.random.split(key)
         x_new = dynamics_fn(x, u, env_params, env_params.dt, key_dyn)
         pos = x_new[:2]
-        roll = x_new[2]
+        quat = x_new[2]
         vel = x_new[3:5]
         omega = x_new[5]
 
@@ -128,7 +131,7 @@ def get_free_bodyrate_dynamics_2d():
             # drone
             pos=pos,
             vel=vel,
-            roll=roll,
+            quat=quat,
             omega=omega,
             # trajectory
             pos_tar=pos_tar,
@@ -173,9 +176,9 @@ def get_free_dynamics_2d():
         # jax.debug.print('F scale = {a}, \n T scale = {b}', a=u_cap[0]/u[0], b=u_cap[1]/u[1])
 
         r = x[:2]  # position in world frame
-        q = x[2]  # roll in world frame
+        q = x[2]  # quat in world frame
         v = x[3:5]  # velocity in world frame
-        omega = x[5]  # roll rate in world frame
+        omega = x[5]  # quat rate in world frame
 
         # make the system unstable
         # omega = omega + 10.0 * jnp.abs(jnp.sin(q))
@@ -222,8 +225,8 @@ def get_free_dynamics_2d():
         k3 = f(x + k2 * dt / 2, u, params, key3)
         k4 = f(x + k3 * dt, u, params, key4)
         x_new = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6 * dt
-        roll = x_new[2]
-        roll_normed = utils.angle_normalize(roll)
+        quat = x_new[2]
+        roll_normed = utils.angle_normalize(quat)
         return x_new.at[2].set(roll_normed)
 
     @jax.jit
@@ -236,14 +239,14 @@ def get_free_dynamics_2d():
         torque = env_action.omega / env_params.max_omega * env_params.max_torque
         u = jnp.asarray([env_action.thrust, torque])
         x = jnp.asarray(
-            [*env_state.pos, env_state.roll, *env_state.vel, env_state.omega]
+            [*env_state.pos, env_state.quat, *env_state.vel, env_state.omega]
         )
 
         # rk4
         key, key_dyn = jax.random.split(key)
         x_new = dynamics_fn(x, u, env_params, env_params.dt, key_dyn)
         pos = x_new[:2]
-        roll = x_new[2]
+        quat = x_new[2]
         vel = x_new[3:5]
         omega = x_new[5]
 
@@ -262,7 +265,7 @@ def get_free_dynamics_2d():
             # drone
             pos=pos,
             vel=vel,
-            roll=roll,
+            quat=quat,
             omega=omega,
             # trajectory
             pos_tar=pos_tar,

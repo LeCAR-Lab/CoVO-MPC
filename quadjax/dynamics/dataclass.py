@@ -8,7 +8,7 @@ def default_array(array):
 @struct.dataclass
 class EnvState2D:
     pos: jnp.ndarray  # (x,y)
-    roll: float # drone orientation
+    quat: float # drone orientation
     vel: jnp.ndarray  # (x,y)
     omega: float
     last_thrust: float  # Only needed for rendering
@@ -29,7 +29,7 @@ class EnvParams2D:
     max_thrust: float = 0.8
     max_motor_force: float = 0.28
     max_torque: float = 1e-2
-    extra_torque: float = 0.0e-2
+    extra_torque: float = 1.0e-2
     dt: float = 0.02
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
@@ -38,9 +38,9 @@ class EnvParams2D:
     traj_obs_len: int = 8
     traj_obs_gap: int = 2
     max_steps_in_episode: int = 300
-    dyn_noise_scale: float = 0.05
     alpha_bodyrate: float = 0.5
 
+    dyn_noise_scale: float = 0.05
 
 @struct.dataclass
 class Action2D:
@@ -238,7 +238,6 @@ class EnvParams3D:
 
     # noise related parameters
     dyn_noise_scale: float = 0.02
-    obs_noise_scale: float = 0.05
 
 
 @struct.dataclass

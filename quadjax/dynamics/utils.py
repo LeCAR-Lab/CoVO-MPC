@@ -387,15 +387,17 @@ def log_pos_fn(err_pos):
 def tracking_2d_reward_fn(state: EnvState2D, params = None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    omega_panelty = jnp.abs(state.omega)*0.02
-    omega_command_panelty = jnp.abs(state.last_omega)*0.02
+    underactuated_direction_panelty = jnp.abs(state.pos[1])*0.05
+    # omega_panelty = jnp.abs(state.omega)*0.02
+    # omega_command_panelty = jnp.abs(state.last_omega)*0.02
     thrust_command_panelty = jnp.abs(state.last_thrust-0.03*9.81)*0.5
     reward = 1.0 - \
         0.1 * err_vel - \
         log_pos_fn(err_pos) -\
-        omega_panelty - \
-        omega_command_panelty - \
+        underactuated_direction_panelty - \
         thrust_command_panelty 
+        # omega_panelty - \
+        # omega_command_panelty - \
     return reward
 
 @jax.jit

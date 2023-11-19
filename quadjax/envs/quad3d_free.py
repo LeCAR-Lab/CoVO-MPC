@@ -1194,11 +1194,12 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         )
         controller = controllers.FixedController(env, control_params=control_params)
     elif "mppi" in controller_name:
-        sigma = 0.5
+        # sigma = 0.5
+        sigma = 0.2 #0.5
         if controller_params == "":
             N = 8192
             H = 32
-            lam = 0.05 #1e-2
+            lam = 5e-2
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(controller_params.split("_")[0][1:])
@@ -1256,6 +1257,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 a_mean=a_mean,
                 a_cov=a_cov,
                 a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
+                obs_noise_scale = 0.00, 
             )
             controller = controllers.MPPIZejiController(
                 env=env,

@@ -100,14 +100,14 @@ class PIDController2D(controllers.BaseController):
         self, obs, state, env_param, rng_act, control_params, info=None
     ) -> jnp.ndarray:
         # position control
-        roll = state.roll
+        quat = state.quat
         f_d = self.param.m * (
             jnp.array([0.0, self.param.g])
             - control_params.Kp * (state.pos - state.pos_tar)
             - control_params.Kd * (state.vel - state.vel_tar)
             - control_params.Ki * control_params.integral
         )
-        thrust = jnp.dot(jnp.array([-jnp.sin(roll), jnp.cos(roll)]), f_d)
+        thrust = jnp.dot(jnp.array([-jnp.sin(quat), jnp.cos(quat)]), f_d)
         thrust = jnp.clip(thrust, 0.0, self.param.max_thrust)
 
         # attitude control
@@ -115,7 +115,7 @@ class PIDController2D(controllers.BaseController):
         z_d = f_d / f_d_norm
         z_d = jnp.where(f_d_norm < 1e-3, jnp.array([0.0, 1.0]), z_d)
         roll_tar = jnp.arctan2(-z_d[0], z_d[1])
-        angle_err = roll_tar - state.roll
+        angle_err = roll_tar - state.quat
         # generate desired angular velocity
         omega_d = control_params.Kp_att * angle_err
 
