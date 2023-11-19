@@ -74,7 +74,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.max_steps_in_episode,
                 self.default_params.dt,
             )
-            self.reward_fn = utils.tracking_realworld_reward_fn
+            self.reward_fn = utils.tracking_penyaw_reward_fn
             self.get_init_state = self.fixed_init_state
         else:
             raise NotImplementedError
@@ -1404,6 +1404,7 @@ def main(args: Args):
             debug=args.debug,
         )
     elif args.mode == "render":
+        # with jax.disable_jit():
         render_env(
             env,
             controller=controller,

@@ -149,11 +149,13 @@ class MPPIZejiController(controllers.BaseController):
                 return (env_state, env_params, key), a_cov
             if expansion_mode in ['lqr', 'ppo', 'mppi', 'pid']:
                 def get_a_cov_offline(env_state, env_params, key):
-                    # a_cov_offline = jnp.zeros((self.env.default_params.max_steps_in_episode, self.env.action_dim, self.env.action_dim))
+                    # a_cov_offline = jnp.zeros((self.env.default_params.max_steps_in_episode, 128, 128))
                     # for i in range(self.env.default_params.max_steps_in_episode):
                     #     _, a_cov = get_single_a_cov_offline((env_state, env_params, key), None)
                     #     a_cov_offline = a_cov_offline.at[i].set(a_cov)
+
                     _, a_cov_offline = lax.scan(get_single_a_cov_offline, (env_state, env_params, key), None, length=self.env.default_params.max_steps_in_episode)
+
                     # a_cov_offline_mean = jnp.mean(a_cov_offline, axis=0)
                     # a_cov_offline = jnp.repeat(a_cov_offline_mean[None, ...], self.H, axis=0)
                     return a_cov_offline
@@ -234,12 +236,14 @@ class MPPIZejiController(controllers.BaseController):
         log_const = (2 * 4 * self.H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*self.H)
         log_s = 0.5 * log_const - 0.5 * log_o
 
+        # jax.debug.print('{x}', x=eigns)
         # o = eigns
         # s = jnp.exp(log_s)
         # cc = ((o**2)*s)/((1+2/lam*o*s)**3)
         # jax.debug.print('verified solution: log cc {cc}', cc=jnp.log(cc))
         # jax.debug.print('log const {log_const}', log_const=log_const)
         # jax.debug.print('approximated log cc {log_cc}', log_cc=2.0*log_s + 1.0 * log_o)
+        # jax.debug.print('log s diff {x}', x=jnp.sum(log_s)-2 * 4 * self.H * jnp.log(control_params.sample_sigma))
                         
         a_cov = u @ jnp.diag(jnp.exp(log_s)) @ u.T
 
@@ -257,15 +261,21 @@ class MPPIZejiController(controllers.BaseController):
             a_mean = a_mean_flattened.reshape(self.H, -1)
             env_state, env_params, rng_act = carry
             # (_, _, _, _, rng_act, cumulated_reward), rewards = lax.scan(single_rollout_fn, (env_state, env_params, 0.0, False, rng_act, 0.0), a_mean[:1])#self.H)
-            # cumulated_reward = 0.0
-            # carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
-            # for i in range(self.H):
-            #     carry, reward = single_rollout_fn(carry, a_mean[i])
-            #     cumulated_reward = cumulated_reward + reward
-            # env_state = carry[0]
-            # cumulated_reward = cumulated_reward + self.env.reward_fn(env_state, env_params)
+
+            # NOTE: use for loop instead of lax.scan to avoid the gradient disappearing problem
+            cumulated_reward = 0.0
             carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
-            (_, _, _, _, rng_act, cumulated_reward), _ = single_rollout_fn(carry, a_mean[0])
+            for i in range(self.H):
+                carry, reward = single_rollout_fn(carry, a_mean[i])
+                cumulated_reward = cumulated_reward + reward
+            
+            # env_state = carry[0]
+            # carry = (env_state, env_params, 0.0, False, rng_act, 0.0)
+            # (_, _, _, _, rng_act, cumulated_reward), _ = lax.scan(single_rollout_fn, carry, a_mean)
+
+            # remeber to add the last reward
+            cumulated_reward = cumulated_reward + self.env.reward_fn(env_state, env_params)
+
             return -cumulated_reward
         # calculate the hessian of get_cumulated_reward
         jabobian_fn = jax.jacfwd(get_cumulated_cost, argnums=0)

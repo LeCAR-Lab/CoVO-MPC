@@ -52,11 +52,14 @@ class PIDController(controllers.BaseController):
         thrust = jnp.clip(thrust, 0.0, self.param.max_thrust)
 
         # attitude control
-        z_d = f_d / jnp.linalg.norm(f_d)
+        # make sure f_d is not zero
+        f_d_norm = jnp.linalg.norm(f_d)
+        f_d_norm = jnp.where(f_d_norm < 1e-3, 1e-3, f_d_norm)
+        z_d = f_d / f_d_norm
         axis_angle = jnp.cross(jnp.array([0.0, 0.0, 1.0]), z_d)
         angle = jnp.linalg.norm(axis_angle)
-        small_angle = (jnp.abs(angle) < 1e-3)
-        axis = jnp.where(small_angle, jnp.array([0.0, 0.0, 1.0]), axis_angle / angle)
+        angle = jnp.where(angle < 1e-3, 5e-4, angle)
+        axis = jnp.where((angle < 1e-3), jnp.array([0.0, 0.0, 1.0]), axis_angle / angle)
         R_d = geom.axisangletoR(axis, angle)
         quat_desired = geom.Qtoq(R_d)
         R_e = R_d.T @ Q
