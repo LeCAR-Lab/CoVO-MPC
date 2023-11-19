@@ -32,6 +32,7 @@ class MPPIZejiController(controllers.BaseController):
         self.N = N # NOTE: N is the number of saples, set here as a static number
         self.H = H
         self.lam = lam
+        self.action_dim = self.env.action_dim
         if expansion_mode == 'mean':
             # Key method
             def get_sigma_zeji(control_params, env_state, env_params, key):
@@ -233,7 +234,9 @@ class MPPIZejiController(controllers.BaseController):
         eigns = eigns + offset
 
         log_o = jnp.log(eigns)
-        log_const = (2 * 4 * self.H * jnp.log(control_params.sample_sigma) + jnp.sum(log_o)) / (2*self.H)
+        element_num = self.action_dim*self.H
+        log_det_a_cov = element_num * (jnp.log(control_params.sample_sigma)*2)
+        log_const = (log_det_a_cov * 2 + jnp.sum(log_o)) / element_num
         log_s = 0.5 * log_const - 0.5 * log_o
 
         # jax.debug.print('{x}', x=eigns)
@@ -243,7 +246,7 @@ class MPPIZejiController(controllers.BaseController):
         # jax.debug.print('verified solution: log cc {cc}', cc=jnp.log(cc))
         # jax.debug.print('log const {log_const}', log_const=log_const)
         # jax.debug.print('approximated log cc {log_cc}', log_cc=2.0*log_s + 1.0 * log_o)
-        jax.debug.print('log s diff {x}', x=jnp.sum(log_s)-2 * 4 * self.H * jnp.log(control_params.sample_sigma))
+        # jax.debug.print('log s diff {x}', x=jnp.sum(log_s)-log_det_a_cov)
                         
         a_cov = u @ jnp.diag(jnp.exp(log_s)) @ u.T
 
