@@ -243,7 +243,7 @@ class MPPIZejiController(controllers.BaseController):
         # jax.debug.print('verified solution: log cc {cc}', cc=jnp.log(cc))
         # jax.debug.print('log const {log_const}', log_const=log_const)
         # jax.debug.print('approximated log cc {log_cc}', log_cc=2.0*log_s + 1.0 * log_o)
-        # jax.debug.print('log s diff {x}', x=jnp.sum(log_s)-2 * 4 * self.H * jnp.log(control_params.sample_sigma))
+        jax.debug.print('log s diff {x}', x=jnp.sum(log_s)-2 * 4 * self.H * jnp.log(control_params.sample_sigma))
                         
         a_cov = u @ jnp.diag(jnp.exp(log_s)) @ u.T
 
