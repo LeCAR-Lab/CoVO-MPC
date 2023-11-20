@@ -504,6 +504,15 @@ def get_free_dynamics_3d_bodyrate(disturb_type: str = "periodic"):
         omega_new = (
             params.alpha_bodyrate * (omega) + (1 - params.alpha_bodyrate) * omega_tar
         )
+
+        # external torque due to hanging object
+        l = 1.0
+        extra_force = - params.extra_torque / l
+        extra_force_in_body = Q.T @ jnp.asarray([0, 0, extra_force])
+        extra_torque_in_body = jnp.cross(jnp.asarray([0, 0, l]), extra_force_in_body)
+        extra_omega_change = (jnp.linalg.inv(params.I) @ extra_torque_in_body) * dt
+        omega_new = omega_new + extra_omega_change
+
         f_disturb_new = f_disturb
 
         # return
