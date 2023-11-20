@@ -10,7 +10,7 @@ task=tracking_zigzag
 # done
 
 for task in tracking_zigzag; do
-    for controller in mppi mppi_zeji_zero mppi_zeji_pid mppi_zeji_mean; do
+    for controller in mppi mppi_zeji_pid mppi_zeji_mean; do #mppi mppi_zeji_zero mppi_zeji_pid mppi_zeji_mean; do
         for N in 8192; do
             for H in 32; do
                 for lam in 0.01; do

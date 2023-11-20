@@ -40,7 +40,7 @@ class EnvParams2D:
     max_steps_in_episode: int = 300
     alpha_bodyrate: float = 0.5
 
-    dyn_noise_scale: float = 0.05
+    dyn_noise_scale: float = 0.02
 
 @struct.dataclass
 class Action2D:
@@ -237,7 +237,7 @@ class EnvParams3D:
     adapt_horizon: int = 4
 
     # noise related parameters
-    dyn_noise_scale: float = 0.02
+    dyn_noise_scale: float = 0.05
 
 
 @struct.dataclass

@@ -36,16 +36,16 @@ class MPPIController(controllers.BaseController):
         #     self.network_params = pickle.load(f)
 
     @partial(jax.jit, static_argnums=(0,))
-    def __call__(self, obs:jnp.ndarray, state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams, info = None) -> jnp.ndarray:
+    def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIParams, info = None) -> jnp.ndarray:
         # env_params = env_params.replace(m=0.04)
-        # inject noise to state elements
+        # inject noise to env_state elements
         # TODO: this part should be moved to environment actually, but we use state for lazy evaluation
         rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)
-        pos_noise = jax.random.normal(rng_pos, shape=state.pos.shape) * control_params.obs_noise_scale
-        vel_noise = jax.random.normal(rng_vel, shape=state.vel.shape) * control_params.obs_noise_scale * 2.0
-        quat_noise = jax.random.normal(rng_quat, shape=state.quat.shape) * control_params.obs_noise_scale * 0.1
-        omega_noise = jax.random.normal(rng_omega, shape=state.omega.shape) * control_params.obs_noise_scale * 2.0
-        state = state.replace(pos=state.pos + pos_noise, vel=state.vel + vel_noise, quat=state.quat + quat_noise, omega=state.omega + omega_noise)
+        pos_noise = jax.random.normal(rng_pos, shape=env_state.pos.shape) * control_params.obs_noise_scale * 0.25
+        vel_noise = jax.random.normal(rng_vel, shape=env_state.vel.shape) * control_params.obs_noise_scale * 0.5
+        quat_noise = jax.random.normal(rng_quat, shape=env_state.quat.shape) * control_params.obs_noise_scale * 0.02
+        omega_noise = jax.random.normal(rng_omega, shape=env_state.omega.shape) * control_params.obs_noise_scale * 0.5
+        env_state = env_state.replace(pos=env_state.pos + pos_noise, vel=env_state.vel + vel_noise, quat=env_state.quat + quat_noise, omega=env_state.omega + omega_noise)
 
         # shift operator
         a_mean_old = control_params.a_mean
@@ -71,12 +71,12 @@ class MPPIController(controllers.BaseController):
         # rollout to get reward with lax.scan
         rng_act, step_key = jax.random.split(rng_act)
         def rollout_fn(carry, action):
-            state, params, reward_before, done_before = carry
-            obs, state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p))(state, action, params)
+            env_state, params, reward_before, done_before = carry
+            obs, env_state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p))(env_state, action, params)
             reward = jnp.where(done_before, reward_before, reward)
-            return (state, params, reward, done | done_before), (reward, state.pos)
-        # repeat state each element to match the sample size N
-        state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), state)
+            return (env_state, params, reward, done | done_before), (reward, env_state.pos)
+        # repeat env_state each element to match the sample size N
+        state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_state)
         env_params_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_params)
         done_repeat = jnp.full(self.N, False)
         reward_repeat = jnp.full(self.N, 0.0)

@@ -19,6 +19,7 @@ from quadjax.dynamics import utils, geom
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.envs.base import BaseEnvironment
 
+
 class Quad3D(BaseEnvironment):
     """
     JAX Compatible version of Quad3D-v0 OpenAI gym environment. Source:
@@ -49,7 +50,11 @@ class Quad3D(BaseEnvironment):
             self.reward_fn = utils.tracking_penyaw_reward_fn
             self.get_init_state = self.fixed_init_state
         elif task == "tracking_slow":
-            self.generate_traj = partial(utils.generate_lissa_traj_slow, self.default_params.max_steps_in_episode, self.default_params.dt)
+            self.generate_traj = partial(
+                utils.generate_lissa_traj_slow,
+                self.default_params.max_steps_in_episode,
+                self.default_params.dt,
+            )
             self.reward_fn = utils.tracking_realworld_reward_fn
             self.get_init_state = self.fixed_init_state
         elif task == "tracking_zigzag":
@@ -367,7 +372,7 @@ class Quad3D(BaseEnvironment):
         else:
             raise NotImplementedError
         # equibrium point
-        self.equib = jnp.array([0.0] * 6 + [1.0] + [0.0] * 9) # size=16
+        self.equib = jnp.array([0.0] * 6 + [1.0] + [0.0] * 9)  # size=16
         # RL parameters
         self.action_dim = 4
         self.adapt_obs_dim = 22 * self.default_params.adapt_horizon
@@ -440,7 +445,7 @@ class Quad3D(BaseEnvironment):
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         # TODO: merge into raw_step
         # disable noise in parameters
-        dyn_noise_scale = params.dyn_noise_scale * (1.0-deterministic)
+        dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
         params = params.replace(dyn_noise_scale=dyn_noise_scale)
         return self.step_env(key, state, sub_action, params)
 
@@ -450,7 +455,7 @@ class Quad3D(BaseEnvironment):
         state: EnvState3D,
         action: jnp.ndarray,
         params: EnvParams3D,
-        deterministic: bool = True, 
+        deterministic: bool = True,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         # TODO: merge into raw_step
         action = jnp.clip(action, -1.0, 1.0)
@@ -463,7 +468,7 @@ class Quad3D(BaseEnvironment):
             return (key, next_state, action, params), None
 
         # disable noise in parameters
-        dyn_noise_scale = params.dyn_noise_scale * (1.0-deterministic)
+        dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
         params = params.replace(dyn_noise_scale=dyn_noise_scale)
 
         # call lax.scan to get next_state
@@ -1009,38 +1014,51 @@ def eval_env(
     rng = jax.random.PRNGKey(1)
     # rng, rng_params = jax.random.split(rng)
     # env_params = env.default_params
-    
+
     # rng, rng_reset = jax.random.split(rng)
     # obs, info, env_state = env.reset(rng_reset, env_params)
 
-    # rng, rng_control = jax.random.split(rng)                      
+    # rng, rng_control = jax.random.split(rng)
     # control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
     def run_one_step(carry, _):
         obs, env_state, rng, env_params, control_params = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
-        action, control_params, control_info = controller(obs, env_state, env_params, rng_act, control_params)
+        action, control_params, control_info = controller(
+            obs, env_state, env_params, rng_act, control_params
+        )
         if control_info is not None:
-            if 'a_mean' in control_info:
-                action = control_info['a_mean']
+            if "a_mean" in control_info:
+                action = control_info["a_mean"]
         next_obs, next_env_state, reward, done, info = env.step(
-            rng_step, env_state, action, env_params)
+            rng_step, env_state, action, env_params
+        )
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         rng, rng_control = jax.random.split(rng)
-        return (next_obs, next_env_state, rng, env_params, control_params), (info['err_pos'], done)
-    
+        return (next_obs, next_env_state, rng, env_params, control_params), (
+            info["err_pos"],
+            done,
+        )
+
     t0 = time_module.time()
+
     def run_one_ep(rng_reset, rng):
         env_params = env.default_params
 
         obs, info, env_state = env.reset(rng_reset, env_params)
 
         rng_control, rng = jax.random.split(rng)
-        control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
+        control_params = controller.reset(
+            env_state, env_params, controller.init_control_params, rng_control
+        )
 
         (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
-            run_one_step, (obs, env_state, rng, env_params, control_params), jnp.arange(env.default_params.max_steps_in_episode))
+            run_one_step,
+            (obs, env_state, rng, env_params, control_params),
+            jnp.arange(env.default_params.max_steps_in_episode),
+        )
         return rng, err_pos
+
     run_one_ep_jit = jax.jit(run_one_ep)
     # calculate cumulative err_pos bewteen each done
     num_eps = total_steps // env.default_params.max_steps_in_episode
@@ -1049,8 +1067,8 @@ def eval_env(
     rng, rng_reset_meta = jax.random.split(rng)
     rng_reset_list = jax.random.split(rng_reset_meta, num_trajs)
     for i, rng_reset in enumerate(rng_reset_list):
-        print(f'[DEBUG] test traj {i+1}')
-        for _ in trange(num_eps//num_trajs):
+        print(f"[DEBUG] test traj {i+1}")
+        for _ in trange(num_eps // num_trajs):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
             err_pos_ep.append(err_pos.mean())
     # last_ep_end = 0
@@ -1062,11 +1080,13 @@ def eval_env(
     # print mean and std of err_pos
     pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
     print(f"env running time: {time_module.time()-t0:.2f}s")
-    print(f'err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}')
-    print(f'${pos_mean*100:.2f} \pm {pos_std*100:.2f}$')
+    print(f"err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}")
+    print(f"${pos_mean*100:.2f} \pm {pos_std*100:.2f}$")
 
     # save data
-    with open(f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb") as f:
+    with open(
+        f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb"
+    ) as f:
         pickle.dump(np.array(err_pos_ep), f)
 
 
@@ -1096,7 +1116,7 @@ def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename
     # controller_reset_jit = jax.jit(controller.reset)
     # rng, rng_act, rng_step = jax.random.split(rng, 3)
     # controller_jit(obs, env_state, env_params, rng_act, control_params)
-    # rng, rng_control = jax.random.split(rng)                      
+    # rng, rng_control = jax.random.split(rng)
     # controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
     # ts = []
     # for i in trange(101):
@@ -1179,10 +1199,10 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         controller = controllers.LQRController(env, control_params=control_params)
     elif controller_name == "pid":
         control_params = controllers.PIDParams(
-            Kp=8.0, 
-            Kd=4.0,  
+            Kp=8.0,
+            Kd=4.0,
             Ki=3.0,
-            Kp_att=1.0, 
+            Kp_att=1.0,
         )
         controller = controllers.PIDController(env, control_params=control_params)
     elif controller_name == "random":
@@ -1194,12 +1214,11 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         )
         controller = controllers.FixedController(env, control_params=control_params)
     elif "mppi" in controller_name:
-        # sigma = 0.5
-        sigma = 0.135 #0.5
+        sigma = 0.5
         if controller_params == "":
             N = 8192
             H = 32
-            lam = 5e-2 # 0.01
+            lam = 0.01
         else:
             # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
             N = int(controller_params.split("_")[0][1:])
@@ -1215,25 +1234,24 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
         a_mean = jnp.tile(a_mean_per_step, (H, 1))
         if controller_name == "mppi":
-            # DEBUG here
-            sigma = jnp.array([0.05, 0.15, 0.15, 0.3])
-            a_cov_per_step = jnp.diag(sigma**2)
+            sigmas = jnp.array([sigma] * env.action_dim)
+            a_cov_per_step = jnp.diag(sigmas**2)
             # a_cov_per_step = jnp.diag(jnp.array([sigma**2] * env.action_dim))
             a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
             control_params = controllers.MPPIParams(
                 gamma_mean=1.0,
                 gamma_sigma=0.0,
-                discount= 1.0,
+                discount=1.0,
                 sample_sigma=sigma,
                 a_mean=a_mean,
                 a_cov=a_cov,
-                obs_noise_scale=0.00,
+                obs_noise_scale=0.05,
             )
             controller = controllers.MPPIController(
                 env=env, control_params=control_params, N=N, H=H, lam=lam
             )
         elif "mppi_zeji" in controller_name:
-            a_cov = jnp.diag(jnp.ones(H*env.action_dim)*sigma**2)
+            a_cov = jnp.diag(jnp.ones(H * env.action_dim) * sigma**2)
             if "mean" in controller_name:
                 expansion_mode = "mean"
             elif "lqr" in controller_name:
@@ -1257,7 +1275,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 a_mean=a_mean,
                 a_cov=a_cov,
                 a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
-                obs_noise_scale = 0.00, 
+                obs_noise_scale=0.05,
             )
             controller = controllers.MPPIZejiController(
                 env=env,
@@ -1323,8 +1341,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 train_params[1], env_info["obs_param"]
             )
             adapted_last_obs = adaptor.apply(train_params[2], env_info["obs_adapt"])
-            jax.debug.print("compressed {com}", com=compressed_last_obs)
-            jax.debug.print("adapted {ada}", ada=adapted_last_obs)
             obs = jnp.concatenate([last_obs, compressed_last_obs], axis=-1)
             pi, value = network.apply(train_params[0], obs)
             return pi, value
@@ -1372,6 +1388,7 @@ class Args:
     disturb_type: str = "gaussian"  # periodic, sin, drag, gaussian, none
     name: str = ""
 
+
 def main(args: Args):
     # if args.debug is True, enable NaN detection
     if args.debug:
@@ -1399,7 +1416,7 @@ def main(args: Args):
             env,
             controller=controller,
             control_params=control_params,
-            total_steps=300*4*10,
+            total_steps=300 * 4 * 10,
             filename=args.name,
             debug=args.debug,
         )

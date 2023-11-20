@@ -325,10 +325,10 @@ class MPPIZejiController(controllers.BaseController):
         # inject noise to state elements
         # TODO: this part should be moved to environment actually, but we use state for lazy evaluation
         rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)
-        pos_noise = jax.random.normal(rng_pos, shape=env_state.pos.shape) * control_params.obs_noise_scale * 0.5
-        vel_noise = jax.random.normal(rng_vel, shape=env_state.vel.shape) * control_params.obs_noise_scale 
-        quat_noise = jax.random.normal(rng_quat, shape=env_state.quat.shape) * control_params.obs_noise_scale * 0.05
-        omega_noise = jax.random.normal(rng_omega, shape=env_state.omega.shape) * control_params.obs_noise_scale
+        pos_noise = jax.random.normal(rng_pos, shape=env_state.pos.shape) * control_params.obs_noise_scale * 0.25
+        vel_noise = jax.random.normal(rng_vel, shape=env_state.vel.shape) * control_params.obs_noise_scale * 0.5
+        quat_noise = jax.random.normal(rng_quat, shape=env_state.quat.shape) * control_params.obs_noise_scale * 0.02
+        omega_noise = jax.random.normal(rng_omega, shape=env_state.omega.shape) * control_params.obs_noise_scale * 0.5
         env_state = env_state.replace(pos=env_state.pos + pos_noise, vel=env_state.vel + vel_noise, quat=env_state.quat + quat_noise, omega=env_state.omega + omega_noise)
 
         # shift operator
