@@ -183,7 +183,7 @@ class EnvParams3D:
     max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
     max_omega: jnp.ndarray = default_array([10.0, 10.0, 3.0])
     max_thrust: float = 0.8
-    extra_torque: float = 4e-3
+    extra_torque: float = 0.0 #4.5e-3 enable it by set it to a none zero value
     dt: float = 0.02
     g: float = 9.81  # gravity
 
