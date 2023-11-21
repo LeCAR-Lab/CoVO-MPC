@@ -594,7 +594,7 @@ def main(args: Args):
                 sample_sigma = sigma,
                 a_mean = a_mean,
                 a_cov = a_cov,
-                obs_noise_scale = 0.02, 
+                obs_noise_scale = 0.0, 
             )
             controller = controllers.MPPIController(env=env, control_params=control_params, N=N, H=H, lam=lam)
         elif 'mppi_zeji' in args.controller:
@@ -625,7 +625,7 @@ def main(args: Args):
                 a_mean = a_mean,
                 a_cov = a_cov,
                 a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
-                obs_noise_scale = 0.02, 
+                obs_noise_scale = 0.0, 
             )
             controller = controllers.MPPIZejiController(env=env, control_params=control_params, N=N, H=H, lam=lam, expansion_mode=expansion_mode)
     else:

@@ -28,8 +28,8 @@ class EnvParams2D:
     max_omega: float = 10.0 # TODO check this value
     max_thrust: float = 0.8
     max_motor_force: float = 0.28
-    max_torque: float = 1e-2
-    extra_torque: float = 1.0e-2
+    max_torque: float = 1.0e-2
+    extra_torque: float = 1.2e-2
     dt: float = 0.02
     g: float = 9.81  # gravity
     m: float = 0.03  # mass
@@ -38,9 +38,9 @@ class EnvParams2D:
     traj_obs_len: int = 8
     traj_obs_gap: int = 2
     max_steps_in_episode: int = 300
-    alpha_bodyrate: float = 0.5
+    alpha_bodyrate: float = 1.0
 
-    dyn_noise_scale: float = 0.02
+    dyn_noise_scale: float = 0.0
 
 @struct.dataclass
 class Action2D:
@@ -183,7 +183,7 @@ class EnvParams3D:
     max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
     max_omega: jnp.ndarray = default_array([10.0, 10.0, 3.0])
     max_thrust: float = 0.8
-    extra_torque: float = 0.0 #4.5e-3 enable it by set it to a none zero value
+    extra_torque: float = 4.5e-3 # enable it by set it to a none zero value
     dt: float = 0.02
     g: float = 9.81  # gravity
 

@@ -15,7 +15,7 @@ for task in tracking_zigzag; do
             for H in 16; do
                 for lam in 0.01; do
                     echo "Running with H = $H, lam = $lam, N = $N, controller = $controller, task = $task"
-                    python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N${N}_H${H}_lam${lam}" --eval-repeat-times 1 # --reward-type quadratic 
+                    python ../envs/quad2d_free.py --task ${task} --dynamics bodyrate --controller ${controller} --mode eval --controller_params "N${N}_H${H}_lam${lam}" --eval-repeat-times 10 # --reward-type quadratic 
                 done
             done
         done
