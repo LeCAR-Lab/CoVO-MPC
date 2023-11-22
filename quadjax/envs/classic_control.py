@@ -44,6 +44,7 @@ class CartPole(BaseEnvironment):
         # MPPI compatiblility function
         self.step_env_wocontroller = self.step_env
         self.step_env_wocontroller_gradient = self.step_env
+        self.reward_fn = self.get_reward
 
     @property
     def default_params(self) -> CartPoleParams:
@@ -152,18 +153,19 @@ def main(args: Args):
     if args.task == "cartpole":
         env = CartPole()
     else:
-        raise
+        raise NotImplementedError
 
     # setup controller
+    # shared MPPI parameters
+    sigma = 0.3
+    N = 1024 if not args.debug else 2
+    H = 32 if not args.debug else 2
+    lam = 0.01
+    a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
+    # other controllers
     if args.controller == "pid":
         pass
     elif args.controller == "mppi":
-        sigma = 0.5
-        N = 1024 if not args.debug else 2
-        H = 32 if not args.debug else 2
-        lam = 0.01
-
-        a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
         sigmas = jnp.array([sigma] * env.action_dim)
         a_cov_per_step = jnp.diag(sigmas**2)
         a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
@@ -184,7 +186,25 @@ def main(args: Args):
             expansion_mode = 'pid'
         else:
             expansion_mode = 'mean'
-        
+        a_cov = jnp.diag(jnp.ones(H * env.action_dim) * sigma**2)
+        control_params = controllers.MPPIZejiParams(
+            gamma_mean=1.0,
+            gamma_sigma=0.0,
+            discount=1.0,
+            sample_sigma=sigma,
+            a_mean=a_mean,
+            a_cov=a_cov,
+            a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
+            obs_noise_scale=0.0,
+        )
+        controller = controllers.MPPIZejiController(
+            env=env,
+            control_params=control_params,
+            N=N,
+            H=H,
+            lam=lam,
+            expansion_mode=expansion_mode,
+        )
     else:
         raise NotImplementedError
     

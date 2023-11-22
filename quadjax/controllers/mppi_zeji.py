@@ -324,12 +324,12 @@ class MPPIZejiController(controllers.BaseController):
     def __call__(self, obs:jnp.ndarray, env_state, env_params, rng_act: chex.PRNGKey, control_params: MPPIZejiParams, info = None) -> jnp.ndarray:
         # inject noise to state elements
         # TODO: this part should be moved to environment actually, but we use state for lazy evaluation
-        rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)
-        pos_noise = jax.random.normal(rng_pos, shape=env_state.pos.shape) * control_params.obs_noise_scale * 0.25
-        vel_noise = jax.random.normal(rng_vel, shape=env_state.vel.shape) * control_params.obs_noise_scale * 0.5
-        quat_noise = jax.random.normal(rng_quat, shape=env_state.quat.shape) * control_params.obs_noise_scale * 0.02
-        omega_noise = jax.random.normal(rng_omega, shape=env_state.omega.shape) * control_params.obs_noise_scale * 0.5
-        env_state = env_state.replace(pos=env_state.pos + pos_noise, vel=env_state.vel + vel_noise, quat=env_state.quat + quat_noise, omega=env_state.omega + omega_noise)
+        # rng_pos, rng_vel, rng_quat, rng_omega, rng_act = jax.random.split(rng_act, 5)
+        # pos_noise = jax.random.normal(rng_pos, shape=env_state.pos.shape) * control_params.obs_noise_scale * 0.25
+        # vel_noise = jax.random.normal(rng_vel, shape=env_state.vel.shape) * control_params.obs_noise_scale * 0.5
+        # quat_noise = jax.random.normal(rng_quat, shape=env_state.quat.shape) * control_params.obs_noise_scale * 0.02
+        # omega_noise = jax.random.normal(rng_omega, shape=env_state.omega.shape) * control_params.obs_noise_scale * 0.5
+        # env_state = env_state.replace(pos=env_state.pos + pos_noise, vel=env_state.vel + vel_noise, quat=env_state.quat + quat_noise, omega=env_state.omega + omega_noise)
 
         # shift operator
         a_mean_old = control_params.a_mean
@@ -379,14 +379,14 @@ class MPPIZejiController(controllers.BaseController):
             env_state, env_params, reward_before, done_before = carry
             obs, env_state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env_wocontroller(step_key, s, a, p))(env_state, action, env_params)
             reward = jnp.where(done_before, reward_before, reward)
-            return (env_state, env_params, reward, done | done_before), (reward, env_state.pos)
+            return (env_state, env_params, reward, done | done_before), reward #, env_state.pos)
         # repeat env_state each element to match the sample size N
         state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_state)
         env_params_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_params)
         done_repeat = jnp.full(self.N, False)
         reward_repeat = jnp.full(self.N, 0.0)
 
-        _, (rewards, poses) = lax.scan(rollout_fn, (state_repeat, env_params_repeat, reward_repeat, done_repeat), a_sampled.transpose(1,0,2), length=self.H)
+        _, rewards = lax.scan(rollout_fn, (state_repeat, env_params_repeat, reward_repeat, done_repeat), a_sampled.transpose(1,0,2), length=self.H)
         # get discounted reward sum over horizon (axis=1)
         rewards = rewards.transpose(1,0) # (H, N) -> (N, H)
         discounted_rewards = jnp.sum(rewards * jnp.power(control_params.discount, jnp.arange(self.H)), axis=1, keepdims=False)
@@ -410,8 +410,8 @@ class MPPIZejiController(controllers.BaseController):
 
         # debug values
         info = {
-            'pos_mean': jnp.mean(poses, axis=1), 
-            'pos_std': jnp.std(poses, axis=1)
+            # 'pos_mean': jnp.mean(poses, axis=1), 
+            # 'pos_std': jnp.std(poses, axis=1)
         }
 
         return u, control_params, info
