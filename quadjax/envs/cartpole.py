@@ -153,7 +153,7 @@ def main(args: Args):
 
     # setup controller
     # shared MPPI parameters
-    sigma = 0.3
+    sigma = 0.2
     N = 1024 if not args.debug else 2
     H = 32 if not args.debug else 2
     lam = 0.01
