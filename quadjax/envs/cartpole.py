@@ -143,17 +143,13 @@ class CartPole(BaseEnvironment):
 
 @pydataclass
 class Args:
-    task: str = "cartpole"
     controller: str = "mppi"  # fixed
     debug: bool = False
 
 
 def main(args: Args):
     # setup environment
-    if args.task == "cartpole":
-        env = CartPole()
-    else:
-        raise NotImplementedError
+    env = CartPole()
 
     # setup controller
     # shared MPPI parameters
@@ -244,10 +240,9 @@ def main(args: Args):
     rngs = jax.random.split(rng, 100)
     t0 = time.time()
     rewards = jax.vmap(run_one_ep)(rngs)
-    reward = run_one_ep(rng)
     print(f'time: {time.time() - t0:.2f}s')
 
-    print(f'reward: ${rewards.mean():.2f} \pm {rewards.std():.2f}$')
+    print(f'cost: ${-rewards.mean():.2f} \pm {rewards.std():.2f}$')
 
 
 if __name__ == "__main__":
