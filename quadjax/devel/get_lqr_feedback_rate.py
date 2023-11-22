@@ -49,7 +49,7 @@ def acrobot():
     params = env.default_params
     # get A
     def dynamics_fn(x, u):
-        state = AcrobotState(x[0], x[1], x[2], x[3], 0, 0.0)
+        state = AcrobotState(x[0]+jnp.pi, x[1], x[2], x[3], 0, 0.0)
         x_new, _, _, _, _ = env.step_env(None, state, u, params)
         return x_new
     A = jax.jacfwd(dynamics_fn, argnums=0)(jnp.zeros(4), jnp.zeros(1))
@@ -66,22 +66,28 @@ def acrobot():
     # print K
     print(f'A = {A}, \n B = {B}, \n Q = {Q}, \n R = {R}, \n K = {K}')
     # run simulation with K
-    state = AcrobotState(0.05+jnp.pi, 0.05, 0.05, 0.05, 0, 0.0)
-    state = AcrobotState(jnp.pi, 0.0, 0.0, 0.0, 0, 0.0)
+    # state = AcrobotState(0.05+jnp.pi, 0.05, 0.05, 0.05, 0, 0.0)
+    state = AcrobotState(jnp.pi+0.05, 0.05, 0.05, 0.05, 0, 0.0)
     obs = env.get_obs(state, params)
     done = False
     obses = []
+    us = []
     while not done:
-        u = -K @ obs[:4]
+        u = -K @ obs
         obs, state, _, done, _ = env.step_env(None, state, u, params)
         obses.append(obs)
+        us.append(u)
     # plot all obs
     import matplotlib.pyplot as plt
     obses = jnp.asarray(obses)
+    us = jnp.asarray(us)
     obs_dim = obses.shape[-1]
-    fig, axs = plt.subplots(obs_dim, 1)
+    u_dim = us.shape[-1]
+    fig, axs = plt.subplots(obs_dim+u_dim, 1)
     for i in range(obs_dim):
         axs[i].plot(obses[:, i])
+    for i in range(u_dim):
+        axs[obs_dim+i].plot(us[:, i])
     plt.savefig('../../results/lqr_obs.png')
 
 if __name__ == "__main__":

@@ -59,7 +59,8 @@ class Acrobot(BaseEnvironment):
         params: AcrobotParams,
     ) -> Tuple[chex.Array, AcrobotState, float, bool, dict]:
         """Performs step transitions in the environment."""
-        torque = jnp.clip(action[0], -1, 1)
+        action_clip = jnp.clip(action[0], -1, 1)
+        torque = action_clip * 50.0
 
         # Augment state with force action so it can be passed to ds/dt
         s_augmented = jnp.array(
@@ -86,7 +87,7 @@ class Acrobot(BaseEnvironment):
             velocity_1,
             velocity_2,
             state.time + 1,
-            last_action=torque,
+            last_action=action_clip,
         )
         done = self.is_terminal(state, params)
         return (
@@ -224,7 +225,7 @@ def main(args: Args):
     # other controllers
     if args.controller == "feedback":
         control_params = controllers.FeedbackParams(
-            K=jnp.array([[-0.1, -0.3, -5.0, -1.0]])
+            K=jnp.array([[-3.0, -0.8, -1.5, -0.5]])
         )
         controller = controllers.FeedbackController(env=env, control_params=control_params)
     elif args.controller == "mppi":
