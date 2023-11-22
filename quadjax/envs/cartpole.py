@@ -113,8 +113,8 @@ class CartPole(BaseEnvironment):
         reward = (
             -1.0 * state.theta**2
             - 0.1 * state.theta_dot**2
-            - 0.001 * state.x**2
-            - 0.001 * state.x_dot**2
+            - 0.1 * state.x**2
+            - 0.01 * state.x_dot**2
             - 0.1 * state.last_action**2
         )
         return reward
