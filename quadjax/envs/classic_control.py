@@ -86,7 +86,7 @@ class CartPole(BaseEnvironment):
         done = self.is_terminal(state, params)
 
         return (
-            self.get_obs(state),
+            self.get_obs(state, params),
             state,
             reward,
             done,
@@ -106,7 +106,7 @@ class CartPole(BaseEnvironment):
             time=0,
             last_action=0.0,
         )
-        return self.get_obs(state), state
+        return self.get_obs(state, params), state
 
     def get_reward(self, state: CartPoleState, params: CartPoleParams) -> float:
         """Returns reward for given state."""
@@ -119,7 +119,7 @@ class CartPole(BaseEnvironment):
         )
         return reward
 
-    def get_obs(self, state: CartPoleState) -> chex.Array:
+    def get_obs(self, state: CartPoleState, params: CartPoleParams) -> chex.Array:
         """Applies observation function to state."""
         return jnp.array([state.x, state.x_dot, state.theta, state.theta_dot])
 
@@ -163,8 +163,11 @@ def main(args: Args):
     lam = 0.01
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
     # other controllers
-    if args.controller == "pid":
-        pass
+    if args.controller == "feedback":
+        control_params = controllers.FeedbackParams(
+            K=jnp.array([[-0.1, -0.3, -5.0, -1.0]])
+        )
+        controller = controllers.FeedbackController(env=env, control_params=control_params)
     elif args.controller == "mppi":
         sigmas = jnp.array([sigma] * env.action_dim)
         a_cov_per_step = jnp.diag(sigmas**2)
@@ -183,7 +186,7 @@ def main(args: Args):
         )
     elif "covo" in args.controller:
         if 'offline' in args.controller:
-            expansion_mode = 'pid'
+            expansion_mode = 'feedback'
         else:
             expansion_mode = 'mean'
         a_cov = jnp.diag(jnp.ones(H * env.action_dim) * sigma**2)

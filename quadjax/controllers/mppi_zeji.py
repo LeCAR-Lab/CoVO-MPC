@@ -52,7 +52,7 @@ class MPPIZejiController(controllers.BaseController):
             #     sigma = self.get_sigma_from_R(R, control_params)
             #     return sigma
             # self.get_sigma_zeji = get_sigma_zeji
-        elif expansion_mode in ['lqr', 'zero', 'ppo', 'mppi', 'pid']:
+        elif expansion_mode in ['lqr', 'zero', 'ppo', 'mppi', 'pid', 'feedback']:
             if expansion_mode == 'lqr':
                 if self.env.action_dim == 2:
                     expansion_control_params = controllers.LQRParams(
@@ -70,6 +70,11 @@ class MPPIZejiController(controllers.BaseController):
                     expansion_controller = controllers.LQRController(env, expansion_control_params)
                 else:
                     raise NotImplementedError
+            elif expansion_mode == 'feedback':
+                expansion_control_params = controllers.FeedbackParams(
+                    K = jnp.array([[-0.1, -0.3, -5.0, -1.0]])
+                )
+                expansion_controller = controllers.FeedbackController(env, expansion_control_params)
             elif expansion_mode == 'pid':
                 if env.action_dim == 4:
                     expansion_control_params = controllers.PIDParams(
@@ -148,7 +153,7 @@ class MPPIZejiController(controllers.BaseController):
                 rng_step, key = jax.random.split(key)
                 _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), a_cov
-            if expansion_mode in ['lqr', 'ppo', 'mppi', 'pid']:
+            if expansion_mode in ['lqr', 'ppo', 'mppi', 'pid', 'feedback']:
                 def get_a_cov_offline(env_state, env_params, key):
                     # a_cov_offline = jnp.zeros((self.env.default_params.max_steps_in_episode, 128, 128))
                     # for i in range(self.env.default_params.max_steps_in_episode):
