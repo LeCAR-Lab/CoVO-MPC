@@ -242,7 +242,8 @@ class MPPIZejiController(controllers.BaseController):
         element_num = self.action_dim*self.H
         log_det_a_cov = element_num * (jnp.log(control_params.sample_sigma)*2)
         log_const = (log_det_a_cov * 2 + jnp.sum(log_o)) / element_num
-        log_s = 0.5 * log_const - 0.5 * log_o
+        # jax.debug.print('log_const={log_const}, log_o={log_o}, diff={diff}', log_const=log_const, log_o=log_o, diff=log_const - log_o)
+        log_s = 0.5 * (log_const - log_o)
 
         # jax.debug.print('{x}', x=eigns)
         # o = eigns

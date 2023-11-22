@@ -73,8 +73,10 @@ class Acrobot(BaseEnvironment):
             ]
         )
         ns = rk4(s_augmented, params)
-        joint_angle1 = wrap(ns[0], 0, 2*jnp.pi)
-        joint_angle2 = wrap(ns[1], -jnp.pi, jnp.pi)
+        # joint_angle1 = wrap(ns[0], 0, 2*jnp.pi)
+        # joint_angle2 = wrap(ns[1], -jnp.pi, jnp.pi)
+        joint_angle1 = ns[0] % (2*jnp.pi)
+        joint_angle2 = (ns[1] + jnp.pi) % (2*jnp.pi) - jnp.pi
         velocity_1 = jnp.clip(ns[2], -params.max_vel_1, params.max_vel_1)
         velocity_2 = jnp.clip(ns[3], -params.max_vel_2, params.max_vel_2)
 
@@ -103,7 +105,7 @@ class Acrobot(BaseEnvironment):
     ) -> Tuple[chex.Array, AcrobotState]:
         """Reset environment state by sampling initial position."""
         init_state = jax.random.uniform(
-            key, shape=(4,), minval=-0.1, maxval=0.1
+            key, shape=(4,), minval=-0.05, maxval=0.05
         )
         state = AcrobotState(
             joint_angle1=init_state[0]+jnp.pi,
@@ -200,8 +202,6 @@ def rk4(y0: chex.Array, params: AcrobotParams):
     yout = y0 + params.dt / 6.0 * (k1 + 2 * k2 + 2 * k3 + k4)
     return yout
 
-
-
 @pydataclass
 class Args:
     controller: str = "mppi"  # fixed
@@ -211,6 +211,8 @@ class Args:
 def main(args: Args):
     if args.debug:
         jax.config.update("jax_debug_nans", True)
+        # jax.config.update("jax_disable_jit", True)
+    jax.config.update("jax_debug_nans", True)
 
     # setup environment
     env = Acrobot()
@@ -219,7 +221,7 @@ def main(args: Args):
     # shared MPPI parameters
     sigma = 0.3
     N = 1024 if not args.debug else 2
-    H = 32 if not args.debug else 2
+    H = 32 if not args.debug else 4
     lam = 0.01
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
     # other controllers

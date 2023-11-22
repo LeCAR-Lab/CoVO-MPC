@@ -72,17 +72,22 @@ def acrobot():
     done = False
     obses = []
     us = []
+    rewards = []
     while not done:
         u = -K @ obs
-        obs, state, _, done, _ = env.step_env(None, state, u, params)
+        obs, state, reward, done, _ = env.step_env(None, state, u, params)
         obses.append(obs)
         us.append(u)
+        rewards.append(reward)
     # plot all obs
     import matplotlib.pyplot as plt
     obses = jnp.asarray(obses)
     us = jnp.asarray(us)
     obs_dim = obses.shape[-1]
     u_dim = us.shape[-1]
+    # print mean reward
+    rewards = jnp.asarray(rewards)
+    print(f'mean reward = {jnp.mean(rewards)}')
     fig, axs = plt.subplots(obs_dim+u_dim, 1)
     for i in range(obs_dim):
         axs[i].plot(obses[:, i])
