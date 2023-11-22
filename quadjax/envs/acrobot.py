@@ -19,6 +19,7 @@ class AcrobotState:
     velocity_1: float
     velocity_2: float
     time: int
+    last_action: float
 
 
 @struct.dataclass
@@ -59,13 +60,6 @@ class Acrobot(BaseEnvironment):
     ) -> Tuple[chex.Array, AcrobotState, float, bool, dict]:
         """Performs step transitions in the environment."""
         torque = jnp.clip(action[0], -1, 1)
-        # Add noise to force action - always sample - conditionals in JAX
-        torque = torque + jax.random.uniform(
-            key,
-            shape=(),
-            minval=-params.torque_noise_max,
-            maxval=params.torque_noise_max,
-        )
 
         # Augment state with force action so it can be passed to ds/dt
         s_augmented = jnp.array(
@@ -78,8 +72,8 @@ class Acrobot(BaseEnvironment):
             ]
         )
         ns = rk4(s_augmented, params)
-        joint_angle1 = wrap(ns[0], 0.0, 2*jnp.pi)
-        joint_angle2 = wrap(ns[1], 0.0, 2*jnp.pi)
+        joint_angle1 = wrap(ns[0], 0, 2*jnp.pi)
+        joint_angle2 = wrap(ns[1], -jnp.pi, jnp.pi)
         velocity_1 = jnp.clip(ns[2], -params.max_vel_1, params.max_vel_1)
         velocity_2 = jnp.clip(ns[3], -params.max_vel_2, params.max_vel_2)
 
@@ -92,6 +86,7 @@ class Acrobot(BaseEnvironment):
             velocity_1,
             velocity_2,
             state.time + 1,
+            last_action=torque,
         )
         done = self.is_terminal(state, params)
         return (
@@ -110,11 +105,12 @@ class Acrobot(BaseEnvironment):
             key, shape=(4,), minval=-0.1, maxval=0.1
         )
         state = AcrobotState(
-            joint_angle1=init_state[0],
+            joint_angle1=init_state[0]+jnp.pi,
             joint_angle2=init_state[1],
             velocity_1=init_state[2],
             velocity_2=init_state[3],
             time=0,
+            last_action=0.0,
         )
         return self.get_obs(state, params), state
 
@@ -123,8 +119,9 @@ class Acrobot(BaseEnvironment):
         reward = (
             -1.0 * (state.joint_angle1-jnp.pi)**2
             - 0.1 * state.velocity_1**2
-            - 1.0 * (state.joint_angle1+state.joint_angle2-jnp.pi)**2
+            - 1.0 * (state.joint_angle2)**2
             - 0.1 * state.velocity_2**2
+            - 0.1 * state.last_action**2
         )
         return reward
 
@@ -132,10 +129,8 @@ class Acrobot(BaseEnvironment):
         """Applies observation function to state."""
         return jnp.array(
             [
-                jnp.cos(state.joint_angle1),
-                jnp.sin(state.joint_angle1),
-                jnp.cos(state.joint_angle2),
-                jnp.sin(state.joint_angle2),
+                state.joint_angle1 - jnp.pi,
+                state.joint_angle2,
                 state.velocity_1,
                 state.velocity_2,
             ]
@@ -143,15 +138,8 @@ class Acrobot(BaseEnvironment):
 
     def is_terminal(self, state: AcrobotState, params: AcrobotParams) -> bool:
         """Check whether state is terminal."""
-        # Check termination and construct updated state
-        done_angle = (
-            -jnp.cos(state.joint_angle1)
-            - jnp.cos(state.joint_angle2 + state.joint_angle1)
-            > 1.0
-        )
         # Check number of steps in episode termination condition
-        done_steps = state.time >= params.max_steps_in_episode
-        done = jnp.logical_or(done_angle, done_steps)
+        done = state.time >= params.max_steps_in_episode
         return done
 
 def dsdt(s_augmented: chex.Array, t: float, params: AcrobotParams) -> chex.Array:
@@ -220,6 +208,9 @@ class Args:
 
 
 def main(args: Args):
+    if args.debug:
+        jax.config.update("jax_debug_nans", True)
+
     # setup environment
     env = Acrobot()
 
