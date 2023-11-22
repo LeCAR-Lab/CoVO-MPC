@@ -72,7 +72,8 @@ class MPPIZejiController(controllers.BaseController):
                     raise NotImplementedError
             elif expansion_mode == 'feedback':
                 expansion_control_params = controllers.FeedbackParams(
-                    K = jnp.array([[-0.1, -0.3, -5.0, -1.0]])
+                    # K = jnp.array([[-0.1, -0.3, -5.0, -1.0]])
+                    K = jnp.array([[-0.5, -0.5, -5.0, -5.0]])
                 )
                 expansion_controller = controllers.FeedbackController(env, expansion_control_params)
             elif expansion_mode == 'pid':

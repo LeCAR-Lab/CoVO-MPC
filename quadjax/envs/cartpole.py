@@ -34,7 +34,7 @@ class CartPoleParams:
     tau: float = 0.02
     theta_threshold_radians: float = 12 * 2 * jnp.pi / 360
     x_threshold: float = 2.4
-    max_steps_in_episode: int = 500  # v0 had only 200 steps!
+    max_steps_in_episode: int = 200
 
 
 class CartPole(BaseEnvironment):
@@ -113,8 +113,8 @@ class CartPole(BaseEnvironment):
         reward = (
             -1.0 * state.theta**2
             - 0.1 * state.theta_dot**2
-            - 0.1 * state.x**2
-            - 0.01 * state.x_dot**2
+            - 0.001 * state.x**2
+            - 0.001 * state.x_dot**2
             - 0.1 * state.last_action**2
         )
         return reward
@@ -126,19 +126,19 @@ class CartPole(BaseEnvironment):
     def is_terminal(self, state: CartPoleState, params: CartPoleParams) -> bool:
         """Check whether state is terminal."""
         # Check termination criteria
-        done1 = jnp.logical_or(
-            state.x < -params.x_threshold,
-            state.x > params.x_threshold,
-        )
-        done2 = jnp.logical_or(
-            state.theta < -params.theta_threshold_radians,
-            state.theta > params.theta_threshold_radians,
-        )
+        # done1 = jnp.logical_or(
+        #     state.x < -params.x_threshold,
+        #     state.x > params.x_threshold,
+        # )
+        # done2 = jnp.logical_or(
+        #     state.theta < -params.theta_threshold_radians,
+        #     state.theta > params.theta_threshold_radians,
+        # )
 
         # Check number of steps in episode termination condition
         done_steps = state.time >= params.max_steps_in_episode
-        done = jnp.logical_or(jnp.logical_or(done1, done2), done_steps)
-        return done
+        # done = jnp.logical_or(jnp.logical_or(done1, done2), done_steps)
+        return done_steps
 
 
 @pydataclass
@@ -240,6 +240,7 @@ def main(args: Args):
     rngs = jax.random.split(rng, 100)
     t0 = time.time()
     rewards = jax.vmap(run_one_ep)(rngs)
+    rewards = rewards * 1000
     print(f'time: {time.time() - t0:.2f}s')
 
     print(f'cost: ${-rewards.mean():.2f} \pm {rewards.std():.2f}$')
