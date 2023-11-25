@@ -31,7 +31,7 @@ def get_sigma_eign2(eign_values, lam, H, sig):
 
     return s
 
-def test_once(N=1024, H = 3, sig = 0.2, lam = 0.01, repeat_times=1024, env_steps=30, method='base', a=1.0, b=1.0, mode='render'):
+def test_once(N=1024, H = 3, sig = 0.2, lam = 0.01, repeat_times=1024, env_steps=30, method=['base'], a=1.0, b=1.0, mode='render'):
 
     if method == 'base':
         a_cov = jnp.eye(H)*(sig**2)
@@ -48,8 +48,8 @@ def test_once(N=1024, H = 3, sig = 0.2, lam = 0.01, repeat_times=1024, env_steps
         return x
     
     def reward_fn(t, x):
-        x_tar = jnp.sin(0.6*t)
-        # x_tar = 0.0
+        # x_tar = jnp.sin(0.6*t)
+        x_tar = 0.0
         reward = 1.0-1.0 * (x - x_tar)**2
         return reward
 
@@ -89,7 +89,6 @@ def test_once(N=1024, H = 3, sig = 0.2, lam = 0.01, repeat_times=1024, env_steps
         t = t + 1
         return (t, x, a_mean, rng), (x, reward, x_mppi_sampled)
 
-
     def run_exp_once(rng):
         x0 = 0.0
         t0 = 0
@@ -124,40 +123,62 @@ def test_once(N=1024, H = 3, sig = 0.2, lam = 0.01, repeat_times=1024, env_steps
         x, reward, x_mppi_sampled = run_exp_once(render_rng)
         x_tiled = x[:, None, None].repeat(N, axis=2)
         x_mppi_sampled = jnp.concatenate([x_tiled, x_mppi_sampled], axis=1)
-        plt.figure()
+        # set figure size to (15, 5)
+        plt.figure(figsize=(9, 4))
+        # set y limit to -10 to 10
+        plt.ylim(-10, 10)
+        # set x label to time
+        plt.xlabel('time')
+        # set y label to x
+        plt.ylabel('x')
         # plot mppi samples
-        plt.plot(x, color='red', label='x')
-        for t0 in range(0, 30, H):
-            # plot 20 samples
-            for i in range(20):
+        # if method == 'zeji':
+        #     color = 'red'
+        # else:
+        color = 'black'
+        plt.plot(x, color=color, label='real trajectory')
+        plt.plot(x, color=color, label='samples', alpha=0.2)
+        # plot y=0 
+        plt.plot(jnp.zeros(env_steps), '--', color=color, label='reference')
+        for t0 in range(0, 30, H//2):
+            # plot 10 samples
+            for i in range(16):
                 t1 = t0+H
                 tt = jnp.arange(t0, t1+1)
                 x_sampled = x_mppi_sampled[t0, :, i]
-                plt.plot(tt, x_sampled, alpha=0.1, color='green')
+                plt.plot(tt, x_sampled, alpha=0.2, color=color)
             # plot 2 std
-            sampled_mean = jnp.mean(x_mppi_sampled[t0], axis=1)
-            sampled_std = jnp.std(x_mppi_sampled[t0], axis=1)
-            plt.plot(tt, sampled_mean, color='green')
-            plt.fill_between(tt, sampled_mean+sampled_std*2, sampled_mean-sampled_std*2, alpha=0.3, color='green')
-        plt.title(f'{method} render')
+            # sampled_mean = jnp.mean(x_mppi_sampled[t0], axis=1)
+            # sampled_std = jnp.std(x_mppi_sampled[t0], axis=1)
+            # plt.plot(tt, sampled_mean, color='green')
+            # plt.fill_between(tt, sampled_mean+sampled_std*2, sampled_mean-sampled_std*2, alpha=0.3, color='green')
+        plt.legend()
+        if method == 'zeji':
+            plt.title('CoVO-MPC trajectory')
+        else:
+            plt.title('MPPI trajectory')
+        # plt.title(f'{method} render')
         plt.savefig(f'{method}_render.png')
         # plot a_cov as a heatmap with colorbar
         plt.figure()
         sns.set_theme(style="whitegrid")
         sns.heatmap(a_cov)
-        plt.title(f'{method} a_cov \n log det={jnp.log(jnp.linalg.det(a_cov)):.3f}')
+        if method == 'zeji':
+            plt.title('CoVO-MPC calculated covariance matrix')
+        else:
+            plt.title('MPPI covariance matrix')
         plt.savefig(f'{method}_a_cov.png')
 
 
 def main():
-    N=1024
-    H=10
-    lam=0.01
-    a=1.2
+    N=16
+    H=8
+    lam=0.1
+    a=1.6
     b=1.0
     sig=0.3
-    print('base: ', test_once(N=N, H=H, lam=lam, a=a, b=b, sig=sig, method='base', mode='eval_plot'))
-    print('zeji: ', test_once(N=N, H=H, lam=lam, a=a, b=b, sig=sig, method='zeji', mode='eval_plot'))
+    print('base: ', test_once(N=N, H=H, lam=lam, a=a, b=b, sig=sig, method='base', mode='render'))
+    print('zeji: ', test_once(N=N, H=H, lam=lam, a=a, b=b, sig=sig, method='zeji', mode='render'))
     # df = pd.DataFrame(columns=['method', 'H', 'lam', 'a', 'b', 'sig', 'cost', 'N'])
     # for i in trange(1, 10):
     #     H = i
