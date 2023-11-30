@@ -1245,7 +1245,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 sample_sigma=sigma,
                 a_mean=a_mean,
                 a_cov=a_cov,
-                obs_noise_scale=0.05,
+                obs_noise_scale=0.0,
             )
             controller = controllers.MPPIController(
                 env=env, control_params=control_params, N=N, H=H, lam=lam
@@ -1275,7 +1275,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 a_mean=a_mean,
                 a_cov=a_cov,
                 a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
-                obs_noise_scale=0.05,
+                obs_noise_scale=0.0,
             )
             controller = controllers.MPPIZejiController(
                 env=env,
