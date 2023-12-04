@@ -63,3 +63,8 @@ python train.py --env quad3d_free --debug
 **add disturbance**
 
 all the environment dynamics is inside `quadjax/dynamics` folder. For `Quad3D` quadrotor only environment, the dynamics is `free.py` with function `get_free_dynamics_3d()`. Please note the coordinate system is in the quadrotor local frame. 
+
+## Notes
+
+* all action in the environment is normalized into [-1, 1] range.
+* for maximum reusability, the environment is designed to be simple single file format.

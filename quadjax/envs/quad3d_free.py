@@ -84,7 +84,6 @@ class Quad3D(BaseEnvironment):
         self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(
             disturb_type=disturb_type
         )
-        self.update_time = lambda x: x
         self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
         self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel)
         
@@ -224,19 +223,21 @@ class Quad3D(BaseEnvironment):
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
 
-        def step_once(carried, _):
-            key, state, action, params = carried
-            # call controller to get sub_action and new_control_params
-            sub_action, _, state = self.control_fn(None, state, params, key, action)
-            next_state = self.raw_step(key, state, sub_action, params)
-            return (key, next_state, action, params), None
-
-        # call lax.scan to get next_state
-        (_, next_state, _, params), _ = lax.scan(
-            step_once, (key, state, action, params), jnp.arange(self.sub_steps)
+        # call controller to get sub_action and new_control_params
+        sub_action, _, state = self.control_fn(None, state, params, key, action)
+        # call dynamics to get next_state
+        next_state = self.raw_step(key, state, sub_action, params)
+        
+        # get observation, reward, done, info
+        reward = self.reward_fn(state, params)
+        done = self.is_terminal(state, params)
+        return (
+            self.get_obs(next_state, params),
+            next_state,
+            reward,
+            done,
+            self.get_info(state, params),
         )
-        next_state = self.update_time(next_state)
-        return self.get_obs_state_reward_done_info(state, next_state, params)
 
     def step_env_wocontroller(
         self,
@@ -278,7 +279,6 @@ class Quad3D(BaseEnvironment):
         (_, next_state, _, params), _ = lax.scan(
             step_once, (key, state, action, params), jnp.arange(self.sub_steps)
         )
-        next_state = self.update_time(next_state)
         return self.get_obs_state_reward_done_info_gradient(state, next_state, params)
 
     def raw_step(
