@@ -79,14 +79,15 @@ class Quad3D(BaseEnvironment):
             self.get_init_state = self.fixed_init_state
         else:
             raise NotImplementedError
-        
+
         # dynamics function
         self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(
             disturb_type=disturb_type
         )
         self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
         self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel)
-        
+        self.substeps = 1  # NOTE: if you want to run lower-level controllers, you can modify it to > 1
+
         # lower-level controller
         if lower_controller == "base":
             self.default_control_params = 0.0
@@ -174,7 +175,7 @@ class Quad3D(BaseEnvironment):
                 return EnvParams3D(disturb_params=disturb_params)
 
             self.sample_params = sample_default_params
-        
+
         # observation function
         if enable_randomizer and "params" not in obs_type:
             print("Warning: enable domain randomziation without params in obs_type")
@@ -192,7 +193,7 @@ class Quad3D(BaseEnvironment):
             self.obs_dim = 25 + self.default_params.traj_obs_len * 6
         else:
             raise NotImplementedError
-        
+
         # equibrium point
         self.equib = jnp.array([0.0] * 6 + [1.0] + [0.0] * 9)  # size=16
 
@@ -223,21 +224,24 @@ class Quad3D(BaseEnvironment):
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
 
-        # call controller to get sub_action and new_control_params
-        sub_action, _, state = self.control_fn(None, state, params, key, action)
-        # call dynamics to get next_state
-        next_state = self.raw_step(key, state, sub_action, params)
-        
+        def step_once(carried, _):
+            key, state, action, params = carried
+            # call controller to get sub_action and new_control_params
+            sub_action, _, state = self.control_fn(None, state, params, key, action)
+            next_state = self.raw_step(key, state, sub_action, params)
+            return (key, next_state, action, params), None
+
+        # call lax.scan to get next_state
+        (_, next_state, _, params), _ = lax.scan(
+            step_once, (key, state, action, params), jnp.arange(self.substeps)
+        )
+
         # get observation, reward, done, info
         reward = self.reward_fn(state, params)
         done = self.is_terminal(state, params)
-        return (
-            self.get_obs(next_state, params),
-            next_state,
-            reward,
-            done,
-            self.get_info(state, params),
-        )
+        info = self.get_info(state, params)
+        obs = self.get_obs(next_state, params)
+        return (obs, next_state, reward, done, info)
 
     def step_env_wocontroller(
         self,
@@ -878,6 +882,7 @@ def eval_env(
                 f"{quadjax.get_package_path()}/../results/eval_err_pos.npy"
             )
             # assert two are the same
+            print("err_pos", err_pos.mean(), err_pos_load.mean())
             assert np.allclose(err_pos, err_pos_load)
             exit()
             err_pos_ep.append(err_pos.mean())
@@ -1206,7 +1211,7 @@ def main(args: Args):
 
     env = Quad3D(
         task=args.task,
-        dynamics=args.dynamics,
+        # dynamics=args.dynamics,
         obs_type=args.obs_type,
         lower_controller=args.lower_controller,
         enable_randomizer=not args.noDR,
