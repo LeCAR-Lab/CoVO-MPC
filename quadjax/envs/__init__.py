@@ -1,1 +1,1 @@
-from quadjax.envs import dualquad2d, quad3d_free, quad2d_free, quad3d, base
+from quadjax.envs import quad3d_free

@@ -37,10 +37,12 @@ class Quad3D(BaseEnvironment):
         disable_rollover_terminate: bool = False,
     ):
         super().__init__()
+
+        # task related parameters
         self.task = task
         self.disable_rollover_terminate = disable_rollover_terminate
+
         # reference trajectory function
-        self.task = task
         if task == "tracking":
             self.generate_traj = partial(
                 utils.generate_lissa_traj,
@@ -65,14 +67,6 @@ class Quad3D(BaseEnvironment):
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
             self.get_init_state = self.fixed_init_state
-        elif task in "jumping":
-            self.generate_traj = partial(
-                utils.generate_jumping_fixed_traj,
-                self.default_params.max_steps_in_episode,
-                self.default_params.dt,
-            )
-            self.reward_fn = utils.jumping_obj_reward_fn
-            self.get_init_state = self.sample_init_state
         elif task == "hovering":
             self.generate_traj = partial(
                 utils.generate_fixed_traj,
@@ -1070,6 +1064,13 @@ def eval_env(
         print(f"[DEBUG] test traj {i+1}")
         for _ in trange(num_eps // num_trajs):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
+            # load it back
+            err_pos_load = np.load(
+                f"{quadjax.get_package_path()}/../results/eval_err_pos.npy"
+            )
+            # assert two are the same
+            assert np.allclose(err_pos, err_pos_load)
+            exit()
             err_pos_ep.append(err_pos.mean())
     # last_ep_end = 0
     # for i in range(len(dones)):
