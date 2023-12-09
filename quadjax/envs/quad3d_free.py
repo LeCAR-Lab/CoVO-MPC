@@ -52,15 +52,16 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
-            self.get_init_state = self.fixed_init_state
+            self.get_init_state = self.get_zero_init_state
         elif task == "tracking_slow":
+            # Note: this is the version with quadratic cost, which is preferred with large model error
             self.generate_traj = partial(
                 utils.generate_lissa_traj_slow,
                 self.default_params.max_steps_in_episode,
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_realworld_reward_fn
-            self.get_init_state = self.fixed_init_state
+            self.get_init_state = self.get_zero_init_state
         elif task == "tracking_zigzag":
             self.generate_traj = partial(
                 utils.generate_zigzag_traj,
@@ -68,7 +69,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
-            self.get_init_state = self.fixed_init_state
+            self.get_init_state = self.get_zero_init_state
         elif task == "hovering":
             self.generate_traj = partial(
                 utils.generate_fixed_traj,
@@ -76,7 +77,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
-            self.get_init_state = self.fixed_init_state
+            self.get_init_state = self.get_zero_init_state
         else:
             raise NotImplementedError
 
@@ -86,7 +87,6 @@ class Quad3D(BaseEnvironment):
         )
         self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
         self.get_err_vel = lambda state: jnp.linalg.norm(state.vel_tar - state.vel)
-        self.substeps = 1  # NOTE: if you want to run lower-level controllers, you can modify it to > 1
 
         # lower-level controller
         if lower_controller == "base":
@@ -125,8 +125,9 @@ class Quad3D(BaseEnvironment):
         else:
             raise NotImplementedError
         self.sim_dt = self.default_params.dt
+        self.substeps = 1  # NOTE: if you want to run lower-level controllers, you can modify it to > 1
 
-        # sampling function
+        # domain randomization function
         if enable_randomizer:
 
             def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
@@ -175,17 +176,20 @@ class Quad3D(BaseEnvironment):
                 return EnvParams3D(disturb_params=disturb_params)
 
             self.sample_params = sample_default_params
-
-        # observation function
         if enable_randomizer and "params" not in obs_type:
             print("Warning: enable domain randomziation without params in obs_type")
+
+        # observation function
         if obs_type == "quad_params":
+            # add parameters to observation
             self.get_obs = self.get_obs_quad_params
             self.obs_dim = 39 + self.default_params.traj_obs_len * 6
         elif obs_type == "quad":
+            # only observe quadrotor state
             self.get_obs = self.get_obs_quadonly
             self.obs_dim = 19 + self.default_params.traj_obs_len * 6
         elif obs_type == "quad_l1":
+            # add l1 adaptive controller to observation
             assert (
                 "l1" in lower_controller
             ), "quad_l1 obs_type only works with l1 lower controller"
@@ -304,119 +308,119 @@ class Quad3D(BaseEnvironment):
         key, step_key = jax.random.split(key)
         return self.step_fn(params, state, env_action, step_key, self.sim_dt)
 
-    def get_obs_state_reward_done_info_gradient(
-        self,
-        state: EnvState3D,
-        next_state: EnvState3D,
-        params: EnvParams3D,
-    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-        reward = self.reward_fn(state, params)
-        done = self.is_terminal(state, params)
-        return (
-            self.get_obs(next_state, params),
-            next_state,
-            reward,
-            done,
-            self.get_info(state, params),
-        )
+    # def get_obs_state_reward_done_info_gradient(
+    #     self,
+    #     state: EnvState3D,
+    #     next_state: EnvState3D,
+    #     params: EnvParams3D,
+    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+    #     reward = self.reward_fn(state, params)
+    #     done = self.is_terminal(state, params)
+    #     return (
+    #         self.get_obs(next_state, params),
+    #         next_state,
+    #         reward,
+    #         done,
+    #         self.get_info(state, params),
+    #     )
 
-    def get_obs_state_reward_done_info(
-        self,
-        state: EnvState3D,
-        next_state: EnvState3D,
-        params: EnvParams3D,
-    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-        obs, state, reward, done, info = self.get_obs_state_reward_done_info_gradient(
-            state, next_state, params
-        )
-        obs = lax.stop_gradient(obs)
-        state = lax.stop_gradient(state)
-        return (
-            obs,
-            state,
-            reward,
-            done,
-            info,
-        )
+    # def get_obs_state_reward_done_info(
+    #     self,
+    #     state: EnvState3D,
+    #     next_state: EnvState3D,
+    #     params: EnvParams3D,
+    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+    #     obs, state, reward, done, info = self.get_obs_state_reward_done_info_gradient(
+    #         state, next_state, params
+    #     )
+    #     obs = lax.stop_gradient(obs)
+    #     state = lax.stop_gradient(state)
+    #     return (
+    #         obs,
+    #         state,
+    #         reward,
+    #         done,
+    #         info,
+    #     )
 
-    def sample_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
-        """Reset environment state by sampling theta, theta_dot."""
-        traj_key, disturb_key, key = jax.random.split(key, 3)
-        # generate reference trajectory by adding a few sinusoids together
-        pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
-        pos_key, key = jax.random.split(key)
-        pos_hook = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
-        if self.task == "jumping":
-            # convert pos_hook to make sure x>0.3
-            pos_hook = (pos_hook + jnp.array([1.6, 0.0, 0.0])) / jnp.array(
-                [2.0, 1.0, 1.0]
-            )
-        pos = pos_hook - params.hook_offset
-        # randomly sample object position from a sphere with radius params.l and center at hook_pos
-        pos_obj = utils.sample_sphere(key, params.l * 0.9, pos_hook)
-        l_rope = jnp.linalg.norm(pos_obj - pos_hook)
-        # randomly sample object velocity, which is perpendicular to the rope
-        vel_key, key = jax.random.split(key)
-        vel_obj = jax.random.uniform(vel_key, shape=(3,), minval=-2.0, maxval=2.0)
-        zeta = (pos_obj - pos_hook) / l_rope
-        zeta_dot = jnp.cross(zeta, vel_obj)
-        zeros3 = jnp.zeros(3, dtype=jnp.float32)
-        vel_hist = jnp.zeros(
-            (self.default_params.adapt_horizon + 2, 3), dtype=jnp.float32
-        )
-        omega_hist = jnp.zeros(
-            (self.default_params.adapt_horizon + 2, 3), dtype=jnp.float32
-        )
-        action_hist = jnp.zeros(
-            (self.default_params.adapt_horizon + 2, 4), dtype=jnp.float32
-        )
-        return EnvState3D(
-            # drone
-            pos=pos,
-            vel=zeros3,
-            omega=zeros3,
-            omega_tar=zeros3,
-            quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
-            # object
-            pos_obj=pos_obj,
-            vel_obj=vel_obj,
-            # hook
-            pos_hook=pos_hook,
-            vel_hook=zeros3,
-            # rope
-            l_rope=l_rope,
-            zeta=zeta,
-            zeta_dot=zeta_dot,
-            f_rope=zeros3,
-            f_rope_norm=0.0,
-            # trajectory
-            pos_tar=pos_traj[0],
-            vel_tar=vel_traj[0],
-            acc_tar=acc_traj[0],
-            pos_traj=pos_traj,
-            vel_traj=vel_traj,
-            acc_traj=acc_traj,
-            # debug value
-            last_thrust=0.0,
-            last_torque=zeros3,
-            # step
-            time=0,
-            # disturbance
-            f_disturb=jax.random.uniform(
-                disturb_key,
-                shape=(3,),
-                minval=-params.disturb_scale,
-                maxval=params.disturb_scale,
-            ),
-            # trajectory information for adaptation
-            vel_hist=vel_hist,
-            omega_hist=omega_hist,
-            action_hist=action_hist,
-            # control parameters
-            control_params=self.default_control_params,
-        )
+    # def sample_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
+    #     """Reset environment state by sampling theta, theta_dot."""
+    #     traj_key, disturb_key, key = jax.random.split(key, 3)
+    #     # generate reference trajectory by adding a few sinusoids together
+    #     pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
+    #     pos_key, key = jax.random.split(key)
+    #     pos_hook = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
+    #     if self.task == "jumping":
+    #         # convert pos_hook to make sure x>0.3
+    #         pos_hook = (pos_hook + jnp.array([1.6, 0.0, 0.0])) / jnp.array(
+    #             [2.0, 1.0, 1.0]
+    #         )
+    #     pos = pos_hook - params.hook_offset
+    #     # randomly sample object position from a sphere with radius params.l and center at hook_pos
+    #     pos_obj = utils.sample_sphere(key, params.l * 0.9, pos_hook)
+    #     l_rope = jnp.linalg.norm(pos_obj - pos_hook)
+    #     # randomly sample object velocity, which is perpendicular to the rope
+    #     vel_key, key = jax.random.split(key)
+    #     vel_obj = jax.random.uniform(vel_key, shape=(3,), minval=-2.0, maxval=2.0)
+    #     zeta = (pos_obj - pos_hook) / l_rope
+    #     zeta_dot = jnp.cross(zeta, vel_obj)
+    #     zeros3 = jnp.zeros(3, dtype=jnp.float32)
+    #     vel_hist = jnp.zeros(
+    #         (self.default_params.adapt_horizon + 2, 3), dtype=jnp.float32
+    #     )
+    #     omega_hist = jnp.zeros(
+    #         (self.default_params.adapt_horizon + 2, 3), dtype=jnp.float32
+    #     )
+    #     action_hist = jnp.zeros(
+    #         (self.default_params.adapt_horizon + 2, 4), dtype=jnp.float32
+    #     )
+    #     return EnvState3D(
+    #         # drone
+    #         pos=pos,
+    #         vel=zeros3,
+    #         omega=zeros3,
+    #         omega_tar=zeros3,
+    #         quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
+    #         # object
+    #         pos_obj=pos_obj,
+    #         vel_obj=vel_obj,
+    #         # hook
+    #         pos_hook=pos_hook,
+    #         vel_hook=zeros3,
+    #         # rope
+    #         l_rope=l_rope,
+    #         zeta=zeta,
+    #         zeta_dot=zeta_dot,
+    #         f_rope=zeros3,
+    #         f_rope_norm=0.0,
+    #         # trajectory
+    #         pos_tar=pos_traj[0],
+    #         vel_tar=vel_traj[0],
+    #         acc_tar=acc_traj[0],
+    #         pos_traj=pos_traj,
+    #         vel_traj=vel_traj,
+    #         acc_traj=acc_traj,
+    #         # debug value
+    #         last_thrust=0.0,
+    #         last_torque=zeros3,
+    #         # step
+    #         time=0,
+    #         # disturbance
+    #         f_disturb=jax.random.uniform(
+    #             disturb_key,
+    #             shape=(3,),
+    #             minval=-params.disturb_scale,
+    #             maxval=params.disturb_scale,
+    #         ),
+    #         # trajectory information for adaptation
+    #         vel_hist=vel_hist,
+    #         omega_hist=omega_hist,
+    #         action_hist=action_hist,
+    #         # control parameters
+    #         control_params=self.default_control_params,
+    #     )
 
-    def fixed_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
+    def get_zero_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
         """Reset environment state by sampling theta, theta_dot."""
         traj_key, disturb_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
@@ -462,7 +466,7 @@ class Quad3D(BaseEnvironment):
             last_torque=zeros3,
             # step
             time=0,
-            # disturbance
+            # disturbanceself
             f_disturb=jax.random.uniform(
                 disturb_key,
                 shape=(3,),
@@ -523,27 +527,30 @@ class Quad3D(BaseEnvironment):
 
         return obs
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_objonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        obs_elements = [
-            # object
-            state.pos_obj,
-            state.vel_obj / 3.0,
-            # hook
-            state.pos_hook,
-            state.vel_hook / 3.0,
-            # rope
-            jnp.expand_dims(state.l_rope, axis=0),
-            state.zeta,
-            state.zeta_dot / 10.0,  # 3*3=9
-            state.f_rope,
-            jnp.expand_dims(state.f_rope_norm, axis=0),  # 3+1=4
-        ]
-        obs = jnp.concatenate(obs_elements, axis=-1)
-        return obs
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_objonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     obs_elements = [
+    #         # object
+    #         state.pos_obj,
+    #         state.vel_obj / 3.0,
+    #         # hook
+    #         state.pos_hook,
+    #         state.vel_hook / 3.0,
+    #         # rope
+    #         jnp.expand_dims(state.l_rope, axis=0),
+    #         state.zeta,
+    #         state.zeta_dot / 10.0,  # 3*3=9
+    #         state.f_rope,
+    #         jnp.expand_dims(state.f_rope_norm, axis=0),  # 3+1=4
+    #     ]
+    #     obs = jnp.concatenate(obs_elements, axis=-1)
+    #     return obs
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_adapt_hist(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        '''
+        Return the history of velocity, acceleration, and jerk
+        '''
         vel_hist = state.vel_hist
         omega_hist = state.omega_hist
         action_hist = state.action_hist
@@ -610,27 +617,27 @@ class Quad3D(BaseEnvironment):
         obs = jnp.concatenate(obs_elements, axis=-1)
         return obs
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        obs_elements = [
-            # nlac observation
-            state.control_params.vel_hat,
-            state.control_params.a_hat,
-            state.control_params.d_hat,
-        ]
-        obs = jnp.concatenate(obs_elements, axis=-1)
-        return obs
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     obs_elements = [
+    #         # nlac observation
+    #         state.control_params.vel_hat,
+    #         state.control_params.a_hat,
+    #         state.control_params.d_hat,
+    #     ]
+    #     obs = jnp.concatenate(obs_elements, axis=-1)
+    #     return obs
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        obs_elements = [
-            # nlac observation
-            state.control_params.vel_hat,
-            state.control_params.a_hat,
-            state.control_params.d_hat,
-        ]
-        obs = jnp.concatenate(obs_elements, axis=-1)
-        return obs
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     obs_elements = [
+    #         # nlac observation
+    #         state.control_params.vel_hat,
+    #         state.control_params.a_hat,
+    #         state.control_params.d_hat,
+    #     ]
+    #     obs = jnp.concatenate(obs_elements, axis=-1)
+    #     return obs
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_params(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -638,20 +645,20 @@ class Quad3D(BaseEnvironment):
         param_obs = self.get_obs_paramsonly(state, params)
         return jnp.concatenate([quad_obs, param_obs], axis=-1)
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_quad_obj(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        quad_obs = self.get_obs_quadonly(state, params)
-        obj_obs = self.get_obs_objonly(state, params)
-        return jnp.concatenate([quad_obs, obj_obs], axis=-1)
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_quad_obj(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     quad_obs = self.get_obs_quadonly(state, params)
+    #     obj_obs = self.get_obs_objonly(state, params)
+    #     return jnp.concatenate([quad_obs, obj_obs], axis=-1)
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_quad_obj_params(
-        self, state: EnvState3D, params: EnvParams3D
-    ) -> chex.Array:
-        quad_obs = self.get_obs_quadonly(state, params)
-        obj_obs = self.get_obs_objonly(state, params)
-        param_obs = self.get_obs_paramsonly(state, params)
-        return jnp.concatenate([quad_obs, obj_obs, param_obs], axis=-1)
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_quad_obj_params(
+    #     self, state: EnvState3D, params: EnvParams3D
+    # ) -> chex.Array:
+    #     quad_obs = self.get_obs_quadonly(state, params)
+    #     obj_obs = self.get_obs_objonly(state, params)
+    #     param_obs = self.get_obs_paramsonly(state, params)
+    #     return jnp.concatenate([quad_obs, obj_obs, param_obs], axis=-1)
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_l1(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -659,17 +666,17 @@ class Quad3D(BaseEnvironment):
         l1_obs = self.get_obs_l1only(state, params)
         return jnp.concatenate([quad_obs, l1_obs], axis=-1)
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        quad_obs = self.get_obs_quadonly(state, params)
-        nlac_obs = self.get_obs_nlaconly(state, params)
-        return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     quad_obs = self.get_obs_quadonly(state, params)
+    #     nlac_obs = self.get_obs_nlaconly(state, params)
+    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
 
-    @partial(jax.jit, static_argnums=(0,))
-    def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        quad_obs = self.get_obs_quadonly(state, params)
-        nlac_obs = self.get_obs_nlaconly(state, params)
-        return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     quad_obs = self.get_obs_quadonly(state, params)
+    #     nlac_obs = self.get_obs_nlaconly(state, params)
+    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
 
     @partial(jax.jit, static_argnums=(0,))
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
@@ -952,7 +959,17 @@ def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename
     # ts = []
     # for i in trange(11):
     #     t0 = time_module.time()
-    #     rng, rng_control = jax.random.split(rng)
+    #     rng, rng_control = jax.random.split(rng)ms=(0,))
+    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     quad_obs = self.get_obs_quadonly(state, params)
+    #     nlac_obs = self.get_obs_nlaconly(state, params)
+    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
+
+    # @partial(jax.jit, static_argnums=(0,))
+    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+    #     quad_obs = self.get_obs_quadonly(state, params)
+    #     nlac_obs = self.get_obs_nlaconly(state, params)
+    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
     #     control_params = controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
     #     ts.append((time_module.time()-t0)*1000)
     # ts = ts[1:]

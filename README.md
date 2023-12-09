@@ -68,3 +68,9 @@ all the environment dynamics is inside `quadjax/dynamics` folder. For `Quad3D` q
 
 * all action in the environment is normalized into [-1, 1] range.
 * for maximum reusability, the environment is designed to be simple single file format.
+
+## Supported features
+
+* large scale RL
+* domain randomization
+* RMA
