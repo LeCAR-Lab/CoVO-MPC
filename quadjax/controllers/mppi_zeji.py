@@ -133,7 +133,8 @@ class MPPIZejiController(controllers.BaseController):
                 action, _, _ = expansion_controller(obs, env_state, env_params, rng_act, expansion_control_params)
                 action = lax.stop_gradient(action)
                 rng_step, key = jax.random.split(key)
-                _, env_state, _, _, _ = self.env.step_env_wocontroller_gradient(rng_step, env_state, action, env_params)
+                # _, env_state, _, _, _ = self.env.step_env_wocontroller_gradient(rng_step, env_state, action, env_params)
+                _, env_state, _, _, _ = self.env.step_env(rng_step, env_state, action, env_params, deterministic=True)
                 return (env_state, env_params, key), action
             def get_single_a_cov_offline(carry, unused):
                 env_state, env_params, key = carry
@@ -146,7 +147,8 @@ class MPPIZejiController(controllers.BaseController):
                 action, _, _ = expansion_controller(obs, env_state, env_params, rng_step, expansion_control_params)
                 action = lax.stop_gradient(action)
                 rng_step, key = jax.random.split(key)
-                _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
+                # _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
+                _, env_state, _, _, _ = self.env.step_env(rng_step, env_state, action, env_params)
                 return (env_state, env_params, key), a_cov
             if expansion_mode in ['lqr', 'ppo', 'mppi', 'pid']:
                 def get_a_cov_offline(env_state, env_params, key):
@@ -201,7 +203,8 @@ class MPPIZejiController(controllers.BaseController):
                 action, expansion_control_params, _ = expansion_controller(obs, env_state, env_params, rng_act, expansion_control_params)
                 action = lax.stop_gradient(action)
                 rng_step, key = jax.random.split(key)
-                _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
+                # _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
+                _, env_state, _, _, _ = self.env.step_env(rng_step, env_state, action, env_params)
                 return (env_state, env_params, expansion_control_params, key), a_cov
             def reset_a_cov_offline(env_state, env_params, control_params, key):
                 expansion_control_params = expansion_controller.reset(env_state, env_params, key)
@@ -256,7 +259,8 @@ class MPPIZejiController(controllers.BaseController):
         def single_rollout_fn(carry, action):
             env_state, env_params, reward_before, done_before, key, cumulated_reward = carry
             rng_act, key = jax.random.split(key)
-            _, env_state, reward, done, _ = self.env.step_env_wocontroller_gradient(rng_act, env_state, action, env_params)
+            # _, env_state, reward, done, _ = self.env.step_env_wocontroller_gradient(rng_act, env_state, action, env_params)
+            _, env_state, reward, done, _ = self.env.step_env(rng_act, env_state, action, env_params, deterministic=True)
             # reward = jnp.where(done_before, reward_before, reward)
             cumulated_reward = cumulated_reward + reward
             return (env_state, env_params, reward, done | done_before, key, cumulated_reward), reward
@@ -377,7 +381,8 @@ class MPPIZejiController(controllers.BaseController):
         rng_act, step_key = jax.random.split(rng_act)
         def rollout_fn(carry, action):
             env_state, env_params, reward_before, done_before = carry
-            obs, env_state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env_wocontroller(step_key, s, a, p))(env_state, action, env_params)
+            # obs, env_state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env_wocontroller(step_key, s, a, p))(env_state, action, env_params)
+            obs, env_state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p, True))(env_state, action, env_params)
             reward = jnp.where(done_before, reward_before, reward)
             return (env_state, env_params, reward, done | done_before), (reward, env_state.pos)
         # repeat env_state each element to match the sample size N

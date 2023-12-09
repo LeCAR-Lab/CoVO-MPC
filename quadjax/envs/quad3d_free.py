@@ -212,7 +212,7 @@ class Quad3D(BaseEnvironment):
         return EnvParams3D()
 
     """
-    key methods
+    key methods@
     """
 
     def step_env(
@@ -221,6 +221,7 @@ class Quad3D(BaseEnvironment):
         state: EnvState3D,
         action: jnp.ndarray,
         params: EnvParams3D,
+        deterministic: bool = False,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
 
@@ -230,6 +231,10 @@ class Quad3D(BaseEnvironment):
             sub_action, _, state = self.control_fn(None, state, params, key, action)
             next_state = self.raw_step(key, state, sub_action, params)
             return (key, next_state, action, params), None
+        
+        # disable noise in parameters if deterministic
+        dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
+        params = params.replace(dyn_noise_scale=dyn_noise_scale)
 
         # call lax.scan to get next_state
         (_, next_state, _, params), _ = lax.scan(
@@ -243,47 +248,47 @@ class Quad3D(BaseEnvironment):
         obs = self.get_obs(next_state, params)
         return (obs, next_state, reward, done, info)
 
-    def step_env_wocontroller(
-        self,
-        key: chex.PRNGKey,
-        state: EnvState3D,
-        sub_action: jnp.ndarray,
-        params: EnvParams3D,
-        deterministic: bool = True,
-    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-        # TODO: merge into raw_step
-        # disable noise in parameters
-        dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
-        params = params.replace(dyn_noise_scale=dyn_noise_scale)
-        return self.step_env(key, state, sub_action, params)
+    # def step_env_wocontroller(
+    #     self,
+    #     key: chex.PRNGKey,
+    #     state: EnvState3D,
+    #     sub_action: jnp.ndarray,
+    #     params: EnvParams3D,
+    #     deterministic: bool = True,
+    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+    #     # TODO: merge into raw_step
+    #     # disable noise in parameters
+    #     dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
+    #     params = params.replace(dyn_noise_scale=dyn_noise_scale)
+    #     return self.step_env(key, state, sub_action, params)
 
-    def step_env_wocontroller_gradient(
-        self,
-        key: chex.PRNGKey,
-        state: EnvState3D,
-        action: jnp.ndarray,
-        params: EnvParams3D,
-        deterministic: bool = True,
-    ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-        # TODO: merge into raw_step
-        action = jnp.clip(action, -1.0, 1.0)
+    # def step_env_wocontroller_gradient(
+    #     self,
+    #     key: chex.PRNGKey,
+    #     state: EnvState3D,
+    #     action: jnp.ndarray,
+    #     params: EnvParams3D,
+    #     deterministic: bool = True,
+    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
+    #     # TODO: merge into raw_step
+    #     action = jnp.clip(action, -1.0, 1.0)
 
-        def step_once(carried, _):
-            key, state, action, params = carried
-            # call controller to get sub_action and new_control_params
-            sub_action, _, state = self.control_fn(None, state, params, key, action)
-            next_state = self.raw_step(key, state, sub_action, params)
-            return (key, next_state, action, params), None
+    #     def step_once(carried, _):
+    #         key, state, action, params = carried
+    #         # call controller to get sub_action and new_control_params
+    #         sub_action, _, state = self.control_fn(None, state, params, key, action)
+    #         next_state = self.raw_step(key, state, sub_action, params)
+    #         return (key, next_state, action, params), None
 
-        # disable noise in parameters
-        dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
-        params = params.replace(dyn_noise_scale=dyn_noise_scale)
+    #     # disable noise in parameters
+    #     dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
+    #     params = params.replace(dyn_noise_scale=dyn_noise_scale)
 
-        # call lax.scan to get next_state
-        (_, next_state, _, params), _ = lax.scan(
-            step_once, (key, state, action, params), jnp.arange(self.sub_steps)
-        )
-        return self.get_obs_state_reward_done_info_gradient(state, next_state, params)
+    #     # call lax.scan to get next_state
+    #     (_, next_state, _, params), _ = lax.scan(
+    #         step_once, (key, state, action, params), jnp.arange(self.substeps)
+    #     )
+    #     return self.get_obs_state_reward_done_info_gradient(state, next_state, params)
 
     def raw_step(
         self,
@@ -878,12 +883,15 @@ def eval_env(
         for _ in trange(num_eps // num_trajs):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
             # load it back
-            err_pos_load = np.load(
-                f"{quadjax.get_package_path()}/../results/eval_err_pos.npy"
+            mppi_load = np.load(
+                f"{quadjax.get_package_path()}/../results/mppi.npy"
+            )
+            covo_load = np.load(
+                f"{quadjax.get_package_path()}/../results/covo.npy"
             )
             # assert two are the same
-            print("err_pos", err_pos.mean(), err_pos_load.mean())
-            assert np.allclose(err_pos, err_pos_load)
+            print("err_pos", err_pos.mean(), mppi_load.mean(), covo_load.mean())
+            assert np.allclose(err_pos, mppi_load) or np.allclose(err_pos, covo_load), "err_pos not equal"
             exit()
             err_pos_ep.append(err_pos.mean())
     # last_ep_end = 0
@@ -1165,7 +1173,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         control_params = controllers.L1Params()
         controller = controllers.L1Controller(env, control_params)
     elif controller_name == "debug":
-
         class DebugController(controllers.BaseController):
             def __call__(
                 self, obs, state, env_params, rng_act, control_params, env_info
