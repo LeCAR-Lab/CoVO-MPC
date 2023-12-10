@@ -89,32 +89,14 @@ class CoVOController(controllers.BaseController):
                 )
                 return (env_state, env_params, key), a_cov
 
-            if mode == "offline":
-
-                def get_a_cov_offline(env_state, env_params, key):
-                    _, a_cov_offline = lax.scan(
-                        get_single_a_cov_offline,
-                        (env_state, env_params, key),
-                        None,
-                        length=self.env.default_params.max_steps_in_episode,
-                    )
-                    return a_cov_offline
-
-            elif mode == "online":
-
-                def get_a_cov_offline(env_state, env_params, key):
-                    _, a_cov = get_single_a_cov_offline(
-                        (env_state, env_params, key), None
-                    )
-                    a_cov_offline = jnp.repeat(
-                        a_cov[None, ...],
-                        self.env.default_params.max_steps_in_episode,
-                        axis=0,
-                    )
-                    return a_cov_offline
-
-            else:
-                raise NotImplementedError
+            def get_a_cov_offline(env_state, env_params, key):
+                _, a_cov_offline = lax.scan(
+                    get_single_a_cov_offline,
+                    (env_state, env_params, key),
+                    None,
+                    length=self.env.default_params.max_steps_in_episode,
+                )
+                return a_cov_offline
 
             def reset_a_cov_offline(env_state, env_params, control_params, key):
                 a_cov_offline = get_a_cov_offline(env_state, env_params, key)
@@ -168,7 +150,7 @@ class CoVOController(controllers.BaseController):
             ) = carry
             rng_act, key = jax.random.split(key)
             _, env_state, reward, done, _ = self.env.step_env(
-                rng_act, env_state, action, env_params, deterministic=True
+                rng_act, env_state, action, env_params, deterministic=True, 
             )
             cumulated_reward = cumulated_reward + reward
             return (
@@ -282,7 +264,6 @@ class CoVOController(controllers.BaseController):
 
         # get trajectory weight
         cost_exp = jnp.exp(-(cost - jnp.min(cost)) / self.lam)
-
         weight = cost_exp / jnp.sum(cost_exp)
 
         # update trajectory mean and covariance with weight
