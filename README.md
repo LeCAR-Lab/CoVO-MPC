@@ -1,22 +1,12 @@
-# Quadjax: High performance quadrotor simulator with wide support of RL and control algorithms
+# CoVO-MPC: Theoretical Analysis of Sampling-based MPC and Optimal Covariance Design
 
 [![Python Version](https://img.shields.io/badge/Python-3.10-blue.svg)](https://github.com/eureka-research/Eureka)
 [<img src="https://img.shields.io/badge/Backend-Jax-red.svg"/>](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-
 https://github.com/jc-bao/quadjax/assets/60093981/b553e3d4-5c87-46ec-b666-808e51253697
 
-## Supported algorithms
-
-* RL
-  * PPO + Auto curriculum + Domain randomization
-  * [RMA](https://arxiv.org/abs/2106.00091) (Rapid Motor Adaptation)
-  * [DATT](https://arxiv.org/abs/2310.09053) (Deep Adaptive Trajectory Tracking)
-* Control
-  * PID, L1 Adaptive Control
-  * MPPI (model predictive path integral)
-  * 🌟 [CoVO-MPC](https://panchaoyi.com/covo-mpc-theoretical-analysis-of-sampling-based-mpc-and-optimal-covariance-design) (optimal covariance model predictive control)
+Implementation of the novel sampling-based Model Predictive Control (MPC) algorithm, CoVariance-Optimal MPC (CoVO-MPC), developed through the research outlined in the associated paper. This new control algorithm is sought to outperform standard Model Predictive Path Integral Control (MPPI) by 43 to 54%.
 
 ## Installation
 
@@ -49,6 +39,17 @@ sh covo_quadrotor.sh
 # ablation study for sampling number
 sh covo_quadrotor_N.sh
 ```
+
+## All Supported algorithms
+
+* RL
+  * PPO + Auto curriculum + Domain randomization
+  * [RMA](https://arxiv.org/abs/2106.00091) (Rapid Motor Adaptation)
+  * [DATT](https://arxiv.org/abs/2310.09053) (Deep Adaptive Trajectory Tracking)
+* Control
+  * PID, L1 Adaptive Control
+  * MPPI (model predictive path integral)
+  * 🌟 [CoVO-MPC](https://panchaoyi.com/covo-mpc-theoretical-analysis-of-sampling-based-mpc-and-optimal-covariance-design) (optimal covariance model predictive control)
 
 ## Visualization
 
