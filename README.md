@@ -1,5 +1,7 @@
 # Quadjax: High performance quadrotor simulator with wide support of RL and control algorithms
 
+https://github.com/jc-bao/quadjax/assets/60093981/b553e3d4-5c87-46ec-b666-808e51253697
+
 ## Supported algorithms
 
 * RL
