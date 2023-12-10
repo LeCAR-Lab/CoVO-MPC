@@ -4,13 +4,8 @@ from flax import struct
 from functools import partial
 from jax import lax
 from jax import numpy as jnp
-import pickle
-from jaxopt import ProjectedGradient
-from jaxopt.projection import projection_hyperplane
 
 from quadjax import controllers
-from quadjax.dynamics import EnvParams2D, EnvState2D, geom
-from quadjax.train import ActorCritic
 
 @struct.dataclass
 class MPPIParams:

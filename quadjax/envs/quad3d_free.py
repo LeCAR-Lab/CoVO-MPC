@@ -52,7 +52,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
-            self.get_init_state = self.get_zero_init_state
+            self.get_init_state = self.get_zero_state
         elif task == "tracking_slow":
             # Note: this is the version with quadratic cost, which is preferred with large model error
             self.generate_traj = partial(
@@ -61,7 +61,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_realworld_reward_fn
-            self.get_init_state = self.get_zero_init_state
+            self.get_init_state = self.get_zero_state
         elif task == "tracking_zigzag":
             self.generate_traj = partial(
                 utils.generate_zigzag_traj,
@@ -69,7 +69,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
-            self.get_init_state = self.get_zero_init_state
+            self.get_init_state = self.get_zero_state
         elif task == "hovering":
             self.generate_traj = partial(
                 utils.generate_fixed_traj,
@@ -77,7 +77,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.dt,
             )
             self.reward_fn = utils.tracking_penyaw_reward_fn
-            self.get_init_state = self.get_zero_init_state
+            self.get_init_state = self.get_zero_state
         else:
             raise NotImplementedError
 
@@ -216,7 +216,7 @@ class Quad3D(BaseEnvironment):
         return EnvParams3D()
 
     """
-    key methods@
+    key methods
     """
 
     def step_env(
@@ -420,7 +420,7 @@ class Quad3D(BaseEnvironment):
     #         control_params=self.default_control_params,
     #     )
 
-    def get_zero_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
+    def get_zero_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
         """Reset environment state by sampling theta, theta_dot."""
         traj_key, disturb_key, key = jax.random.split(key, 3)
         # generate reference trajectory by adding a few sinusoids together
@@ -442,18 +442,6 @@ class Quad3D(BaseEnvironment):
             omega=zeros3,
             omega_tar=zeros3,
             quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
-            # object
-            pos_obj=zeros3,
-            vel_obj=zeros3,
-            # hook
-            pos_hook=zeros3,
-            vel_hook=zeros3,
-            # rope
-            l_rope=0.0,
-            zeta=zeros3,
-            zeta_dot=zeros3,
-            f_rope=zeros3,
-            f_rope_norm=0.0,
             # trajectory
             pos_tar=pos_traj[0],
             vel_tar=vel_traj[0],
@@ -488,11 +476,6 @@ class Quad3D(BaseEnvironment):
             "err_vel": self.get_err_vel(state),
             "obs_param": self.get_obs_paramsonly(state, params),
             "obs_adapt": self.get_obs_adapt_hist(state, params),
-            "hit_wall": (
-                (utils.get_hit_reward(state.pos_obj, params) < -0.5)
-                | (utils.get_hit_reward(state.pos, params) < -0.5)
-            ),
-            "pass_wall": ((state.pos[0] < -0.05) & (state.pos_obj[0] < -0.05)),
         }
         return info
 
@@ -597,10 +580,6 @@ class Quad3D(BaseEnvironment):
                     # 1st order alpha
                     (params.alpha_bodyrate - params.alpha_bodyrate_mean)
                     / params.alpha_bodyrate_std,
-                    # object mass
-                    (params.mo - params.mo_mean) / params.mo_std,
-                    # rope length
-                    (params.l - params.l_mean) / params.l_std,
                 ]
             ),
         ]  # 13+6=19
@@ -685,8 +664,6 @@ class Quad3D(BaseEnvironment):
         done = (
             (state.time >= params.max_steps_in_episode)
             | (jnp.abs(state.pos) > 3.0).any()
-            | (jnp.abs(state.pos_obj) > 3.0).any()
-            | (jnp.abs(state.zeta_dot) > 100.0).any()
         )
         if not self.disable_rollover_terminate:
             rollover = (state.quat[3] < jnp.cos(jnp.pi / 4.0)) | (
@@ -1092,22 +1069,28 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             )
         elif "mppi_zeji" in controller_name:
             a_cov = jnp.diag(jnp.ones(H * env.action_dim) * sigma**2)
-            if "mean" in controller_name:
-                expansion_mode = "mean"
-            elif "lqr" in controller_name:
-                expansion_mode = "lqr"
-            elif "zero" in controller_name:
-                expansion_mode = "zero"
-            elif "ppo" in controller_name:
-                expansion_mode = "ppo"
-            elif "pid" in controller_name:
-                expansion_mode = "pid"
+            if "online" in controller_name:
+                mode = "online"
+            elif "offline" in controller_name:
+                mode = "offline"
             else:
-                expansion_mode = "mean"
-                print(
-                    "[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean"
-                )
-            control_params = controllers.MPPIZejiParams(
+                raise NotImplementedError
+            # if "mean" in controller_name:
+            #     expansion_mode = "mean"
+            # elif "lqr" in controller_name:
+            #     expansion_mode = "lqr"
+            # elif "zero" in controller_name:
+            #     expansion_mode = "zero"
+            # elif "ppo" in controller_name:
+            #     expansion_mode = "ppo"
+            # elif "pid" in controller_name:
+            #     expansion_mode = "pid"
+            # else:
+            #     expansion_mode = "mean"
+            #     print(
+            #         "[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean"
+            #     )
+            control_params = controllers.CoVOParams(
                 gamma_mean=1.0,
                 gamma_sigma=0.0,
                 discount=1.0,
@@ -1117,13 +1100,14 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
                 obs_noise_scale=0.05,
             )
-            controller = controllers.MPPIZejiController(
+            controller = controllers.CoVOController(
                 env=env,
                 control_params=control_params,
                 N=N,
                 H=H,
                 lam=lam,
-                expansion_mode=expansion_mode,
+                mode = mode
+                # expansion_mode=expansion_mode,
             )
     elif controller_name == "nn":
         from quadjax.train import ActorCritic
