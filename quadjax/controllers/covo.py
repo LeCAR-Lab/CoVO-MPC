@@ -33,14 +33,14 @@ class CoVOController(controllers.BaseController):
         self.action_dim = self.env.action_dim
         if mode == "online":
             # Key method
-            def get_sigma_zeji(control_params, env_state, env_params, key):
+            def get_sigma_covo(control_params, env_state, env_params, key):
                 R = self.get_hessian(
                     env_state, env_params, control_params, control_params.a_mean, key
                 )
-                sigma = self.get_sigma(R, control_params)
+                sigma = self.optimize_sigma(R, control_params)
                 return sigma
 
-            self.get_sigma_zeji = get_sigma_zeji
+            self.get_sigma_covo = get_sigma_covo
         elif mode == "offline":
             assert (
                 env.action_dim == 4
@@ -75,7 +75,7 @@ class CoVOController(controllers.BaseController):
                     mppi_rollout_fn, (env_state, env_params, key), None, length=self.H
                 )
                 R = self.get_hessian(env_state, env_params, control_params, a_mean, key)
-                a_cov = self.get_sigma(R, control_params)
+                a_cov = self.optimize_sigma(R, control_params)
                 # step forward with lqr
                 rng_step, key = jax.random.split(key)
                 obs = self.env.get_obs(env_state, env_params)
@@ -84,13 +84,12 @@ class CoVOController(controllers.BaseController):
                 )
                 action = lax.stop_gradient(action)
                 rng_step, key = jax.random.split(key)
-                # _, env_state, _, _, _ = self.env.step_env_wocontroller(rng_step, env_state, action, env_params)
                 _, env_state, _, _, _ = self.env.step_env(
                     rng_step, env_state, action, env_params
                 )
                 return (env_state, env_params, key), a_cov
 
-            if mode == "offline":  # ['lqr', 'ppo', 'mppi', 'pid']:
+            if mode == "offline":
 
                 def get_a_cov_offline(env_state, env_params, key):
                     _, a_cov_offline = lax.scan(
@@ -123,16 +122,16 @@ class CoVOController(controllers.BaseController):
                 return control_params
 
             # Key method
-            def get_sigma_zeji(control_params, env_state, env_params, key):
+            def get_sigma_covo(control_params, env_state, env_params, key):
                 return control_params.a_cov_offline[env_state.time]
 
-            self.get_sigma_zeji = get_sigma_zeji
+            self.get_sigma_covo = get_sigma_covo
             # overwrite reset function
             self.reset = reset_a_cov_offline
         else:
             raise NotImplementedError
 
-    def get_sigma(self, R: jnp.ndarray, control_params: CoVOParams):
+    def optimize_sigma(self, R: jnp.ndarray, control_params: CoVOParams):
         R = (R + R.T) / 2.0
         eigns, u = jnp.linalg.eigh(R)
 
@@ -221,9 +220,10 @@ class CoVOController(controllers.BaseController):
         a_mean = jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]])
         control_params = control_params.replace(a_mean=a_mean)
 
-        a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
+        # optimize sigma with CoVO (The key difference between CoVO and MPPI)
+        a_cov = self.get_sigma_covo(control_params, env_state, env_params, rng_act)
 
-        control_params = control_params.replace(a_cov=a_cov_zeji)
+        control_params = control_params.replace(a_cov=a_cov)
 
         # sample action with mean and covariance, repeat for N times to get N samples with shape (N, H, action_dim)
         # a_mean shape (H, action_dim), a_cov shape (H, action_dim, action_dim)

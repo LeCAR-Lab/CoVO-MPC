@@ -9,7 +9,7 @@ class NetworkController(controllers.BaseController):
         super().__init__(env, control_params)
         self.apply_fn = apply_fn
 
-    # @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0,))
     def update_params(self, env_params, control_params):
         return control_params
     

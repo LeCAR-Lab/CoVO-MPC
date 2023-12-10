@@ -97,10 +97,8 @@ class Quad3D(BaseEnvironment):
 
             self.control_fn = base_controller_fn
         elif lower_controller == "l1":
-            self.default_control_params = controllers.L1ParamsBodyrate()
-            controller = controllers.L1ControllerBodyrate(
-                self, self.default_control_params, self.default_params.dt
-            )
+            self.default_control_params = controllers.L1Params()
+            controller = controllers.L1Controller(self, self.default_control_params)
 
             def l1_control_fn(obs, state, env_params, rng_act, input_action):
                 action_l1, control_params, _ = controller(
@@ -111,9 +109,9 @@ class Quad3D(BaseEnvironment):
 
             self.control_fn = l1_control_fn
         elif lower_controller == "l1_esitimate_only":
-            self.default_control_params = controllers.L1ParamsBodyrate()
-            controller = controllers.L1ControllerBodyrate(
-                self, self.default_control_params, self.default_params.dt
+            self.default_control_params = controllers.L1Params()
+            controller = controllers.L1Controller(
+                self, self.default_control_params
             )
 
             def l1_esitimate_only_control_fn(
@@ -685,14 +683,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         a_mean = jnp.tile(a_mean_per_step, (H, 1))
         return a_mean
 
-    if controller_name == "lqr":
-        control_params = controllers.LQRParams(
-            Q=jnp.diag(jnp.ones(12)),
-            R=0.03 * jnp.diag(jnp.ones(4)),
-            K=jnp.zeros((4, 12)),
-        )
-        controller = controllers.LQRController(env, control_params=control_params)
-    elif controller_name == "pid":
+    if controller_name == "pid":
         control_params = controllers.PIDParams(
             Kp=10.0,
             Kd=5.0,
@@ -701,8 +692,8 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         )
         controller = controllers.PIDController(env, control_params=control_params)
     elif controller_name == "l1":
-        control_params = controllers.L1ParamsBodyrate()
-        controller = controllers.L1ControllerBodyrate(env, control_params, env.sim_dt)
+        control_params = controllers.L1Params()
+        controller = controllers.L1Controller(env, control_params)
     elif controller_name == "random":
         control_params = None
         controller = controllers.RandomController(env, control_params)
@@ -803,7 +794,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
 @pydataclass
 class Args:
     task: str = "tracking"  # tracking, tracking_zigzag, hovering
-    dynamics: str = "bodyrate"  # bodyrate, free, slung
     controller: str = "lqr"  # fixed
     controller_params: str = ""
     obs_type: str = "quad"
@@ -818,16 +808,15 @@ class Args:
 def main(args: Args):
     if args.debug:
         jax.config.update("jax_debug_nans", True)
-    
+
     # check if f"{quadjax.get_package_path()}/../results" folder exists, if not, create one
     save_path = f"{quadjax.get_package_path()}/../results"
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-        print('[DEBUG] create folder ', save_path)
+        print("[DEBUG] create folder ", save_path)
 
     env = Quad3D(
         task=args.task,
-        # dynamics=args.dynamics,
         obs_type=args.obs_type,
         lower_controller=args.lower_controller,
         enable_randomizer=not args.noDR,

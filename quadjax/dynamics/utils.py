@@ -13,6 +13,7 @@ def angle_normalize(x: float) -> float:
     """Normalize the angle - radians."""
     return ((x + jnp.pi) % (2 * jnp.pi)) - jnp.pi
 
+
 @jax.jit
 def get_hit_penalty(y: float, z: float) -> float:
     half_width = 0.05
@@ -29,18 +30,24 @@ def get_hit_penalty(y: float, z: float) -> float:
     )
     return hit_panelty
 
-'''
+
+"""
 disturbance related
-'''
+"""
+
+
 @jax.jit
-def constant_disturbance(x:jnp.ndarray, u:jnp.ndarray, params:EnvParams3D):
+def constant_disturbance(x: jnp.ndarray, u: jnp.ndarray, params: EnvParams3D):
     return params.d_offset
 
-'''
+
+"""
 trajectory related
-'''
+"""
+
+
 def generate_fixed_traj(
-    max_steps: int, dt:float, key: chex.PRNGKey
+    max_steps: int, dt: float, key: chex.PRNGKey
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
     zeros = jnp.zeros((max_steps, 3))
     key_pos = jax.random.split(key)[0]
@@ -49,8 +56,9 @@ def generate_fixed_traj(
     # pos_traj = zeros + pos
     return zeros, zeros, zeros
 
+
 def generate_jumping_fixed_traj(
-    max_steps: int, dt:float, key: chex.PRNGKey
+    max_steps: int, dt: float, key: chex.PRNGKey
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
     zeros = jnp.zeros((max_steps, 3))
     key_pos = jax.random.split(key)[0]
@@ -61,23 +69,26 @@ def generate_jumping_fixed_traj(
     pos_traj = zeros + pos
     return pos_traj, zeros, zeros
 
+
 def generate_given_fixed_traj(
-    pos: jnp.ndarray, max_steps: int, dt:float, key: chex.PRNGKey
+    pos: jnp.ndarray, max_steps: int, dt: float, key: chex.PRNGKey
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
     zeros = jnp.zeros((max_steps, 3))
     pos_traj = zeros + pos
     vel_traj = zeros
     return pos_traj, vel_traj
 
+
 def generate_given_fixed_traj(
-    pos: jnp.ndarray, max_steps: int, dt:float, key: chex.PRNGKey
+    pos: jnp.ndarray, max_steps: int, dt: float, key: chex.PRNGKey
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
     zeros = jnp.zeros((max_steps, 3))
     pos_traj = zeros + pos
     vel_traj = zeros
     return pos_traj, vel_traj
 
-def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
+
+def generate_lissa_traj(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
     # get random amplitude and phase
     key_amp, key_phase = jax.random.split(key, 2)
     rand_amp = jax.random.uniform(key_amp, shape=(3, 2), minval=-1.0, maxval=1.0)
@@ -86,7 +97,9 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
     )
     # get trajectory
     scale = 1.0
-    ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
+    ts = (
+        jnp.arange(0, max_steps + 50) * dt
+    )  # NOTE: do not use params for jax limitation
     w1 = 2 * jnp.pi * 0.2
     w2 = 2 * jnp.pi * 0.4
 
@@ -95,8 +108,8 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
             rand_amp[i, 0] * jnp.sin(w1 * ts + rand_phase[i, 0])
             + rand_amp[i, 1] * jnp.sin(w2 * ts + rand_phase[i, 1])
             for i in range(3)
-        ], 
-        axis=1
+        ],
+        axis=1,
     )
     pos_traj = pos_traj - pos_traj[0]
 
@@ -105,8 +118,8 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
             rand_amp[i, 0] * w1 * jnp.cos(w1 * ts + rand_phase[i, 0])
             + rand_amp[i, 1] * w2 * jnp.cos(w2 * ts + rand_phase[i, 1])
             for i in range(3)
-        ], 
-        axis=1
+        ],
+        axis=1,
     )
 
     acc_traj = scale * jnp.stack(
@@ -114,13 +127,16 @@ def generate_lissa_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Arr
             -rand_amp[i, 0] * w1**2 * jnp.sin(w1 * ts + rand_phase[i, 0])
             - rand_amp[i, 1] * w2**2 * jnp.sin(w2 * ts + rand_phase[i, 1])
             for i in range(3)
-        ], 
-        axis=1
+        ],
+        axis=1,
     )
 
     return pos_traj, vel_traj, acc_traj
 
-def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
+
+def generate_lissa_traj_slow(
+    max_steps: int, dt: float, key: chex.PRNGKey
+) -> chex.Array:
     # get random amplitude and phase
     key_amp, key_phase = jax.random.split(key, 2)
     rand_amp = jax.random.uniform(key_amp, shape=(3, 2), minval=-1.0, maxval=1.0)
@@ -129,7 +145,9 @@ def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> che
     )
     # get trajectory
     scale = 1.0
-    ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
+    ts = (
+        jnp.arange(0, max_steps + 50) * dt
+    )  # NOTE: do not use params for jax limitation
     w1 = 2 * jnp.pi * 0.1
     w2 = 2 * jnp.pi * 0.1
     # w1 = 2 * jnp.pi * 0.2
@@ -140,8 +158,8 @@ def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> che
             rand_amp[i, 0] * jnp.sin(w1 * ts + rand_phase[i, 0])
             + rand_amp[i, 1] * jnp.sin(w2 * ts + rand_phase[i, 1])
             for i in range(3)
-        ], 
-        axis=1
+        ],
+        axis=1,
     )
     pos_traj = pos_traj - pos_traj[0]
 
@@ -150,8 +168,8 @@ def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> che
             rand_amp[i, 0] * w1 * jnp.cos(w1 * ts + rand_phase[i, 0])
             + rand_amp[i, 1] * w2 * jnp.cos(w2 * ts + rand_phase[i, 1])
             for i in range(3)
-        ], 
-        axis=1
+        ],
+        axis=1,
     )
 
     acc_traj = scale * jnp.stack(
@@ -159,13 +177,14 @@ def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> che
             -rand_amp[i, 0] * w1**2 * jnp.sin(w1 * ts + rand_phase[i, 0])
             - rand_amp[i, 1] * w2**2 * jnp.sin(w2 * ts + rand_phase[i, 1])
             for i in range(3)
-        ], 
-        axis=1
+        ],
+        axis=1,
     )
 
     return pos_traj, vel_traj, acc_traj
 
-def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
+
+def generate_zigzag_traj(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
     point_per_seg = 40
     num_seg = max_steps // point_per_seg + 1
 
@@ -173,7 +192,9 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
     key_angles = jax.random.split(key, num_seg)
 
     # generate a 3d unit vector
-    prev_point = jax.random.uniform(key_keypoints[0], shape=(3,), minval=-1.0, maxval=1.0)
+    prev_point = jax.random.uniform(
+        key_keypoints[0], shape=(3,), minval=-1.0, maxval=1.0
+    )
     prev_point = prev_point / jnp.linalg.norm(prev_point) * 0.1
 
     def update_fn(carry, i):
@@ -214,7 +235,8 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
         point_dot_traj_seg = (
             (next_point - prev_point)
             / (point_per_seg + 1)
-            * jnp.ones((point_per_seg, 3)) / dt
+            * jnp.ones((point_per_seg, 3))
+            / dt
         )
 
         carry = (key_keypoints[i + 1], key_angles[i + 1], next_point)
@@ -227,14 +249,16 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
     )
 
     pos_traj = jnp.concatenate(point_traj_segs, axis=0)
-    pos_traj = pos_traj - pos_traj[0]   
+    pos_traj = pos_traj - pos_traj[0]
     vel_traj = jnp.concatenate(point_dot_traj_segs, axis=0)
 
     return pos_traj, vel_traj, jnp.zeros_like(pos_traj)
 
-'''
+
+"""
 reward function
-'''
+"""
+
 
 @jax.jit
 def hovering_reward_fn(state: EnvState3D):
@@ -242,134 +266,74 @@ def hovering_reward_fn(state: EnvState3D):
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
     return 1.0 - 0.6 * err_pos - 0.1 * err_vel
 
-@jax.jit
-def get_hit_reward(pos, params):
-    r = 3.0
-    gap_size = (1.0-params.curri_params)*0.3 + 0.1
-    a = r - gap_size/2.0
-    b = 0.06
-    YZ = jnp.sqrt((pos[1])**2 + (pos[2])**2) - r
-    l = jnp.sqrt(((pos[0])/b)**2 + (YZ/a)**2)
-    return -jnp.clip(jnp.log(1.0+50.0*(1.0-jnp.clip(l, 0.0, 1.0))), 0.0, 1.0)
-
-@jax.jit
-def jumping_obj_reward_fn(state: EnvState3D, params: EnvParams3D):
-    # rew_tracking = tracking_penyaw_obj_reward_fn(state, params)
-    drone_hit_rew = 0.5 * get_hit_reward(state.pos, params)
-    obj_hit_rew = 0.5 * get_hit_reward(state.pos_obj, params)
-    # extra term: encourage the object to pass through point [0.0, 0.0, 0.0] when its x is positive
-    obj_pass_rew = 0.5 * \
-        (
-            (1.0-jnp.linalg.norm(state.pos_obj)) * (state.pos_obj[0] > 0.0) + \
-            1.0 *( (state.pos_obj[0] < 0.0) & (state.pos_obj[0] > -0.05)) + \
-            (2.0-jnp.clip(jnp.linalg.norm(state.vel_obj)*0.2 + \
-                          jnp.linalg.norm(state.pos_obj - state.pos_tar)*0.5, 0.0, 1.0)) * (state.pos_obj[0] < -0.05)
-        )
-    pos_quad_tar = state.pos_tar + jnp.array([0.0, 0.0, params.l]) - params.hook_offset
-    quad_pass_rew = 0.5 * \
-        (
-            (1.0-jnp.linalg.norm(state.pos)) * (state.pos[0] > 0.0) + \
-            1.0 *( (state.pos[0] < 0.0) & (state.pos[0] > -0.05)) + \
-            (2.0-jnp.clip(jnp.linalg.norm(state.vel)*0.2 + \
-                          jnp.linalg.norm(state.pos - pos_quad_tar)*0.5, 0.0, 1.0)) * (state.pos[0] < -0.05)
-        )
-    return drone_hit_rew + obj_hit_rew + obj_pass_rew + quad_pass_rew
 
 @jax.jit
 def log_pos_fn(err_pos):
-    return err_pos * 0.4 + \
-        jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4 + \
-        jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 + \
-        jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 + \
-        jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1
+    return (
+        err_pos * 0.4
+        + jnp.clip(jnp.log(err_pos + 1) * 4, 0, 1) * 0.4
+        + jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2
+        + jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1
+        + jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1
+    )
+
 
 @jax.jit
-def tracking_reward_fn(state: EnvState3D, params = None):
+def tracking_reward_fn(state: EnvState3D, params=None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    reward = 1.0 - \
-        0.05 * err_vel - \
-        log_pos_fn(err_pos)
+    reward = 1.0 - 0.05 * err_vel - log_pos_fn(err_pos)
     return reward
-    
+
+
 @jax.jit
-def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
+def tracking_penyaw_reward_fn(state: EnvState3D, params=None):
     err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
     q = state.quat
-    yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
-    reward = 1.3 - \
-        0.05 * err_vel - \
-        log_pos_fn(err_pos) - \
-        jnp.abs(yaw) * 0.2
-        # jnp.abs(state.omega[2]) * 0.02 - \
+    yaw = jnp.arctan2(2 * (q[3] * q[2] + q[0] * q[1]), 1 - 2 * (q[1] ** 2 + q[2] ** 2))
+    reward = 1.3 - 0.05 * err_vel - log_pos_fn(err_pos) - jnp.abs(yaw) * 0.2
+    # jnp.abs(state.omega[2]) * 0.02 - \
 
     return reward
 
-@jax.jit
-def tracking_realworld_reward_fn(state: EnvState3D, params = None):
-    # err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
-    # err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    # q = state.quat
-    # yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
-    # action_hist = state.action_hist
-    # action_diff = action_hist[-1] - action_hist[-2]
-    # thrust_action_diff = action_diff[0]**2
-    # omega_action_diff = jnp.sum(action_diff[1:]**2)
-    # reward = 1.3 - \
-    #     0.2 * err_vel - \
-    #     log_pos_fn(err_pos) - \
-    #     jnp.abs(yaw) * 0.2 - \
-    #     jnp.sum(state.omega**2) * 0.01 - \
-    #     thrust_action_diff * 1.0 - \
-    #     omega_action_diff * 0.1
 
+@jax.jit
+def tracking_realworld_reward_fn(state: EnvState3D, params=None):
     # reward function from
     alpha_p = 5.0
     alpha_R = 3.0
     # alpha_vel = 0.0
     # alpha_omega = 0.0
     pos_err = state.pos - state.pos_tar
-    pos_err = jnp.mean(pos_err ** 2)
+    pos_err = jnp.mean(pos_err**2)
     quat_err = 1 - state.quat[3] ** 2
-    cost = alpha_p * pos_err + alpha_R * quat_err # + alpha_vel * jnp.sum(state.vel ** 2) + alpha_omega * jnp.sum(state.omega ** 2)
+    cost = (
+        alpha_p * pos_err + alpha_R * quat_err
+    )  # + alpha_vel * jnp.sum(state.vel ** 2) + alpha_omega * jnp.sum(state.omega ** 2)
     cost = cost * 0.02
     reward = -cost
 
     return reward
 
-@jax.jit
-def tracking_penyaw_obj_reward_fn(state: EnvState3D, params:EnvParams3D):
-    err_pos = jnp.linalg.norm(state.pos_tar+jnp.array([0.0, 0.0, params.l])-params.hook_offset-state.pos)
-    err_vel = jnp.linalg.norm(state.vel)
-    err_pos_obj = jnp.linalg.norm(state.pos_tar - state.pos_obj)
-    err_vel_obj = jnp.linalg.norm(state.vel_tar - state.vel_obj)
-    reward = 0.0 - \
-        0.03 * err_vel - \
-        0.4 * err_pos - \
-        0.05 * err_vel_obj - \
-        log_pos_fn(err_pos_obj) - \
-        jnp.linalg.norm(state.omega) * 0.01 - \
-        jnp.abs(state.omega[2]) * 0.05
-    reward = 1.0 + reward/3.0
 
-    return reward
-
-'''
+"""
 visualization functions
-'''
-def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
+"""
+
+
+def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=""):
     import matplotlib.pyplot as plt
     import numpy as np
 
     # check if quat in state_seq, if true, then add a new item called rpy (roll, pitch, yaw)
     if "quat" in state_seq[0]:
         for i, state in enumerate(state_seq):
-            rpy = quadjax.dynamics.qtorpy(state['quat'])
+            rpy = quadjax.dynamics.qtorpy(state["quat"])
             state_seq[i]["rpy"] = rpy
     if "quat_desired" in state_seq[0]:
         for i, state in enumerate(state_seq):
-            rpy = quadjax.dynamics.qtorpy(state['quat_desired'])
+            rpy = quadjax.dynamics.qtorpy(state["quat_desired"])
             state_seq[i]["rpy_tar"] = rpy
 
     # plot results
@@ -381,7 +345,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     num_rows = int(jnp.ceil(num_figs / plot_per_row))
 
     # create num_figs subplots
-    plt.subplots(num_rows, plot_per_row, figsize=(6*plot_per_row, 2 * num_rows))
+    plt.subplots(num_rows, plot_per_row, figsize=(6 * plot_per_row, 2 * num_rows))
 
     # plot reward
     plt.subplot(num_rows, plot_per_row, 1)
@@ -402,24 +366,32 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
 
     # plot state
     for i, (name, value) in enumerate(state_seq[0].items()):
-        if name in ["pos_traj", "vel_traj", "acc_traj", "control_params", "vel_hist", "omega_hist", "action_hist"]:
+        if name in [
+            "pos_traj",
+            "vel_traj",
+            "acc_traj",
+            "control_params",
+            "vel_hist",
+            "omega_hist",
+            "action_hist",
+        ]:
             continue
         elif "rpy" in name and "tar" not in name:
             rpy = np.array([s[name] for s in state_seq])
-            if 'rpy_tar' in state_seq[0]:
+            if "rpy_tar" in state_seq[0]:
                 rpy_tar = np.array([s[f"{name[:3]}_tar"] for s in state_seq])
             scan_range = zip(range(3), ["roll", "pitch", "yaw"])
             for i, subplot_name in scan_range:
                 current_fig += 1
                 plt.subplot(num_rows, plot_per_row, current_fig)
                 plt.plot(time, rpy[:, i], label=f"{subplot_name}")
-                if 'rpy_tar' in state_seq[0]:
+                if "rpy_tar" in state_seq[0]:
                     plt.plot(time, rpy_tar[:, i], "--", label=f"{subplot_name}_tar")
                 plt.ylabel(f"{name}_{subplot_name}")
                 plt.legend()
         elif (("pos" in name) or ("vel" in name)) and ("tar" not in name):
             xyz = np.array([s[name] for s in state_seq])
-            if 'hat' in name:
+            if "hat" in name:
                 xyz_tar = np.array([s[f"{name[:3]}"] for s in state_seq])
             else:
                 xyz_tar = np.array([s[f"{name[:3]}_tar"] for s in state_seq])
@@ -427,7 +399,7 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
                 scan_range = zip(range(3), ["x", "y", "z"])
             elif xyz.shape[1] == 2:
                 scan_range = zip(range(2), ["y", "z"])
-            else: 
+            else:
                 print(f"[DEBUG] ignore {name} with shape {xyz.shape} while plotting")
             for i, subplot_name in scan_range:
                 current_fig += 1
@@ -436,9 +408,9 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
                 plt.plot(time, xyz_tar[:, i], "--", label=f"{subplot_name}_tar")
                 plt.ylabel(f"{name}_{subplot_name}")
                 plt.legend()
-        elif name == 'omega_tar':
+        elif name == "omega_tar":
             omega_tar = np.array([s[name] for s in state_seq])
-            omega = np.array([s['omega'] for s in state_seq])
+            omega = np.array([s["omega"] for s in state_seq])
             if omega_tar.shape[1] == 3:
                 scan_range = zip(range(3), ["x", "y", "z"])
             elif omega_tar.shape[1] == 1:
@@ -457,7 +429,9 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
             current_fig += 1
             plt.subplot(num_rows, plot_per_row, current_fig)
             plt.plot(time, [s[name] for s in state_seq], label=f"{name}")
-            plt.plot(time, [s["f_disturb"]/0.03 for s in state_seq], "--", label="real")
+            plt.plot(
+                time, [s["f_disturb"] / 0.03 for s in state_seq], "--", label="real"
+            )
             plt.ylabel(name)
             plt.legend()
         else:
@@ -469,8 +443,8 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     plt.xlabel("time")
     plt.savefig(f"{quadjax.get_package_path()}/../results/render_plot_{filename}.png")
 
-    # plot another figure 
-    plt.figure(figsize=(6*3, 2*3))
+    # plot another figure
+    plt.figure(figsize=(6 * 3, 2 * 3))
     # only plot pos, vel, rpy and their tar
     plot_items = ["pos", "vel", "rpy"]
     step_num = 300
@@ -478,16 +452,25 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
         if item not in state_seq[0]:
             continue
         item_tar = f"{item}_tar"
-        if item == 'rpy':
+        if item == "rpy":
             subitems = ["roll", "pitch", "yaw"]
         else:
             subitems = ["x", "y", "z"]
         for j, subitem in enumerate(subitems):
             current_fig = i * 3 + j + 1
             plt.subplot(3, 3, current_fig)
-            plt.plot(time[:step_num], [s[f"{item}"][j] for s in state_seq[:step_num]], label=f"{subitem}")
+            plt.plot(
+                time[:step_num],
+                [s[f"{item}"][j] for s in state_seq[:step_num]],
+                label=f"{subitem}",
+            )
             if item_tar in state_seq[0]:
-                plt.plot(time[:step_num], [s[f"{item_tar}"][j] for s in state_seq[:step_num]], "--", label=f"{subitem} desired")
+                plt.plot(
+                    time[:step_num],
+                    [s[f"{item_tar}"][j] for s in state_seq[:step_num]],
+                    "--",
+                    label=f"{subitem} desired",
+                )
             plt.ylabel(f"{item}_{subitem}")
             plt.legend()
     plt.xlabel("time")

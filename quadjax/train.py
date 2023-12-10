@@ -188,9 +188,6 @@ def make_train(env, config):
             rng, _rng = jax.random.split(rng)
             network_params = network.init(_rng, jnp.zeros(env.obs_dim + 8))
 
-            # load parameters
-            # network_params, compressor_params, _ = pickle.load(open(f"{quadjax.get_package_path()}/../results/rma/rma_policy.pkl", "rb"))
-
             ppo_train_state = TrainState.create(
                 apply_fn=get_pi_value_adapt,  # for test
                 params=[network_params, compressor_params],

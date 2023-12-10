@@ -2,8 +2,10 @@ from flax import struct
 from jax import numpy as jnp
 from typing import Optional, Union
 
+
 def default_array(array):
     return struct.field(default_factory=lambda: jnp.array(array))
+
 
 @struct.dataclass
 class EnvState3D:
@@ -29,10 +31,11 @@ class EnvState3D:
     # trajectory information for adaptation
     vel_hist: jnp.ndarray
     omega_hist: jnp.ndarray
-    action_hist: jnp.ndarray 
+    action_hist: jnp.ndarray
 
     # control params is float or dataclass
-    control_params:  Union[float, struct.dataclass] = 0.0    
+    control_params: Union[float, struct.dataclass] = 0.0
+
 
 @struct.dataclass
 class EnvParams3D:
@@ -47,12 +50,15 @@ class EnvParams3D:
     m_mean: float = 0.027  # mass
     m_std: float = 0.003  # mass
 
-    I: jnp.ndarray = default_array([
-        [1.7e-5, 0.0, 0.00], 
-        [0.0, 1.7e-5, 0.0], 
-        [0.0, 0.0, 3.0e-5]])  # moment of inertia
-    I_diag_mean: jnp.ndarray = default_array([1.7e-5, 1.7e-5, 3.0e-5])  # moment of inertia
-    I_diag_std: jnp.ndarray = default_array([0.2e-5, 0.2e-5, 0.3e-5])  # moment of inertia
+    I: jnp.ndarray = default_array(
+        [[1.7e-5, 0.0, 0.00], [0.0, 1.7e-5, 0.0], [0.0, 0.0, 3.0e-5]]
+    )  # moment of inertia
+    I_diag_mean: jnp.ndarray = default_array(
+        [1.7e-5, 1.7e-5, 3.0e-5]
+    )  # moment of inertia
+    I_diag_std: jnp.ndarray = default_array(
+        [0.2e-5, 0.2e-5, 0.3e-5]
+    )  # moment of inertia
 
     l: float = 0.3  # length of the rod
     l_mean: float = 0.3
