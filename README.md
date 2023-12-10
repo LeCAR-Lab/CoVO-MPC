@@ -1,5 +1,10 @@
 # Quadjax: High performance quadrotor simulator with wide support of RL and control algorithms
 
+[![Python Version](https://img.shields.io/badge/Python-3.10-blue.svg)](https://github.com/eureka-research/Eureka)
+[<img src="https://img.shields.io/badge/Backend-Jax-red.svg"/>](https://github.com/google/jax)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
 https://github.com/jc-bao/quadjax/assets/60093981/b553e3d4-5c87-46ec-b666-808e51253697
 
 ## Supported algorithms
