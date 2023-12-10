@@ -1,4 +1,4 @@
-# CoVO-MPC: Theoretical Analysis of Sampling-based MPC and Optimal Covariance Design
+# CoVO-MPC: CoVariance-Optimal MPC
 
 <div align="center">
 
