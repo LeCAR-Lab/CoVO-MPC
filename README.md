@@ -9,11 +9,13 @@
 [<img src="https://img.shields.io/badge/Backend-Jax-red.svg"/>](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-https://github.com/jc-bao/quadjax/assets/60093981/b553e3d4-5c87-46ec-b666-808e51253697
+Simulator             |  Hardware (Crazyflie)
+:-------------------------:|:-------------------------:
+![output](https://github.com/LeCAR-Lab/CoVO-MPC/assets/60093981/50d11272-3a51-4ed5-b734-bca1b80a9ef5) | ![tracking_compare](https://github.com/LeCAR-Lab/CoVO-MPC/assets/60093981/b835403d-8f78-49e7-8ac7-d3b902429839)
 
 </div>
 
-Implementation of the novel sampling-based Model Predictive Control (MPC) algorithm, CoVariance-Optimal MPC (CoVO-MPC), developed through the research outlined in the associated paper. This new control algorithm is sought to outperform standard Model Predictive Path Integral Control (MPPI) by 43 to 54%.
+Implementation of the novel sampling-based Model Predictive Control (MPC) algorithm, **CoVariance-Optimal MPC (CoVO-MPC)**, developed through the research outlined in [the associated paper](https://drive.google.com/file/d/1u964n8BeQnZhwXpms7hJx8DNDYjwxTxy/view?usp=share_link). This new control algorithm is sought to outperform standard Model Predictive Path Integral Control (MPPI) by **43 to 54%**.
 
 ## Installation
 
