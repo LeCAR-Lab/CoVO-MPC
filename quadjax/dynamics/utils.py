@@ -5,7 +5,7 @@ import chex
 from typing import Tuple
 
 import quadjax
-from quadjax.dynamics.dataclass import EnvState3D, EnvParams3D, EnvState2D, EnvParams2D
+from quadjax.dynamics.dataclass import EnvState3D, EnvParams3D
 
 
 @jax.jit
@@ -165,41 +165,6 @@ def generate_lissa_traj_slow(max_steps: int, dt:float, key: chex.PRNGKey) -> che
 
     return pos_traj, vel_traj, acc_traj
 
-def generate_lissa_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
-    # get random amplitude and phase
-    key_amp, key_phase = jax.random.split(key, 2)
-    rand_amp = jax.random.uniform(key_amp, shape=(2, 2), minval=-1.0, maxval=1.0)
-    rand_phase = jax.random.uniform(
-        key_phase, shape=(2, 2), minval=-jnp.pi, maxval=jnp.pi
-    )
-    
-    # get trajectory
-    scale = 0.5
-    ts = jnp.arange(0, max_steps + 50)*dt  # NOTE: do not use params for jax limitation
-    w1 = 2 * jnp.pi * 0.3
-    w2 = 2 * jnp.pi * 0.6
-
-    pos_traj = scale * jnp.stack(
-        [
-            rand_amp[i, 0] * jnp.sin(w1 * ts + rand_phase[i, 0])
-            + rand_amp[i, 1] * jnp.sin(w2 * ts + rand_phase[i, 1])
-            for i in range(2)
-        ],
-        axis=1
-    )
-    pos_traj = pos_traj - pos_traj[0]
-
-    vel_traj = scale * jnp.stack(
-        [
-            rand_amp[i, 0] * w1 * jnp.cos(w1 * ts + rand_phase[i, 0])
-            + rand_amp[i, 1] * w2 * jnp.cos(w2 * ts + rand_phase[i, 1])
-            for i in range(2)
-        ],
-        axis=1
-    )
-    
-    return pos_traj, vel_traj
-
 def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Array:
     point_per_seg = 40
     num_seg = max_steps // point_per_seg + 1
@@ -267,74 +232,9 @@ def generate_zigzag_traj(max_steps: int, dt:float, key: chex.PRNGKey) -> chex.Ar
 
     return pos_traj, vel_traj, jnp.zeros_like(pos_traj)
 
-
-
-def generate_zigzag_traj_2d(max_steps: int, dt: float, key: chex.PRNGKey) -> chex.Array:
-    point_per_seg = 50
-    num_seg = max_steps // point_per_seg + 1
-
-    key_keypoints = jax.random.split(key, num_seg)
-    key_angles = jax.random.split(key, num_seg)
-
-    # generate a 2d unit vector
-    prev_point = jax.random.uniform(key_keypoints[0], shape=(2,), minval=-1.0, maxval=1.0)
-    prev_point = prev_point / jnp.linalg.norm(prev_point) * 0.1
-
-    def update_fn(carry, i):
-        key_keypoint, key_angle, prev_point = carry
-
-        # Calculate the unit vector pointing to the center
-        vec_to_center = -prev_point / jnp.linalg.norm(prev_point)
-
-        # Sample random rotation angle theta from [-pi/3, pi/3]
-        delta_theta = jax.random.uniform(key_angle, minval=-jnp.pi / 3, maxval=jnp.pi / 3)
-
-        # Calculate new direction
-        theta = jnp.arctan2(vec_to_center[1], vec_to_center[0]) + delta_theta
-        new_direction = jnp.array([jnp.cos(theta), jnp.sin(theta)])
-
-        # Sample the distance from [1.5, 2.5]
-        distance = jax.random.uniform(key_keypoint, minval=1.0, maxval=1.5)
-
-        # Calculate the new point
-        next_point = prev_point + distance * new_direction
-
-        point_traj_seg = jnp.stack(
-            [
-                jnp.linspace(prev, next_p, point_per_seg, endpoint=False)
-                for prev, next_p in zip(prev_point, next_point)
-            ],
-            axis=-1,
-        )
-        point_dot_traj_seg = (
-            (next_point - prev_point) / (point_per_seg + 1) * jnp.ones((point_per_seg, 2)) / dt
-        )
-
-        carry = (key_keypoints[i + 1], key_angles[i + 1], next_point)
-        return carry, (point_traj_seg, point_dot_traj_seg)
-
-    initial_carry = (key_keypoints[1], key_angles[1], prev_point)
-    point_traj_segs, point_dot_traj_segs = [], []
-    _, (point_traj_segs, point_dot_traj_segs) = lax.scan(
-        update_fn, initial_carry, jnp.arange(num_seg)
-    )
-
-    pos_traj = jnp.concatenate(point_traj_segs, axis=0)
-    pos_traj = pos_traj - pos_traj[0]   
-    vel_traj = jnp.concatenate(point_dot_traj_segs, axis=0)
-
-    return pos_traj, vel_traj
-
-    
-
 '''
 reward function
 '''
-@jax.jit
-def jumping_reward_fn(state: EnvState3D):
-    drone_panelty = get_hit_penalty(state.y, state.z) * 3.0
-    obj_panelty = get_hit_penalty(state.y_obj, state.z_obj) * 3.0
-    return 1.0 - 0.6 * err_pos - 0.15 * err_vel + (drone_panelty + obj_panelty)
 
 @jax.jit
 def hovering_reward_fn(state: EnvState3D):
@@ -382,47 +282,6 @@ def log_pos_fn(err_pos):
         jnp.clip(jnp.log(err_pos + 1) * 8, 0, 1) * 0.2 + \
         jnp.clip(jnp.log(err_pos + 1) * 16, 0, 1) * 0.1 + \
         jnp.clip(jnp.log(err_pos + 1) * 32, 0, 1) * 0.1
-
-@jax.jit
-def tracking_2d_reward_fn(state: EnvState2D, params = None):
-    err_pos = jnp.linalg.norm(state.pos_tar - state.pos)
-    err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
-    underactuated_direction_panelty = jnp.abs(state.pos[1])*0.05
-    # omega_panelty = jnp.abs(state.omega)*0.02
-    # omega_command_panelty = jnp.abs(state.last_omega)*0.02
-    thrust_command_panelty = jnp.abs(state.last_thrust-0.03*9.81)*0.5
-    reward = 1.0 - \
-        0.1 * err_vel - \
-        log_pos_fn(err_pos) -\
-        underactuated_direction_panelty - \
-        thrust_command_panelty 
-        # omega_panelty - \
-        # omega_command_panelty - \
-    return reward
-
-@jax.jit
-def tracking_2d_quadratic_reward_fn(state: EnvState2D, params = None):
-    x = state.pos
-    vel = state.vel
-    roll = state.roll
-    omega = state.omega
-    thrust = state.last_thrust
-    torque = state.last_omega
-
-    x_tar = state.pos_tar
-    vel_tar = state.vel_tar
-
-    k_x = 20.0
-    k_v = 0.1
-    k_thrust = 0.1
-    k_omega = 0.02
-
-    reward = 1.0 - \
-        k_x * ((x - x_tar)**2).sum() - \
-        k_v * ((vel - vel_tar)**2).sum() - \
-        k_thrust * (thrust - 0.03*9.81)**2 - \
-        k_omega * torque**2
-    return reward
 
 @jax.jit
 def tracking_reward_fn(state: EnvState3D, params = None):

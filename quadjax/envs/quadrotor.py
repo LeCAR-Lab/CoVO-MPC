@@ -10,13 +10,15 @@ import pickle
 import time as time_module
 import numpy as np
 from tqdm import trange
+import os
 
 import quadjax
 from quadjax import dynamics as quad_dyn
 from quadjax import controllers
-from quadjax.dynamics import utils, geom
+from quadjax.dynamics import utils
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.envs.base import BaseEnvironment
+
 
 class Quad3D(BaseEnvironment):
     """
@@ -95,8 +97,10 @@ class Quad3D(BaseEnvironment):
 
             self.control_fn = base_controller_fn
         elif lower_controller == "l1":
-            self.default_control_params = controllers.L1Params()
-            controller = controllers.L1Controller(self, self.default_control_params)
+            self.default_control_params = controllers.L1ParamsBodyrate()
+            controller = controllers.L1ControllerBodyrate(
+                self, self.default_control_params, self.default_params.dt
+            )
 
             def l1_control_fn(obs, state, env_params, rng_act, input_action):
                 action_l1, control_params, _ = controller(
@@ -107,8 +111,10 @@ class Quad3D(BaseEnvironment):
 
             self.control_fn = l1_control_fn
         elif lower_controller == "l1_esitimate_only":
-            self.default_control_params = controllers.L1Params()
-            controller = controllers.L1Controller(self, self.default_control_params)
+            self.default_control_params = controllers.L1ParamsBodyrate()
+            controller = controllers.L1ControllerBodyrate(
+                self, self.default_control_params, self.default_params.dt
+            )
 
             def l1_esitimate_only_control_fn(
                 obs, state, env_params, rng_act, input_action
@@ -147,21 +153,12 @@ class Quad3D(BaseEnvironment):
 
                 disturb_params = rand_val[6:12] * params.disturb_scale
 
-                mo = params.mo_mean + rand_val[12] * params.mo_std
-                l = params.l_mean + rand_val[13] * params.l_std
-                hook_offset = (
-                    params.hook_offset_mean + rand_val[14:17] * params.hook_offset_std
-                )
-
                 return EnvParams3D(
                     m=m,
                     I=I,
                     action_scale=action_scale,
                     alpha_bodyrate=alpha_bodyrate,
                     disturb_params=disturb_params,
-                    mo=mo,
-                    l=l,
-                    hook_offset=hook_offset,
                 )
 
             self.sample_params = sample_random_params
@@ -227,6 +224,7 @@ class Quad3D(BaseEnvironment):
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
         action = jnp.clip(action, -1.0, 1.0)
 
+        # run one step with lower-level controller
         def step_once(carried, _):
             key, state, action, params = carried
             # call controller to get sub_action and new_control_params
@@ -246,51 +244,10 @@ class Quad3D(BaseEnvironment):
         # get observation, reward, done, info
         reward = self.reward_fn(state, params)
         done = self.is_terminal(state, params)
-        info = self.get_info(state, params)
+        info_key, key = jax.random.split(key)
+        info = self.get_info(info_key, state, next_state, params)
         obs = self.get_obs(next_state, params)
         return (obs, next_state, reward, done, info)
-
-    # def step_env_wocontroller(
-    #     self,
-    #     key: chex.PRNGKey,
-    #     state: EnvState3D,
-    #     sub_action: jnp.ndarray,
-    #     params: EnvParams3D,
-    #     deterministic: bool = True,
-    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-    #     # TODO: merge into raw_step
-    #     # disable noise in parameters
-    #     dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
-    #     params = params.replace(dyn_noise_scale=dyn_noise_scale)
-    #     return self.step_env(key, state, sub_action, params)
-
-    # def step_env_wocontroller_gradient(
-    #     self,
-    #     key: chex.PRNGKey,
-    #     state: EnvState3D,
-    #     action: jnp.ndarray,
-    #     params: EnvParams3D,
-    #     deterministic: bool = True,
-    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-    #     # TODO: merge into raw_step
-    #     action = jnp.clip(action, -1.0, 1.0)
-
-    #     def step_once(carried, _):
-    #         key, state, action, params = carried
-    #         # call controller to get sub_action and new_control_params
-    #         sub_action, _, state = self.control_fn(None, state, params, key, action)
-    #         next_state = self.raw_step(key, state, sub_action, params)
-    #         return (key, next_state, action, params), None
-
-    #     # disable noise in parameters
-    #     dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
-    #     params = params.replace(dyn_noise_scale=dyn_noise_scale)
-
-    #     # call lax.scan to get next_state
-    #     (_, next_state, _, params), _ = lax.scan(
-    #         step_once, (key, state, action, params), jnp.arange(self.substeps)
-    #     )
-    #     return self.get_obs_state_reward_done_info_gradient(state, next_state, params)
 
     def raw_step(
         self,
@@ -299,124 +256,13 @@ class Quad3D(BaseEnvironment):
         sub_action: jnp.ndarray,
         params: EnvParams3D,
     ) -> EnvState3D:
+        """Run one step of the environment dynamics."""
         sub_action = jnp.clip(sub_action, -1.0, 1.0)
         thrust = (sub_action[0] + 1.0) / 2.0 * params.max_thrust
         torque = sub_action[1:] * params.max_torque
         env_action = Action3D(thrust=thrust, torque=torque)
         key, step_key = jax.random.split(key)
         return self.step_fn(params, state, env_action, step_key, self.sim_dt)
-
-    # def get_obs_state_reward_done_info_gradient(
-    #     self,
-    #     state: EnvState3D,
-    #     next_state: EnvState3D,
-    #     params: EnvParams3D,
-    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-    #     reward = self.reward_fn(state, params)
-    #     done = self.is_terminal(state, params)
-    #     return (
-    #         self.get_obs(next_state, params),
-    #         next_state,
-    #         reward,
-    #         done,
-    #         self.get_info(state, params),
-    #     )
-
-    # def get_obs_state_reward_done_info(
-    #     self,
-    #     state: EnvState3D,
-    #     next_state: EnvState3D,
-    #     params: EnvParams3D,
-    # ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-    #     obs, state, reward, done, info = self.get_obs_state_reward_done_info_gradient(
-    #         state, next_state, params
-    #     )
-    #     obs = lax.stop_gradient(obs)
-    #     state = lax.stop_gradient(state)
-    #     return (
-    #         obs,
-    #         state,
-    #         reward,
-    #         done,
-    #         info,
-    #     )
-
-    # def sample_init_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
-    #     """Reset environment state by sampling theta, theta_dot."""
-    #     traj_key, disturb_key, key = jax.random.split(key, 3)
-    #     # generate reference trajectory by adding a few sinusoids together
-    #     pos_traj, vel_traj, acc_traj = self.generate_traj(traj_key)
-    #     pos_key, key = jax.random.split(key)
-    #     pos_hook = jax.random.uniform(pos_key, shape=(3,), minval=-1.0, maxval=1.0)
-    #     if self.task == "jumping":
-    #         # convert pos_hook to make sure x>0.3
-    #         pos_hook = (pos_hook + jnp.array([1.6, 0.0, 0.0])) / jnp.array(
-    #             [2.0, 1.0, 1.0]
-    #         )
-    #     pos = pos_hook - params.hook_offset
-    #     # randomly sample object position from a sphere with radius params.l and center at hook_pos
-    #     pos_obj = utils.sample_sphere(key, params.l * 0.9, pos_hook)
-    #     l_rope = jnp.linalg.norm(pos_obj - pos_hook)
-    #     # randomly sample object velocity, which is perpendicular to the rope
-    #     vel_key, key = jax.random.split(key)
-    #     vel_obj = jax.random.uniform(vel_key, shape=(3,), minval=-2.0, maxval=2.0)
-    #     zeta = (pos_obj - pos_hook) / l_rope
-    #     zeta_dot = jnp.cross(zeta, vel_obj)
-    #     zeros3 = jnp.zeros(3, dtype=jnp.float32)
-    #     vel_hist = jnp.zeros(
-    #         (self.default_params.adapt_horizon + 2, 3), dtype=jnp.float32
-    #     )
-    #     omega_hist = jnp.zeros(
-    #         (self.default_params.adapt_horizon + 2, 3), dtype=jnp.float32
-    #     )
-    #     action_hist = jnp.zeros(
-    #         (self.default_params.adapt_horizon + 2, 4), dtype=jnp.float32
-    #     )
-    #     return EnvState3D(
-    #         # drone
-    #         pos=pos,
-    #         vel=zeros3,
-    #         omega=zeros3,
-    #         omega_tar=zeros3,
-    #         quat=jnp.concatenate([zeros3, jnp.array([1.0])]),
-    #         # object
-    #         pos_obj=pos_obj,
-    #         vel_obj=vel_obj,
-    #         # hook
-    #         pos_hook=pos_hook,
-    #         vel_hook=zeros3,
-    #         # rope
-    #         l_rope=l_rope,
-    #         zeta=zeta,
-    #         zeta_dot=zeta_dot,
-    #         f_rope=zeros3,
-    #         f_rope_norm=0.0,
-    #         # trajectory
-    #         pos_tar=pos_traj[0],
-    #         vel_tar=vel_traj[0],
-    #         acc_tar=acc_traj[0],
-    #         pos_traj=pos_traj,
-    #         vel_traj=vel_traj,
-    #         acc_traj=acc_traj,
-    #         # debug value
-    #         last_thrust=0.0,
-    #         last_torque=zeros3,
-    #         # step
-    #         time=0,
-    #         # disturbance
-    #         f_disturb=jax.random.uniform(
-    #             disturb_key,
-    #             shape=(3,),
-    #             minval=-params.disturb_scale,
-    #             maxval=params.disturb_scale,
-    #         ),
-    #         # trajectory information for adaptation
-    #         vel_hist=vel_hist,
-    #         omega_hist=omega_hist,
-    #         action_hist=action_hist,
-    #         # control parameters
-    #         control_params=self.default_control_params,
-    #     )
 
     def get_zero_state(self, key: chex.PRNGKey, params: EnvParams3D) -> EnvState3D:
         """Reset environment state by sampling theta, theta_dot."""
@@ -467,21 +313,59 @@ class Quad3D(BaseEnvironment):
             control_params=self.default_control_params,
         )
 
-    def get_info(self, state: EnvState3D, params: EnvParams3D) -> dict:
+    def get_info(
+        self,
+        rng: chex.PRNGKey,
+        state: EnvState3D,
+        next_state: EnvState3D,
+        params: EnvParams3D,
+    ) -> dict:
+        """Get additional information about the environment."""
+        rng_pos, rng_vel, rng_quat, rng_omega, rng = jax.random.split(rng, 5)
+        obs_noise_scale = self.default_params.obs_noise_scale
+        pos_noise = (
+            jax.random.normal(rng_pos, shape=next_state.pos.shape)
+            * obs_noise_scale
+            * 0.25
+        )
+        vel_noise = (
+            jax.random.normal(rng_vel, shape=next_state.vel.shape)
+            * obs_noise_scale
+            * 0.5
+        )
+        quat_noise = (
+            jax.random.normal(rng_quat, shape=next_state.quat.shape)
+            * obs_noise_scale
+            * 0.02
+        )
+        omega_noise = (
+            jax.random.normal(rng_omega, shape=next_state.omega.shape)
+            * obs_noise_scale
+            * 0.5
+        )
+        noisy_state = next_state.replace(
+            pos=next_state.pos + pos_noise,
+            vel=next_state.vel + vel_noise,
+            quat=next_state.quat + quat_noise,
+            omega=next_state.omega + omega_noise,
+        )
         info = {
             "discount": self.discount(state, params),
             "err_pos": self.get_err_pos(state),
             "err_vel": self.get_err_vel(state),
             "obs_param": self.get_obs_paramsonly(state, params),
             "obs_adapt": self.get_obs_adapt_hist(state, params),
+            "noisy_state": noisy_state,
         }
         return info
 
     def reset_env(
         self, key: chex.PRNGKey, params: EnvParams3D
     ) -> Tuple[chex.Array, EnvState3D]:
+        """Reset environment state."""
         state = self.get_init_state(key, params)
-        info = self.get_info(state, params)
+        info_key, key = jax.random.split(key)
+        info = self.get_info(info_key, state, state, params)
         return self.get_obs(state, params), info, state
 
     @partial(jax.jit, static_argnums=(0,))
@@ -507,25 +391,6 @@ class Quad3D(BaseEnvironment):
         obs = jnp.concatenate(obs_elements, axis=-1)
 
         return obs
-
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_objonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     obs_elements = [
-    #         # object
-    #         state.pos_obj,
-    #         state.vel_obj / 3.0,
-    #         # hook
-    #         state.pos_hook,
-    #         state.vel_hook / 3.0,
-    #         # rope
-    #         jnp.expand_dims(state.l_rope, axis=0),
-    #         state.zeta,
-    #         state.zeta_dot / 10.0,  # 3*3=9
-    #         state.f_rope,
-    #         jnp.expand_dims(state.f_rope_norm, axis=0),  # 3+1=4
-    #     ]
-    #     obs = jnp.concatenate(obs_elements, axis=-1)
-    #     return obs
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_adapt_hist(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
@@ -558,6 +423,7 @@ class Quad3D(BaseEnvironment):
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_paramsonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        """Return parameter observation by normalizing them."""
         obs_elements = [
             # parameter observation
             # I
@@ -586,6 +452,7 @@ class Quad3D(BaseEnvironment):
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_l1only(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        """Return l1 adaptive controller information."""
         obs_elements = [
             # l1 observation
             state.control_params.vel_hat,
@@ -594,66 +461,19 @@ class Quad3D(BaseEnvironment):
         obs = jnp.concatenate(obs_elements, axis=-1)
         return obs
 
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     obs_elements = [
-    #         # nlac observation
-    #         state.control_params.vel_hat,
-    #         state.control_params.a_hat,
-    #         state.control_params.d_hat,
-    #     ]
-    #     obs = jnp.concatenate(obs_elements, axis=-1)
-    #     return obs
-
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_nlaconly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     obs_elements = [
-    #         # nlac observation
-    #         state.control_params.vel_hat,
-    #         state.control_params.a_hat,
-    #         state.control_params.d_hat,
-    #     ]
-    #     obs = jnp.concatenate(obs_elements, axis=-1)
-    #     return obs
-
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_params(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        """Return angle in polar coordinates and change."""
         quad_obs = self.get_obs_quadonly(state, params)
         param_obs = self.get_obs_paramsonly(state, params)
         return jnp.concatenate([quad_obs, param_obs], axis=-1)
 
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_quad_obj(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     quad_obs = self.get_obs_quadonly(state, params)
-    #     obj_obs = self.get_obs_objonly(state, params)
-    #     return jnp.concatenate([quad_obs, obj_obs], axis=-1)
-
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_quad_obj_params(
-    #     self, state: EnvState3D, params: EnvParams3D
-    # ) -> chex.Array:
-    #     quad_obs = self.get_obs_quadonly(state, params)
-    #     obj_obs = self.get_obs_objonly(state, params)
-    #     param_obs = self.get_obs_paramsonly(state, params)
-    #     return jnp.concatenate([quad_obs, obj_obs, param_obs], axis=-1)
-
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_quad_l1(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
+        """Return angle in polar coordinates and change."""
         quad_obs = self.get_obs_quadonly(state, params)
         l1_obs = self.get_obs_l1only(state, params)
         return jnp.concatenate([quad_obs, l1_obs], axis=-1)
-
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     quad_obs = self.get_obs_quadonly(state, params)
-    #     nlac_obs = self.get_obs_nlaconly(state, params)
-    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
-
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     quad_obs = self.get_obs_quadonly(state, params)
-    #     nlac_obs = self.get_obs_nlaconly(state, params)
-    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
 
     @partial(jax.jit, static_argnums=(0,))
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
@@ -682,144 +502,27 @@ class Quad3D(BaseEnvironment):
         return done
 
 
-# def eval_env(
-#     env: Quad3D, controller, control_params, total_steps=300, filename="", debug=False
-# ):
-#     if debug:
-#         env_num = 1
-#     else:
-#         env_num = 8192
-
-#     # running environment
-#     rng = jax.random.PRNGKey(1)
-#     rng, rng_params = jax.random.split(rng)
-#     rng_params = jax.random.split(rng_params, env_num)
-#     env_params = jax.vmap(env.sample_params)(rng_params)
-
-#     rng, rng_reset = jax.random.split(rng)
-#     rng_reset = jax.random.split(rng_reset, env_num)
-#     obs, info, env_state = jax.vmap(env.reset)(rng_reset, env_params)
-
-#     rng, rng_control = jax.random.split(rng)
-#     control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
-
-#     cumulated_err_pos = jnp.zeros(env_num)
-
-#     def run_one_step(carry, _):
-#         obs, env_state, rng, env_params, control_params, info, cumulated_err_pos = carry
-#         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
-#         rng_act = jax.random.split(rng_act, env_num)
-#         action, control_params, control_info = controller(
-#             obs, env_state, env_params, rng_act, control_params, info
-#         )
-#         if control_info is not None:
-#             if "a_mean" in control_info:
-#                 action = control_info["a_mean"]
-#         rng_step = jax.random.split(rng_step, env_num)
-#         next_obs, next_env_state, reward, done, info = jax.vmap(env.step)(
-#             rng_step, env_state, action, env_params
-#         )
-#         # if done, reset environment parameters
-#         rng, rng_params = jax.random.split(rng)
-#         rng_params = jax.random.split(rng_params, env_num)
-#         new_env_params = jax.vmap(env.sample_params)(rng_params)
-
-#         def map_fn(done, x, y):
-#             # reshaped_done = jnp.broadcast_to(done, x.shape)
-#             indexes = (slice(None),) + (None,) * (len(x.shape) - 1)
-#             reshaped_done = done[indexes]
-#             return reshaped_done * x + (1 - reshaped_done) * y
-#             # return jnp.where(reshaped_done, x, y)
-
-#         env_params = jax.tree_map(
-#             lambda x, y: map_fn(done, x, y), new_env_params, env_params
-#         )
-#         cumulated_err_pos = cumulated_err_pos + info["err_pos"]
-#         # if done, reset controller parameters, aviod use if, use lax.cond instead
-#         # NOTE: controller parameters are not reset here
-#         # new_control_params = controller.reset()
-#         # control_params = jax.tree_map(
-#         #     lambda x, y: map_fn(done, x, y), new_control_params, control_params
-#         # )
-#         rng, rng_control = jax.random.split(rng)
-#         new_control_params = controller.reset(env_state, env_params, control_params, rng_control)
-#         # new_control_params = new_control_params.replace(
-#         #     a_mean = jax.random.uniform(rng_control, shape=control_params.a_mean.shape, minval=-1.0, maxval=1.0),
-#         # )
-#         control_params = lax.cond(done, lambda x: new_control_params, lambda x: x, control_params)
-#         return (
-#             next_obs,
-#             next_env_state,
-#             rng,
-#             env_params,
-#             control_params,
-#             info,
-#             cumulated_err_pos,
-#         ), (info['err_pos'], done)
-
-#     t0 = time_module.time()
-#     env_rng, rng = jax.random.split(rng)
-#     env_rng = jax.random.split(env_rng, env_num)
-#     (
-#         obs,
-#         env_state,
-#         env_rng,
-#         env_params,
-#         control_params,
-#         info,
-#         cumulated_err_pos,
-#     ), (err_pos, dones) = lax.scan(
-#         run_one_step,
-#         (obs, env_state, rng, env_params, control_params, info, cumulated_err_pos),
-#         jnp.arange(total_steps),
-#     )
-#     print(f"env running time: {time_module.time()-t0:.2f}s")
-
-#     # calculate cumulative err_pos bewteen each done
-#     err_pos_ep = []
-#     last_ep_end = 0
-#     for i in range(len(dones)):
-#         if dones[i]:
-#             err_pos_ep.append(err_pos[last_ep_end:i+1].mean())
-#             last_ep_end = i+1
-#     err_pos_ep = jnp.array(err_pos_ep)
-#     # print mean and std of err_pos
-#     pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
-#     print(f'err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}')
-#     print(f'${pos_mean*100:.2f} \pm {pos_std*100:.2f}$')
-
-#     # save data
-#     with open(
-#         f"{quadjax.get_package_path()}/../results/eval_err_pos_{filename}.pkl", "wb"
-#     ) as f:
-#         pickle.dump(np.array(err_pos_ep), f)
-
-
 def eval_env(
     env: Quad3D,
     controller: controllers.BaseController,
-    control_params,
     total_steps=30000,
     filename="",
-    debug=False,
 ):
+    """
+    Evaluate the environment with a given controller
+    """
+
     # running environment
     rng = jax.random.PRNGKey(1)
-    # rng, rng_params = jax.random.split(rng)
-    # env_params = env.default_params
 
-    # rng, rng_reset = jax.random.split(rng)
-    # obs, info, env_state = env.reset(rng_reset, env_params)
-
-    # rng, rng_control = jax.random.split(rng)
-    # control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
-
+    # run one step
     def run_one_step(carry, _):
-        obs, env_state, rng, env_params, control_params = carry
+        obs, env_state, rng, env_params, control_params, env_infos = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
         action, control_params, control_info = controller(
-            obs, env_state, env_params, rng_act, control_params
+            obs, env_state, env_params, rng_act, control_params, env_infos
         )
+        # for PPO, use mean action
         if control_info is not None:
             if "a_mean" in control_info:
                 action = control_info["a_mean"]
@@ -828,7 +531,7 @@ def eval_env(
         )
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         rng, rng_control = jax.random.split(rng)
-        return (next_obs, next_env_state, rng, env_params, control_params), (
+        return (next_obs, next_env_state, rng, env_params, control_params, info), (
             info["err_pos"],
             done,
         )
@@ -845,16 +548,19 @@ def eval_env(
             env_state, env_params, controller.init_control_params, rng_control
         )
 
-        (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
+        (obs, env_state, rng, env_params, control_params, env_infos), (
+            err_pos,
+            dones,
+        ) = lax.scan(
             run_one_step,
-            (obs, env_state, rng, env_params, control_params),
+            (obs, env_state, rng, env_params, control_params, info),
             jnp.arange(env.default_params.max_steps_in_episode),
         )
         return rng, err_pos
 
-    run_one_ep_jit = jax.jit(run_one_ep)
     # calculate cumulative err_pos bewteen each done
-    num_eps = total_steps // env.default_params.max_steps_in_episode
+    run_one_ep_jit = jax.jit(run_one_ep)
+    num_eps = int(total_steps // env.default_params.max_steps_in_episode)
     err_pos_ep = []
     num_trajs = 4
     rng, rng_reset_meta = jax.random.split(rng)
@@ -863,21 +569,16 @@ def eval_env(
         print(f"[DEBUG] test traj {i+1}")
         for _ in trange(num_eps // num_trajs):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
-            # load it back
-            mppi_load = np.load(f"{quadjax.get_package_path()}/../results/mppi.npy")
-            covo_load = np.load(f"{quadjax.get_package_path()}/../results/covo.npy")
-            # assert two are the same
-            print("err_pos", err_pos.mean(), mppi_load.mean(), covo_load.mean())
-            assert np.allclose(err_pos, mppi_load) or np.allclose(
-                err_pos, covo_load
-            ), "err_pos not equal"
-            exit()
+            # # load it back
+            # mppi_load = np.load(f"{quadjax.get_package_path()}/../results/mppi.npy")
+            # covo_load = np.load(f"{quadjax.get_package_path()}/../results/covo.npy")
+            # # assert two are the same
+            # print("err_pos", err_pos.mean(), mppi_load.mean(), covo_load.mean())
+            # assert np.allclose(err_pos, mppi_load) or np.allclose(
+            #     err_pos, covo_load
+            # ), "err_pos not equal"
+            # exit()
             err_pos_ep.append(err_pos.mean())
-    # last_ep_end = 0
-    # for i in range(len(dones)):
-    #     if dones[i]:
-    #         err_pos_ep.append(err_pos[last_ep_end:i+1].mean())
-    #         last_ep_end = i+1
     err_pos_ep = jnp.array(err_pos_ep)
     # print mean and std of err_pos
     pos_mean, pos_std = jnp.mean(err_pos_ep), jnp.std(err_pos_ep)
@@ -893,60 +594,24 @@ def eval_env(
 
 
 def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename=""):
+    """
+    Render the environment with a given controller
+    """
     # running environment
     rng = jax.random.PRNGKey(1)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
-    # env_params = env.default_params # DEBUG
 
     state_seq, obs_seq, reward_seq = [], [], []
     control_seq = []
     rng, rng_reset = jax.random.split(rng)
     obs, info, env_state = env.reset(rng_reset, env_params)
 
-    # DEBUG set iniiial state here
-    # env_state = env_state.replace(quat = jnp.array([jnp.sin(jnp.pi/4), 0.0, 0.0, jnp.cos(jnp.pi/4)]))
-
     rng, rng_control = jax.random.split(rng)
     control_params = controller.reset(
         env_state, env_params, controller.init_control_params, rng_control
     )
     n_dones = 0
-
-    # Profiling algorithms
-    # controller_jit = jax.jit(controller)
-    # controller_reset_jit = jax.jit(controller.reset)
-    # rng, rng_act, rng_step = jax.random.split(rng, 3)
-    # controller_jit(obs, env_state, env_params, rng_act, control_params)
-    # rng, rng_control = jax.random.split(rng)
-    # controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
-    # ts = []
-    # for i in trange(101):
-    #     t0 = time_module.time()
-    #     rng, rng_act, rng_step = jax.random.split(rng, 3)
-    #     action, control_params, control_info = controller_jit(obs, env_state, env_params, rng_act, control_params)
-    #     ts.append((time_module.time()-t0)*1000)
-    # ts = ts[1:]
-    # print(f'running time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
-    # ts = []
-    # for i in trange(11):
-    #     t0 = time_module.time()
-    #     rng, rng_control = jax.random.split(rng)ms=(0,))
-    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     quad_obs = self.get_obs_quadonly(state, params)
-    #     nlac_obs = self.get_obs_nlaconly(state, params)
-    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
-
-    # @partial(jax.jit, static_argnums=(0,))
-    # def get_obs_quad_nlac(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-    #     quad_obs = self.get_obs_quadonly(state, params)
-    #     nlac_obs = self.get_obs_nlaconly(state, params)
-    #     return jnp.concatenate([quad_obs, nlac_obs], axis=-1)
-    #     control_params = controller_reset_jit(env_state, env_params, controller.init_control_params, rng_control)
-    #     ts.append((time_module.time()-t0)*1000)
-    # ts = ts[1:]
-    # print(f'reset time: ${np.mean(ts):.2f} \pm {np.std(ts):.2f}$')
-    # exit()
 
     t0 = time_module.time()
     while n_dones < repeat_times:
@@ -992,17 +657,14 @@ def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename
     utils.plot_states(state_seq_dict, obs_seq, reward_seq, env_params, filename)
     print(f"plotting time: {time_module.time()-t0:.2f}s")
 
-    # save state_seq (which is a list of EnvState3D:flax.struct.dataclass)
-    # get package quadjax path
-
-    with open(
-        f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb"
-    ) as f:
+    file_path = f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl"
+    with open(file_path, "wb") as f:
         pickle.dump(state_seq_dict, f)
+    print("[DEBUG] state sequence saved to ", file_path)
 
 
 def get_controller(env, controller_name, controller_params=None, debug=False):
-    def parse_sample_params(param_text:str):
+    def parse_sample_params(param_text: str):
         # parse in format "N{sample_number}_H{horizon}_lam{lam}"
         if param_text == "":
             N = 8192
@@ -1015,6 +677,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             lam = float(param_text.split("_")[2][3:])
             sigma = 0.5
         return N, H, lam, sigma
+
     def get_sample_mean(env):
         thrust_hover = env.default_params.m * env.default_params.g
         thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
@@ -1031,12 +694,15 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         controller = controllers.LQRController(env, control_params=control_params)
     elif controller_name == "pid":
         control_params = controllers.PIDParams(
-            Kp=8.0,
-            Kd=4.0,
-            Ki=3.0,
-            Kp_att=1.0,
+            Kp=10.0,
+            Kd=5.0,
+            Ki=0.0,
+            Kp_att=10.0,
         )
         controller = controllers.PIDController(env, control_params=control_params)
+    elif controller_name == "l1":
+        control_params = controllers.L1ParamsBodyrate()
+        controller = controllers.L1ControllerBodyrate(env, control_params, env.sim_dt)
     elif controller_name == "random":
         control_params = None
         controller = controllers.RandomController(env, control_params)
@@ -1045,19 +711,7 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             u=jnp.asarray([0.0, 0.0, 0.0, 0.0]),
         )
         controller = controllers.FixedController(env, control_params=control_params)
-    elif "mppi" in controller_name:
-        # sigma = 0.5
-        # if controller_params == "":
-        #     N = 8192
-        #     H = 32
-        #     lam = 0.01
-        # else:
-        #     # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
-        #     # N = int(controller_params.split("_")[0][1:])
-        #     # H = int(controller_params.split("_")[1][1:])
-        #     # lam = float(controller_params.split("_")[2][3:])
-        #     N, H, lam = parse_sample_params(controller_params)
-        #     print(f"[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}")
+    elif controller_name == "mppi":
         N, H, lam, sigma = parse_sample_params(controller_params)
         if debug:
             N, H = 4, 2
@@ -1075,7 +729,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
                 sample_sigma=sigma,
                 a_mean=a_mean,
                 a_cov=a_cov,
-                obs_noise_scale=0.05,
             )
             controller = controllers.MPPIController(
                 env=env, control_params=control_params, N=N, H=H, lam=lam
@@ -1094,21 +747,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         else:
             mode = "online"
             print("[DEBUG] unset mode, CoVO mode set to online")
-        # if "mean" in controller_name:
-        #     expansion_mode = "mean"
-        # elif "lqr" in controller_name:
-        #     expansion_mode = "lqr"
-        # elif "zero" in controller_name:
-        #     expansion_mode = "zero"
-        # elif "ppo" in controller_name:
-        #     expansion_mode = "ppo"
-        # elif "pid" in controller_name:
-        #     expansion_mode = "pid"
-        # else:
-        #     expansion_mode = "mean"
-        #     print(
-        #         "[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean"
-        #     )
         control_params = controllers.CoVOParams(
             gamma_mean=1.0,
             gamma_sigma=0.0,
@@ -1117,16 +755,9 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             a_mean=a_mean,
             a_cov=a_cov,
             a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
-            obs_noise_scale=0.05,
         )
         controller = controllers.CoVOController(
-            env=env,
-            control_params=control_params,
-            N=N,
-            H=H,
-            lam=lam,
-            mode=mode
-            # expansion_mode=expansion_mode,
+            env=env, control_params=control_params, N=N, H=H, lam=lam, mode=mode
         )
     elif controller_name == "nn":
         from quadjax.train import ActorCritic
@@ -1148,7 +779,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         from quadjax.train import ActorCritic, Compressor, Adaptor
 
         network = ActorCritic(env.action_dim, activation="tanh")
-        compressor = Compressor()
         adaptor = Adaptor()
         if controller_params == "":
             file_path = "ppo_params_"
@@ -1186,9 +816,14 @@ class Args:
 
 
 def main(args: Args):
-    # if args.debug is True, enable NaN detection
     if args.debug:
         jax.config.update("jax_debug_nans", True)
+    
+    # check if f"{quadjax.get_package_path()}/../results" folder exists, if not, create one
+    save_path = f"{quadjax.get_package_path()}/../results"
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        print('[DEBUG] create folder ', save_path)
 
     env = Quad3D(
         task=args.task,
@@ -1199,11 +834,8 @@ def main(args: Args):
         disturb_type=args.disturb_type,
         disable_rollover_terminate=True,
     )
+
     print("starting test...")
-    # enable NaN value detection
-    # from jax import config
-    # config.update("jax_debug_nans", True)
-    # with jax.disable_jit():
     controller, control_params = get_controller(
         env, args.controller, args.controller_params
     )
@@ -1217,7 +849,6 @@ def main(args: Args):
             debug=args.debug,
         )
     elif args.mode == "render":
-        # with jax.disable_jit():
         render_env(
             env,
             controller=controller,

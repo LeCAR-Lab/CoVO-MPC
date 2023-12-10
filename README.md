@@ -72,5 +72,7 @@ all the environment dynamics is inside `quadjax/dynamics` folder. For `Quad3D` q
 ## Supported features
 
 * large scale RL
+  * curriculum learning
+  * rapid motor adaptation
 * domain randomization
 * RMA

@@ -1,1 +1,1 @@
-from quadjax.envs import quad3d_free
+from quadjax.envs import quadrotor

@@ -7,7 +7,7 @@ import control
 from flax import struct
 
 # from quadjax.envs import Quad3D
-from quadjax.dynamics import EnvParams3D, EnvState3D, EnvParams2D, EnvState2D
+from quadjax.dynamics import EnvParams3D, EnvState3D
 from quadjax.dynamics import geom
 from quadjax import controllers
 

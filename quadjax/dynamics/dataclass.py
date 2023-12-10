@@ -6,46 +6,6 @@ def default_array(array):
     return struct.field(default_factory=lambda: jnp.array(array))
 
 @struct.dataclass
-class EnvState2D:
-    pos: jnp.ndarray  # (x,y)
-    quat: float # drone orientation
-    vel: jnp.ndarray  # (x,y)
-    omega: float
-    last_thrust: float  # Only needed for rendering
-    last_omega: float  # Only needed for rendering
-    pos_traj: jnp.ndarray
-    vel_traj: jnp.ndarray
-    pos_tar: float
-    vel_tar: float
-    omega_tar: float
-    time: int
-
-    control_params: Optional[struct.dataclass] = None
-
-@struct.dataclass
-class EnvParams2D:
-    max_speed: float = 8.0
-    max_omega: float = 10.0
-    max_thrust: float = 0.8
-    max_motor_force: float = 0.28
-    max_torque: float = 1e-2
-    dt: float = 0.02
-    g: float = 9.81  # gravity
-    m: float = 0.03  # mass
-    I: float = 2.0e-5  # moment of inertia
-    traj_obs_len: int = 8
-    traj_obs_gap: int = 2
-    max_steps_in_episode: int = 300
-    alpha_bodyrate: float = 0.5
-
-    dyn_noise_scale: float = 0.02
-
-@struct.dataclass
-class Action2D:
-    thrust: float
-    omega: float
-
-@struct.dataclass
 class EnvState3D:
     # meta state variable for taut state
     pos: jnp.ndarray  # (x,y,z)
@@ -131,6 +91,7 @@ class EnvParams3D:
 
     # noise related parameters
     dyn_noise_scale: float = 0.05
+    obs_noise_scale: float = 0.05
 
 
 @struct.dataclass
