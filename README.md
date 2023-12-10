@@ -1,10 +1,17 @@
 # CoVO-MPC: Theoretical Analysis of Sampling-based MPC and Optimal Covariance Design
 
+<div align="center">
+
+[[Website]](https://panchaoyi.com/covo-mpc-theoretical-analysis-of-sampling-based-mpc-and-optimal-covariance-design)
+[[PDF]](https://drive.google.com/file/d/1u964n8BeQnZhwXpms7hJx8DNDYjwxTxy/view?usp=share_link)
+
 [![Python Version](https://img.shields.io/badge/Python-3.10-blue.svg)](https://github.com/eureka-research/Eureka)
 [<img src="https://img.shields.io/badge/Backend-Jax-red.svg"/>](https://github.com/google/jax)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 https://github.com/jc-bao/quadjax/assets/60093981/b553e3d4-5c87-46ec-b666-808e51253697
+
+</div>
 
 Implementation of the novel sampling-based Model Predictive Control (MPC) algorithm, CoVariance-Optimal MPC (CoVO-MPC), developed through the research outlined in the associated paper. This new control algorithm is sought to outperform standard Model Predictive Path Integral Control (MPPI) by 43 to 54%.
 
