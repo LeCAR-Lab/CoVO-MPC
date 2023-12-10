@@ -34,6 +34,7 @@ class Quad3D(BaseEnvironment):
         lower_controller: str = "base",
         disturb_type: str = "periodic",
         disable_rollover_terminate: bool = False,
+        generate_noisy_state: bool = False,
     ):
         """Initialize Quad3D-v0 environment."""
 
@@ -43,6 +44,7 @@ class Quad3D(BaseEnvironment):
         # task related parameters
         self.task = task
         self.disable_rollover_terminate = disable_rollover_terminate
+        self.generate_noisy_state = generate_noisy_state
 
         # reference trajectory function
         if task == "tracking":
@@ -110,9 +112,7 @@ class Quad3D(BaseEnvironment):
             self.control_fn = l1_control_fn
         elif lower_controller == "l1_esitimate_only":
             self.default_control_params = controllers.L1Params()
-            controller = controllers.L1Controller(
-                self, self.default_control_params
-            )
+            controller = controllers.L1Controller(self, self.default_control_params)
 
             def l1_esitimate_only_control_fn(
                 obs, state, env_params, rng_act, input_action
@@ -319,34 +319,37 @@ class Quad3D(BaseEnvironment):
         params: EnvParams3D,
     ) -> dict:
         """Get additional information about the environment."""
-        rng_pos, rng_vel, rng_quat, rng_omega, rng = jax.random.split(rng, 5)
-        obs_noise_scale = self.default_params.obs_noise_scale
-        pos_noise = (
-            jax.random.normal(rng_pos, shape=next_state.pos.shape)
-            * obs_noise_scale
-            * 0.25
-        )
-        vel_noise = (
-            jax.random.normal(rng_vel, shape=next_state.vel.shape)
-            * obs_noise_scale
-            * 0.5
-        )
-        quat_noise = (
-            jax.random.normal(rng_quat, shape=next_state.quat.shape)
-            * obs_noise_scale
-            * 0.02
-        )
-        omega_noise = (
-            jax.random.normal(rng_omega, shape=next_state.omega.shape)
-            * obs_noise_scale
-            * 0.5
-        )
-        noisy_state = next_state.replace(
-            pos=next_state.pos + pos_noise,
-            vel=next_state.vel + vel_noise,
-            quat=next_state.quat + quat_noise,
-            omega=next_state.omega + omega_noise,
-        )
+        if self.generate_noisy_state:
+            rng_pos, rng_vel, rng_quat, rng_omega, rng = jax.random.split(rng, 5)
+            obs_noise_scale = self.default_params.obs_noise_scale
+            pos_noise = (
+                jax.random.normal(rng_pos, shape=next_state.pos.shape)
+                * obs_noise_scale
+                * 0.25
+            )
+            vel_noise = (
+                jax.random.normal(rng_vel, shape=next_state.vel.shape)
+                * obs_noise_scale
+                * 0.5
+            )
+            quat_noise = (
+                jax.random.normal(rng_quat, shape=next_state.quat.shape)
+                * obs_noise_scale
+                * 0.02
+            )
+            omega_noise = (
+                jax.random.normal(rng_omega, shape=next_state.omega.shape)
+                * obs_noise_scale
+                * 0.5
+            )
+            noisy_state = next_state.replace(
+                pos=next_state.pos + pos_noise,
+                vel=next_state.vel + vel_noise,
+                quat=next_state.quat + quat_noise,
+                omega=next_state.omega + omega_noise,
+            )
+        else:
+            noisy_state = None
         info = {
             "discount": self.discount(state, params),
             "err_pos": self.get_err_pos(state),
@@ -567,15 +570,6 @@ def eval_env(
         print(f"[DEBUG] test traj {i+1}")
         for _ in trange(num_eps // num_trajs):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
-            # # load it back
-            # mppi_load = np.load(f"{quadjax.get_package_path()}/../results/mppi.npy")
-            # covo_load = np.load(f"{quadjax.get_package_path()}/../results/covo.npy")
-            # # assert two are the same
-            # print("err_pos", err_pos.mean(), mppi_load.mean(), covo_load.mean())
-            # assert np.allclose(err_pos, mppi_load) or np.allclose(
-            #     err_pos, covo_load
-            # ), "err_pos not equal"
-            # exit()
             err_pos_ep.append(err_pos.mean())
     err_pos_ep = jnp.array(err_pos_ep)
     # print mean and std of err_pos
@@ -583,6 +577,12 @@ def eval_env(
     print(f"env running time: {time_module.time()-t0:.2f}s")
     print(f"err_pos mean: {pos_mean:.3f}, std: {pos_std:.3f}")
     print(f"${pos_mean*100:.2f} \pm {pos_std*100:.2f}$")
+
+    # check if f"{quadjax.get_package_path()}/../results" folder exists, if not, create one
+    save_path = f"{quadjax.get_package_path()}/../results"
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        print("[DEBUG] create folder ", save_path)
 
     # save data
     with open(
@@ -644,6 +644,12 @@ def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename
         obs = next_obs
         env_state = next_env_state
     print(f"env running time: {time_module.time()-t0:.2f}s")
+
+    # check if f"{quadjax.get_package_path()}/../results" folder exists, if not, create one
+    save_path = f"{quadjax.get_package_path()}/../results"
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+        print("[DEBUG] create folder ", save_path)
 
     t0 = time_module.time()
     # convert state into dict
@@ -809,12 +815,6 @@ def main(args: Args):
     if args.debug:
         jax.config.update("jax_debug_nans", True)
 
-    # check if f"{quadjax.get_package_path()}/../results" folder exists, if not, create one
-    save_path = f"{quadjax.get_package_path()}/../results"
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-        print("[DEBUG] create folder ", save_path)
-
     env = Quad3D(
         task=args.task,
         obs_type=args.obs_type,
@@ -822,6 +822,7 @@ def main(args: Args):
         enable_randomizer=not args.noDR,
         disturb_type=args.disturb_type,
         disable_rollover_terminate=True,
+        generate_noisy_state=True,
     )
 
     print("starting test...")
@@ -832,10 +833,8 @@ def main(args: Args):
         eval_env(
             env,
             controller=controller,
-            control_params=control_params,
             total_steps=300 * 4 * 10,
             filename=args.name,
-            debug=args.debug,
         )
     elif args.mode == "render":
         render_env(

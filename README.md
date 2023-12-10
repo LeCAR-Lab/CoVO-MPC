@@ -81,4 +81,4 @@ python train.py --env quad3d_free --debug
 ## Notes
 
 * all action in the environment is normalized into [-1, 1] range.
-* for maximum reusability, the environment is designed to be simple single file format.
+* for easier modification, the environment is designed to be simple single file format.

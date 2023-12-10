@@ -673,7 +673,7 @@ class Args:
     curri: bool = False
     RMA: bool = False
     noDR: bool = False  # no domain randomization
-    disturb_type: str = "periodic"  # periodic, sin, drag, mixed
+    disturb_type: str = "none"  # none, periodic, sin, drag, mixed
     name: str = ""  # experiment name
 
 
@@ -684,7 +684,7 @@ def main(args: Args):
         "LR": 3e-4,
         "NUM_ENVS": 4096 if not args.debug else 1,
         "NUM_STEPS": 300 if not args.debug else 10,
-        "PPO_TIMESTEPS": 1.6e8 if not args.debug else 6e2,
+        "PPO_TIMESTEPS": 1.0e8 if not args.debug else 6e2,
         "ADAPT_TIMESTEPS": 8e6 if not args.debug else 0.3e2,
         "UPDATE_EPOCHS": 2,
         "NUM_MINIBATCHES": 320 if not args.debug else 1,
@@ -779,10 +779,9 @@ def main(args: Args):
     eval_fn(
         env=env,
         controller=controller,
-        control_params=params,
+        # control_params=params,
         total_steps=3e3*4,
         filename=filename,
-        debug=args.debug,
     )
     render_fn(
         env=env,
