@@ -37,25 +37,14 @@ class CoVOController(controllers.BaseController):
                 return sigma
             self.get_sigma_zeji = get_sigma_zeji
         elif mode == 'offline':
-            if env.action_dim == 4:
-                expansion_control_params = controllers.PIDParams(
-                    Kp=10.0,
-                    Kd=5.0,
-                    Ki=0.0,
-                    Kp_att=10.0,
-                )
-                expansion_controller = controllers.PIDController(env, control_params=control_params)
-            elif env.action_dim == 2:
-                expansion_control_params = controllers.PIDParams(
-                    Kp=10.0,
-                    Kd=5.0,
-                    Ki=0.0,
-                    Kp_att=10.0,
-                    integral=jnp.zeros(2),
-                )
-                expansion_controller = controllers.PIDController2D(env, control_params=control_params)
-            else:
-                raise NotImplementedError
+            assert env.action_dim == 4, 'only support 4D action space Quadrotor environment for now'
+            expansion_control_params = controllers.PIDParams(
+                Kp=10.0,
+                Kd=5.0,
+                Ki=0.0,
+                Kp_att=10.0,
+            )
+            expansion_controller = controllers.PIDController(env, control_params=control_params)
             
             def mppi_rollout_fn(carry, unused):
                 env_state, env_params, key = carry

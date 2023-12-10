@@ -1,8 +1,7 @@
 import jax
 import jax.numpy as jnp
 from jax import lax
-from gymnax.environments import spaces
-from typing import Tuple, Optional
+from typing import Tuple
 import chex
 from functools import partial
 from dataclasses import dataclass as pydataclass
@@ -18,7 +17,6 @@ from quadjax import controllers
 from quadjax.dynamics import utils, geom
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 from quadjax.envs.base import BaseEnvironment
-
 
 class Quad3D(BaseEnvironment):
     """
@@ -82,7 +80,7 @@ class Quad3D(BaseEnvironment):
             raise NotImplementedError
 
         # dynamics function
-        self.step_fn, self.dynamics_fn = quad_dyn.get_free_dynamics_3d_bodyrate(
+        self.step_fn, self.dynamics_fn = quad_dyn.get_quadrotor_1st_order_dyn(
             disturb_type=disturb_type
         )
         self.get_err_pos = lambda state: jnp.linalg.norm(state.pos_tar - state.pos)
@@ -235,7 +233,7 @@ class Quad3D(BaseEnvironment):
             sub_action, _, state = self.control_fn(None, state, params, key, action)
             next_state = self.raw_step(key, state, sub_action, params)
             return (key, next_state, action, params), None
-        
+
         # disable noise in parameters if deterministic
         dyn_noise_scale = params.dyn_noise_scale * (1.0 - deterministic)
         params = params.replace(dyn_noise_scale=dyn_noise_scale)
@@ -531,9 +529,9 @@ class Quad3D(BaseEnvironment):
 
     @partial(jax.jit, static_argnums=(0,))
     def get_obs_adapt_hist(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
-        '''
+        """
         Return the history of velocity, acceleration, and jerk
-        '''
+        """
         vel_hist = state.vel_hist
         omega_hist = state.omega_hist
         action_hist = state.action_hist
@@ -661,10 +659,9 @@ class Quad3D(BaseEnvironment):
     def is_terminal(self, state: EnvState3D, params: EnvParams3D) -> bool:
         """Check whether state is terminal."""
         # Check number of steps in episode termination condition
-        done = (
-            (state.time >= params.max_steps_in_episode)
-            | (jnp.abs(state.pos) > 3.0).any()
-        )
+        done = (state.time >= params.max_steps_in_episode) | (
+            jnp.abs(state.pos) > 3.0
+        ).any()
         if not self.disable_rollover_terminate:
             rollover = (state.quat[3] < jnp.cos(jnp.pi / 4.0)) | (
                 jnp.abs(state.omega) > 100.0
@@ -867,15 +864,13 @@ def eval_env(
         for _ in trange(num_eps // num_trajs):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
             # load it back
-            mppi_load = np.load(
-                f"{quadjax.get_package_path()}/../results/mppi.npy"
-            )
-            covo_load = np.load(
-                f"{quadjax.get_package_path()}/../results/covo.npy"
-            )
+            mppi_load = np.load(f"{quadjax.get_package_path()}/../results/mppi.npy")
+            covo_load = np.load(f"{quadjax.get_package_path()}/../results/covo.npy")
             # assert two are the same
             print("err_pos", err_pos.mean(), mppi_load.mean(), covo_load.mean())
-            assert np.allclose(err_pos, mppi_load) or np.allclose(err_pos, covo_load), "err_pos not equal"
+            assert np.allclose(err_pos, mppi_load) or np.allclose(
+                err_pos, covo_load
+            ), "err_pos not equal"
             exit()
             err_pos_ep.append(err_pos.mean())
     # last_ep_end = 0
@@ -1007,6 +1002,26 @@ def render_env(env: Quad3D, controller, control_params, repeat_times=1, filename
 
 
 def get_controller(env, controller_name, controller_params=None, debug=False):
+    def parse_sample_params(param_text:str):
+        # parse in format "N{sample_number}_H{horizon}_lam{lam}"
+        if param_text == "":
+            N = 8192
+            H = 32
+            lam = 0.01
+            sigma = 0.5
+        else:
+            N = int(param_text.split("_")[0][1:])
+            H = int(param_text.split("_")[1][1:])
+            lam = float(param_text.split("_")[2][3:])
+            sigma = 0.5
+        return N, H, lam, sigma
+    def get_sample_mean(env):
+        thrust_hover = env.default_params.m * env.default_params.g
+        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
+        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
+        a_mean = jnp.tile(a_mean_per_step, (H, 1))
+        return a_mean
+
     if controller_name == "lqr":
         control_params = controllers.LQRParams(
             Q=jnp.diag(jnp.ones(12)),
@@ -1031,25 +1046,23 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         )
         controller = controllers.FixedController(env, control_params=control_params)
     elif "mppi" in controller_name:
-        sigma = 0.5
-        if controller_params == "":
-            N = 8192
-            H = 32
-            lam = 0.01
-        else:
-            # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
-            N = int(controller_params.split("_")[0][1:])
-            H = int(controller_params.split("_")[1][1:])
-            lam = float(controller_params.split("_")[2][3:])
-            print(f"[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}")
+        # sigma = 0.5
+        # if controller_params == "":
+        #     N = 8192
+        #     H = 32
+        #     lam = 0.01
+        # else:
+        #     # parse in format "N{sample_number}_H{horizon}_sigma{sigma}_lam{lam}"
+        #     # N = int(controller_params.split("_")[0][1:])
+        #     # H = int(controller_params.split("_")[1][1:])
+        #     # lam = float(controller_params.split("_")[2][3:])
+        #     N, H, lam = parse_sample_params(controller_params)
+        #     print(f"[DEBUG], set controller parameters to be: N={N}, H={H}, lam={lam}")
+        N, H, lam, sigma = parse_sample_params(controller_params)
         if debug:
-            N = 4
-            H = 2
+            N, H = 4, 2
             print(f"[DEBUG], override controller parameters to be: N={N}, H={H}")
-        thrust_hover = env.default_params.m * env.default_params.g
-        thrust_hover_normed = (thrust_hover / env.default_params.max_thrust) * 2.0 - 1.0
-        a_mean_per_step = jnp.array([thrust_hover_normed, 0.0, 0.0, 0.0])
-        a_mean = jnp.tile(a_mean_per_step, (H, 1))
+        a_mean = get_sample_mean(env)
         if controller_name == "mppi":
             sigmas = jnp.array([sigma] * env.action_dim)
             a_cov_per_step = jnp.diag(sigmas**2)
@@ -1067,48 +1080,54 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             controller = controllers.MPPIController(
                 env=env, control_params=control_params, N=N, H=H, lam=lam
             )
-        elif "mppi_zeji" in controller_name:
-            a_cov = jnp.diag(jnp.ones(H * env.action_dim) * sigma**2)
-            if "online" in controller_name:
-                mode = "online"
-            elif "offline" in controller_name:
-                mode = "offline"
-            else:
-                raise NotImplementedError
-            # if "mean" in controller_name:
-            #     expansion_mode = "mean"
-            # elif "lqr" in controller_name:
-            #     expansion_mode = "lqr"
-            # elif "zero" in controller_name:
-            #     expansion_mode = "zero"
-            # elif "ppo" in controller_name:
-            #     expansion_mode = "ppo"
-            # elif "pid" in controller_name:
-            #     expansion_mode = "pid"
-            # else:
-            #     expansion_mode = "mean"
-            #     print(
-            #         "[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean"
-            #     )
-            control_params = controllers.CoVOParams(
-                gamma_mean=1.0,
-                gamma_sigma=0.0,
-                discount=1.0,
-                sample_sigma=sigma,
-                a_mean=a_mean,
-                a_cov=a_cov,
-                a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
-                obs_noise_scale=0.05,
-            )
-            controller = controllers.CoVOController(
-                env=env,
-                control_params=control_params,
-                N=N,
-                H=H,
-                lam=lam,
-                mode = mode
-                # expansion_mode=expansion_mode,
-            )
+    elif "covo" in controller_name:
+        N, H, lam, sigma = parse_sample_params(controller_params)
+        if debug:
+            N, H = 4, 2
+            print(f"[DEBUG], override controller parameters to be: N={N}, H={H}")
+        a_mean = get_sample_mean(env)
+        a_cov = jnp.diag(jnp.ones(H * env.action_dim) * sigma**2)
+        if "online" in controller_name:
+            mode = "online"
+        elif "offline" in controller_name:
+            mode = "offline"
+        else:
+            mode = "online"
+            print("[DEBUG] unset mode, CoVO mode set to online")
+        # if "mean" in controller_name:
+        #     expansion_mode = "mean"
+        # elif "lqr" in controller_name:
+        #     expansion_mode = "lqr"
+        # elif "zero" in controller_name:
+        #     expansion_mode = "zero"
+        # elif "ppo" in controller_name:
+        #     expansion_mode = "ppo"
+        # elif "pid" in controller_name:
+        #     expansion_mode = "pid"
+        # else:
+        #     expansion_mode = "mean"
+        #     print(
+        #         "[DEBUG] unset expansion mode, MPPI(zeji) expansion_mode set to mean"
+        #     )
+        control_params = controllers.CoVOParams(
+            gamma_mean=1.0,
+            gamma_sigma=0.0,
+            discount=1.0,
+            sample_sigma=sigma,
+            a_mean=a_mean,
+            a_cov=a_cov,
+            a_cov_offline=jnp.zeros((H, env.action_dim, env.action_dim)),
+            obs_noise_scale=0.05,
+        )
+        controller = controllers.CoVOController(
+            env=env,
+            control_params=control_params,
+            N=N,
+            H=H,
+            lam=lam,
+            mode=mode
+            # expansion_mode=expansion_mode,
+        )
     elif controller_name == "nn":
         from quadjax.train import ActorCritic
 
@@ -1146,52 +1165,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             return pi, value
 
         controller = controllers.NetworkController(apply_fn, env, control_params)
-    elif controller_name == "RMA-expert":
-        from quadjax.train import ActorCritic, Compressor, Adaptor
-
-        network = ActorCritic(env.action_dim, activation="tanh")
-        compressor = Compressor()
-        adaptor = Adaptor()
-        if controller_params == "":
-            file_path = "ppo_params_"
-        else:
-            file_path = f"{controller_params}"
-        control_params = pickle.load(
-            open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb")
-        )
-
-        def apply_fn(train_params, last_obs, env_info):
-            compressed_last_obs = compressor.apply(
-                train_params[1], env_info["obs_param"]
-            )
-            adapted_last_obs = adaptor.apply(train_params[2], env_info["obs_adapt"])
-            obs = jnp.concatenate([last_obs, compressed_last_obs], axis=-1)
-            pi, value = network.apply(train_params[0], obs)
-            return pi, value
-
-        controller = controllers.NetworkController(apply_fn, env, control_params)
-    elif controller_name == "l1":
-        control_params = controllers.L1Params()
-        controller = controllers.L1Controller(env, control_params)
-    elif controller_name == "debug":
-        class DebugController(controllers.BaseController):
-            def __call__(
-                self, obs, state, env_params, rng_act, control_params, env_info
-            ) -> jnp.ndarray:
-                quat_desired = jnp.array([0.0, 0.0, 0.0, 1.0])
-                quat_err = geom.multiple_quat(
-                    geom.conjugate_quat(quat_desired), state.quat
-                )
-                att_err = quat_err[:3]
-                omega_tar = -3.0 * att_err
-                thrust = (env_params.m + env_params.mo) * env_params.g
-                omega_normed = omega_tar / env_params.max_omega
-                thrust_normed = thrust / env_params.max_thrust * 2.0 - 1.0
-                action = jnp.concatenate([jnp.asarray([thrust_normed]), omega_normed])
-                return action, None, None
-
-        control_params = None
-        controller = DebugController(env, control_params)
     else:
         raise NotImplementedError
     return controller, control_params
