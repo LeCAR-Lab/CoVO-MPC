@@ -49,17 +49,6 @@ sh covo_quadrotor.sh
 sh covo_quadrotor_N.sh
 ```
 
-## All Supported algorithms
-
-* RL
-  * PPO + Auto curriculum + Domain randomization
-  * [RMA](https://arxiv.org/abs/2106.00091) (Rapid Motor Adaptation)
-  * [DATT](https://arxiv.org/abs/2310.09053) (Deep Adaptive Trajectory Tracking)
-* Control
-  * PID, L1 Adaptive Control
-  * MPPI (model predictive path integral)
-  * 🌟 [CoVO-MPC](https://panchaoyi.com/covo-mpc-theoretical-analysis-of-sampling-based-mpc-and-optimal-covariance-design) (optimal covariance model predictive control)
-
 ## Visualization
 
 ```shell
