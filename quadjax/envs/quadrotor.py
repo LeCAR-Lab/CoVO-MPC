@@ -697,39 +697,30 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             Kp_att=10.0,
         )
         controller = controllers.PIDController(env, control_params=control_params)
-    elif controller_name == "l1":
-        control_params = controllers.L1Params()
-        controller = controllers.L1Controller(env, control_params)
     elif controller_name == "random":
         control_params = None
         controller = controllers.RandomController(env, control_params)
-    elif controller_name == "fixed":
-        control_params = controllers.FixedParams(
-            u=jnp.asarray([0.0, 0.0, 0.0, 0.0]),
-        )
-        controller = controllers.FixedController(env, control_params=control_params)
     elif controller_name == "mppi":
         N, H, lam, sigma = parse_sample_params(controller_params)
         if debug:
             N, H = 4, 2
             print(f"[DEBUG], override controller parameters to be: N={N}, H={H}")
         a_mean = get_sample_mean(env)
-        if controller_name == "mppi":
-            sigmas = jnp.array([sigma] * env.action_dim)
-            a_cov_per_step = jnp.diag(sigmas**2)
-            # a_cov_per_step = jnp.diag(jnp.array([sigma**2] * env.action_dim))
-            a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
-            control_params = controllers.MPPIParams(
-                gamma_mean=1.0,
-                gamma_sigma=0.0,
-                discount=1.0,
-                sample_sigma=sigma,
-                a_mean=a_mean,
-                a_cov=a_cov,
-            )
-            controller = controllers.MPPIController(
-                env=env, control_params=control_params, N=N, H=H, lam=lam
-            )
+        sigmas = jnp.array([sigma] * env.action_dim)
+        a_cov_per_step = jnp.diag(sigmas**2)
+        # a_cov_per_step = jnp.diag(jnp.array([sigma**2] * env.action_dim))
+        a_cov = jnp.tile(a_cov_per_step, (H, 1, 1))
+        control_params = controllers.MPPIParams(
+            gamma_mean=1.0,
+            gamma_sigma=0.0,
+            discount=1.0,
+            sample_sigma=sigma,
+            a_mean=a_mean,
+            a_cov=a_cov,
+        )
+        controller = controllers.MPPIController(
+            env=env, control_params=control_params, N=N, H=H, lam=lam
+        )
     elif "covo" in controller_name:
         N, H, lam, sigma = parse_sample_params(controller_params)
         if debug:
@@ -756,42 +747,6 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
         controller = controllers.CoVOController(
             env=env, control_params=control_params, N=N, H=H, lam=lam, mode=mode
         )
-    elif controller_name == "nn":
-        from quadjax.train import ActorCritic
-
-        network = ActorCritic(env.action_dim, activation="tanh")
-        if controller_params == "":
-            file_path = "ppo_params_"
-        else:
-            file_path = f"{controller_params}"
-        control_params = pickle.load(
-            open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb")
-        )
-
-        def apply_fn(train_params, last_obs, env_info):
-            return network.apply(train_params, last_obs)
-
-        controller = controllers.NetworkController(apply_fn, env, control_params)
-    elif controller_name == "RMA":
-        from quadjax.train import ActorCritic, Compressor, Adaptor
-
-        network = ActorCritic(env.action_dim, activation="tanh")
-        adaptor = Adaptor()
-        if controller_params == "":
-            file_path = "ppo_params_"
-        else:
-            file_path = f"{controller_params}"
-        control_params = pickle.load(
-            open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb")
-        )
-
-        def apply_fn(train_params, last_obs, env_info):
-            adapted_last_obs = adaptor.apply(train_params[2], env_info["obs_adapt"])
-            obs = jnp.concatenate([last_obs, adapted_last_obs], axis=-1)
-            pi, value = network.apply(train_params[0], obs)
-            return pi, value
-
-        controller = controllers.NetworkController(apply_fn, env, control_params)
     else:
         raise NotImplementedError
     return controller, control_params
