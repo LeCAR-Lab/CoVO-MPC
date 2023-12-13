@@ -72,5 +72,5 @@ This will visualize the results in `quadjax/results/state_seq_.pkl` with meshcat
 ## Notes
 
 * all action in the environment is normalized into [-1, 1] range.
-* for easier modification, the environment is designed to be simple single file format.
-* The repo also support PPO, RMA, DATT, L1 adaptive control etc. You can find them in branch `clean`. 
+* for easier modification, the environment is designed to be a simple single-file format.
+* The repo also supports PPO, RMA, DATT, L1 adaptive control, etc. You can find them in the branch `rl`. 
