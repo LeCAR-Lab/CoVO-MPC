@@ -27,7 +27,7 @@ pip install -e .
 
 ## Run `CoVO-MPC`
 
-Run `CoVO-MPC` in quadrotor environment (if you want to run other controllers, just replace `covo-online` with `pid`, `l1`, `mppi`, `nn`, `RMA` etc. you can also change the task to `tracking` or `hover`): 
+Run `CoVO-MPC` in the quadrotor environment (if you want to run other controllers, just replace `covo-online` with `pid`, `mppi`, etc. You can also change the task to `tracking` or `hover`): 
 
 ```shell
 cd quadjax/envs
