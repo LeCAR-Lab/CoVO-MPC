@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[[Website]](https://lecar-lab.github.io/covo-mpc-website/)
+[[Website]](https://lecar-lab.github.io/CoVO-MPC/)
 [[PDF]](https://drive.google.com/file/d/1u964n8BeQnZhwXpms7hJx8DNDYjwxTxy/view?usp=share_link)
 
 [![Python Version](https://img.shields.io/badge/Python-3.10-blue.svg)](https://github.com/eureka-research/Eureka)
