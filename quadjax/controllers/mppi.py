@@ -43,8 +43,6 @@ class MPPIController(controllers.BaseController):
         a_mean_old = control_params.a_mean
         a_cov_old = control_params.a_cov
 
-        # jax.debug.print('a cov old {cov}', cov=a_cov_old)
-
         control_params = control_params.replace(
             a_mean=jnp.concatenate([a_mean_old[1:], a_mean_old[-1:]]),
             a_cov=jnp.concatenate([a_cov_old[1:], a_cov_old[-1:]]),

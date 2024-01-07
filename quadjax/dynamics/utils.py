@@ -50,10 +50,6 @@ def generate_fixed_traj(
     max_steps: int, dt: float, key: chex.PRNGKey
 ) -> Tuple[chex.Array, chex.Array, chex.Array, chex.Array]:
     zeros = jnp.zeros((max_steps, 3))
-    key_pos = jax.random.split(key)[0]
-    # DEBUG: disable random pos
-    # pos = jax.random.uniform(key_pos, shape=(3,), minval=-1.0, maxval=1.0)
-    # pos_traj = zeros + pos
     return zeros, zeros, zeros
 
 
