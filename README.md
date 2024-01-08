@@ -17,6 +17,14 @@ Simulator             |  Hardware (Crazyflie)
 
 Implementation of the novel sampling-based Model Predictive Control (MPC) algorithm, **CoVariance-Optimal MPC (CoVO-MPC)**, developed through the research outlined in [the associated paper](https://drive.google.com/file/d/1u964n8BeQnZhwXpms7hJx8DNDYjwxTxy/view?usp=share_link). This new control algorithm is sought to outperform standard Model Predictive Path Integral Control (MPPI) by **43 to 54%**.
 
+## Why CoVO-MPC?
+
+Sampling-based MPC becomes prevalent in motion planning and model-based RL for its flexibility and parallizability. However, there is **no convergence analysis** to it, which leads to tune hyperparameters heuristically. For instance, MPPI use dynamic-agnostic isotropic Gaussian to sample trajectories, which leads to sub-optimal performance.
+
+We first proves MPPI’s convergence and provide insights into optimal sampling covariance design. CoVO-MPC is proposed to optimize sampling covariance according to the optimization landscape to achieve **optimal sampling** distribution given certain dynamics. 
+
+<img width="995" alt="image" src="https://github.com/LeCAR-Lab/CoVO-MPC/assets/60093981/c5dcc450-450d-4f73-9bab-8cf3fe6aade4">
+
 ## Installation
 
 ```shell
