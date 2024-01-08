@@ -23,7 +23,11 @@ Sampling-based MPC becomes prevalent in motion planning and model-based RL for i
 
 We first proves MPPI’s convergence and provide insights into optimal sampling covariance design. CoVO-MPC is proposed to optimize sampling covariance according to the optimization landscape to achieve **optimal sampling** distribution given certain dynamics. 
 
-<img width="995" alt="image" src="https://github.com/LeCAR-Lab/CoVO-MPC/assets/60093981/c5dcc450-450d-4f73-9bab-8cf3fe6aade4">
+MPPI             |  CoVO-MPC
+:-------------------------:|:-------------------------:
+![mppi_vis](https://github.com/LeCAR-Lab/CoVO-MPC/assets/60093981/1afdf961-5891-499d-8b63-2ac3bceebed0) | ![covo_vis](https://github.com/LeCAR-Lab/CoVO-MPC/assets/60093981/0549f3c8-750d-4d1b-8d82-0cfe15b20d89)
+
+
 
 ## Installation
 
