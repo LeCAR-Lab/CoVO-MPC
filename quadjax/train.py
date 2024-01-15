@@ -572,6 +572,8 @@ def main(args: Args):
         env = quadjax.envs.quad3d.Quad3D(task=args.task, lower_controller=args.lower_controller)
         render_fn = quadjax.envs.quad3d.render_env
         eval_fn = quadjax.envs.quad3d.eval_env
+    elif args.env == 'cartpole':
+        env = quadjax.envs.cartpole.CartPole()
     train_fn = make_train(env, config)
 
     t0 = time.time()

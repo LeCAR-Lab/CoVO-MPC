@@ -54,6 +54,7 @@ class CartPoleParams:
 class CartPole(BaseEnvironment):
     def __init__(self):
         super().__init__()
+        self.obs_dim = 4
         self.action_dim = 1
         # MPPI compatiblility function
         self.step_env_wocontroller = self.step_env
@@ -77,6 +78,7 @@ class CartPole(BaseEnvironment):
     ) -> Tuple[chex.Array, CartPoleState, float, bool, dict]:
         """Performs step transitions in the environment."""
         # action = jnp.clip(action, -1.0, 1.0)
+
         # force = params.force_mag * action[0]
         # costheta = jnp.cos(state.theta)
         # sintheta = jnp.sin(state.theta)
@@ -125,7 +127,7 @@ class CartPole(BaseEnvironment):
             state,
             reward,
             done,
-            {},
+            {"err_pos": 0.0, "err_vel": 0.0, "hit_wall": False, "pass_wall": False},
         )
 
     def reset_env(
@@ -136,24 +138,32 @@ class CartPole(BaseEnvironment):
         state = CartPoleState(
             x=init_state[0],
             x_dot=init_state[1],
-            theta=init_state[2]+jnp.pi*0.1,
+            theta=init_state[2]*20,
             theta_dot=init_state[3],
             time=0,
-            last_action=0.0,
+            last_action=0.0
         )
-        return self.get_obs(state, params), state
+        return (
+            self.get_obs(state, params),
+            {"err_pos": 0.0, "err_vel": 0.0, "hit_wall": False, "pass_wall": False},
+            state,
+        )
 
     def get_reward(self, state: CartPoleState, params: CartPoleParams) -> float:
         """Returns reward for given state."""
+        x = jnp.clip(state.x, -1, 1)
+        x_dot_normed = jnp.clip(state.x_dot / 2, -1, 1)
+        theta_normed = jnp.clip(jnp.abs(state.theta-jnp.pi) / jnp.pi, -1, 1)
+        theta_dot_normed = jnp.clip(state.theta_dot / 4, -1, 1)
         reward = (
             1.0
             - (
-                -1.0 * state.theta**2
-                - 0.1 * state.theta_dot**2
-                - 1.0 * state.x**2
-                - 0.1 * state.x_dot**2
+                1.0 * theta_normed**2
+                # + 0.3 * theta_dot_normed**2
+                + 0.5 * x**2
+                # + 0.3 * x_dot_normed**2
             )
-            * 0.5
+            / 1.0
         )
         return reward
 
@@ -164,10 +174,10 @@ class CartPole(BaseEnvironment):
     def is_terminal(self, state: CartPoleState, params: CartPoleParams) -> bool:
         """Check whether state is terminal."""
         # Check termination criteria
-        # done1 = jnp.logical_or(
-        #     state.x < -params.x_threshold,
-        #     state.x > params.x_threshold,
-        # )
+        done1 = jnp.logical_or(
+            state.x < -params.x_threshold,
+            state.x > params.x_threshold,
+        )
         # done2 = jnp.logical_or(
         #     state.theta < -params.theta_threshold_radians,
         #     state.theta > params.theta_threshold_radians,
@@ -175,8 +185,13 @@ class CartPole(BaseEnvironment):
 
         # Check number of steps in episode termination condition
         done_steps = state.time >= params.max_steps_in_episode
+        done = jnp.logical_or(done1, done_steps)
         # done = jnp.logical_or(jnp.logical_or(done1, done2), done_steps)
-        return done_steps
+        return done
+
+    def sample_params(self, key: chex.PRNGKey) -> CartPoleParams:
+        """Samples random parameters."""
+        return self.default_params
 
 
 class EnergyController(controllers.BaseController):
@@ -196,7 +211,7 @@ class EnergyController(controllers.BaseController):
         M = jnp.array([[mc + mp, mp * l * c], [mp * l * c, mp * l**2]])
         M_inv = jnp.linalg.inv(M)
         C = jnp.zeros((2, 2))
-        tau_g_dq = jnp.array([[0, 0], [0, mp*g*l]])
+        tau_g_dq = jnp.array([[0, 0], [0, mp * g * l]])
         B = jnp.array([[1], [0]])
         A00 = jnp.zeros((2, 2))
         A01 = jnp.eye(2)
@@ -209,7 +224,6 @@ class EnergyController(controllers.BaseController):
         S = solve_continuous_are(A, B, Q, R)
         self.K_lqr = jnp.linalg.inv(R) @ B.T @ S
 
-
     @partial(jax.jit, static_argnums=(0,))
     def __call__(
         self,
@@ -217,7 +231,7 @@ class EnergyController(controllers.BaseController):
         state: CartPoleState,
         env_params,
         rng_act,
-        control_params: CartPoleParams,
+        control_params,
         env_info=None,
     ) -> jnp.ndarray:
         """Computes action for given state."""
@@ -249,14 +263,23 @@ class EnergyController(controllers.BaseController):
         force = jnp.array([u * mp * l])
         action = force / env_params.force_mag
 
-        near_equilibrium = (jnp.abs(x) < 0.1) & (jnp.abs(theta - jnp.pi) < jnp.pi / 30)
-        x = jnp.array([x, theta-jnp.pi, x_dot, theta_dot])
+        near_equilibrium = (jnp.abs(x) < 0.15) & (jnp.abs(theta - jnp.pi) < jnp.pi / 30)
+        near_equilibrium = near_equilibrium | control_params
+        x = jnp.array([x, theta - jnp.pi, x_dot, theta_dot])
         lqr_action = -self.K_lqr @ x / env_params.force_mag
 
         action = jnp.where(near_equilibrium, lqr_action, action)
 
-        return action, control_params, {"E_normed_error": E_normed_error, "near_equilibrium": near_equilibrium}
+        control_params = near_equilibrium
 
+        return (
+            action,
+            control_params,
+            {"E_normed_error": E_normed_error, "near_equilibrium": near_equilibrium},
+        )
+
+    def reset(self, env_state=None, env_params=None, control_params=None, key=None):
+        return False
 
 @pydataclass
 class Args:
@@ -321,7 +344,7 @@ def main(args: Args):
             expansion_mode=expansion_mode,
         )
     elif args.controller == "energy":
-        controller = EnergyController(env=env, control_params=None)
+        controller = EnergyController(env=env, control_params=False)
     else:
         raise NotImplementedError
 
@@ -332,7 +355,7 @@ def main(args: Args):
         # reset env and controller
         env_params = env.default_params
         rng_reset, rng = jax.random.split(rng)
-        obs, env_state = env.reset_env(rng_reset, env_params)
+        obs, env_info, env_state = env.reset_env(rng_reset, env_params)
         rng_control, rng = jax.random.split(rng)
         control_params = controller.reset(
             env_state, env_params, controller.init_control_params, rng_control
@@ -362,19 +385,21 @@ def main(args: Args):
 
     # run multiple episodes
     if args.debug:
-        state_seq, reward_seq, info_seq = [], [], []
+        state_seq, reward_seq, info_seq, action_seq = [], [], [], []
         rng, rng_reset = jax.random.split(rng)
         env_params = env.default_params
-        obs, env_state = env.reset_env(rng_reset, env_params)
+        obs, _, env_state = env.reset_env(rng_reset, env_params)
+        control_params=False
         while True:
             state_seq.append(env_state)
             rng, rng_act, rng_step = jax.random.split(rng, 3)
-            action, _, control_info = controller(
-                obs, env_state, env_params, rng_act, controller.init_control_params
+            action, control_params, control_info = controller(
+                obs, env_state, env_params, rng_act, control_params
             )
             next_obs, next_env_state, reward, done, info = env.step_env(
                 rng_step, env_state, action, env_params
             )
+            action_seq.append(action)
             info_seq.append(control_info)
             reward_seq.append(reward)
             if done:
@@ -391,21 +416,24 @@ def main(args: Args):
         x_dot = jnp.array([state.x_dot for state in state_seq])
         E_normed_error = jnp.array([info["E_normed_error"] for info in info_seq])
         plt.figure(figsize=(5, 7))
-        plt.subplot(5, 1, 1)
+        plt.subplot(6, 1, 1)
         plt.plot(theta)
         plt.ylabel("theta")
-        plt.subplot(5, 1, 2)
+        plt.subplot(6, 1, 2)
         plt.plot(x)
         plt.ylabel("x")
-        plt.subplot(5, 1, 3)
+        plt.subplot(6, 1, 3)
         plt.plot(theta_dot)
         plt.ylabel("theta_dot")
-        plt.subplot(5, 1, 4)
+        plt.subplot(6, 1, 4)
         plt.plot(x_dot)
         plt.ylabel("x_dot")
-        plt.subplot(5, 1, 5)
+        plt.subplot(6, 1, 5)
         plt.plot(E_normed_error)
         plt.ylabel("E_normed_error")
+        plt.subplot(6, 1, 6)
+        plt.plot(jnp.array(action_seq)[:, 0])
+        plt.ylabel("action")
         plt.savefig("../../results/theta_x.png")
         # create animation with the state sequence
         l = env_params.length
