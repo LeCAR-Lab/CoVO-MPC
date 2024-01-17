@@ -4,6 +4,7 @@
 
 [[Website]](https://lecar-lab.github.io/CoVO-MPC/)
 [[PDF]](https://drive.google.com/file/d/1u964n8BeQnZhwXpms7hJx8DNDYjwxTxy/view?usp=share_link)
+[[Arxiv]](https://arxiv.org/abs/2401.07369)
 
 [![Python Version](https://img.shields.io/badge/Python-3.10-blue.svg)](https://github.com/eureka-research/Eureka)
 [<img src="https://img.shields.io/badge/Backend-Jax-red.svg"/>](https://github.com/google/jax)
@@ -75,3 +76,18 @@ This will visualize the results in `quadjax/results/state_seq_.pkl` with meshcat
 * all action in the environment is normalized into [-1, 1] range.
 * for easier modification, the environment is designed to be a simple single-file format.
 * The repo also supports PPO, RMA, DATT, L1 adaptive control, etc. You can find them in the branch `rl`. 
+
+## Citation
+
+If you find this repo useful for your research, please consider citing our paper:
+
+```
+@misc{yi2024covompc,
+      title={CoVO-MPC: Theoretical Analysis of Sampling-based MPC and Optimal Covariance Design}, 
+      author={Zeji Yi and Chaoyi Pan and Guanqi He and Guannan Qu and Guanya Shi},
+      year={2024},
+      eprint={2401.07369},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
+```
