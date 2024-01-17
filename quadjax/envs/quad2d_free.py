@@ -375,7 +375,7 @@ def eval_env(env: Quad2D, controller:controllers.BaseController, control_params,
 
 def render_env(env: Quad2D, controller:controllers.BaseController, control_params, repeat_times = 1, filename = ''):
     # running environment
-    rng = jax.random.PRNGKey(1)
+    rng = jax.random.PRNGKey(4)
     rng, rng_params = jax.random.split(rng)
     env_params = env.sample_params(rng_params)
     env_params = env.default_params # DEBUG
@@ -481,8 +481,14 @@ def render_env(env: Quad2D, controller:controllers.BaseController, control_param
         plt.plot(state_seq[i].pos_tar[0], state_seq[i].pos_tar[1], "ro")
         plt.xlabel("y")
         plt.ylabel("z")
-        plt.xlim([-2, 2])
-        plt.ylim([-2, 2])
+        plt.xlim([-1, 1])
+        plt.ylim([-1, 1])
+
+        # save state_seq and control_info_seq
+        with open(f"{quadjax.get_package_path()}/../results/state_seq_{filename}.pkl", "wb") as f:
+            pickle.dump(state_seq_dict[:i+1], f)
+        with open(f"{quadjax.get_package_path()}/../results/control_info_seq_{filename}.pkl", "wb") as f:
+            pickle.dump(control_info_seq[:i+1], f)
 
     plt.figure(figsize=(4, 4))
     anim = FuncAnimation(plt.gcf(), update_plot, frames=len(state_seq), interval=1)
@@ -558,7 +564,7 @@ def main(args: Args):
         control_params = None
         controller = controllers.RandomController(env, control_params)
     elif 'mppi' in args.controller:
-        sigma = 0.5
+        sigma = 2.0 #0.5
         if args.controller_params == '':
             N = 8192
             H = 16

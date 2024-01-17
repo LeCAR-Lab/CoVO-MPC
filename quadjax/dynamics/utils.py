@@ -506,10 +506,10 @@ def plot_states(state_seq, obs_seq, reward_seq, env_params, filename=''):
     import numpy as np
 
     # check if quat in state_seq, if true, then add a new item called rpy (roll, pitch, yaw)
-    if "quat" in state_seq[0]:
-        for i, state in enumerate(state_seq):
-            rpy = quadjax.dynamics.qtorpy(state['quat'])
-            state_seq[i]["rpy"] = rpy
+    # if "quat" in state_seq[0]:
+    #     for i, state in enumerate(state_seq):
+    #         rpy = quadjax.dynamics.qtorpy(state['quat'])
+    #         state_seq[i]["rpy"] = rpy
     if "quat_desired" in state_seq[0]:
         for i, state in enumerate(state_seq):
             rpy = quadjax.dynamics.qtorpy(state['quat_desired'])
