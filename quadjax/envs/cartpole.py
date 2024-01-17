@@ -17,7 +17,7 @@ from scipy.linalg import solve_continuous_are
 
 from quadjax.envs.base import BaseEnvironment
 from quadjax import controllers
-
+import quadjax
 
 @struct.dataclass
 class CartPoleState:
@@ -77,7 +77,7 @@ class CartPole(BaseEnvironment):
         params: CartPoleParams,
     ) -> Tuple[chex.Array, CartPoleState, float, bool, dict]:
         """Performs step transitions in the environment."""
-        # action = jnp.clip(action, -1.0, 1.0)
+        action = jnp.clip(action, -1.0, 1.0)
 
         # force = params.force_mag * action[0]
         # costheta = jnp.cos(state.theta)
@@ -134,11 +134,11 @@ class CartPole(BaseEnvironment):
         self, key: chex.PRNGKey, params: CartPoleParams
     ) -> Tuple[chex.Array, CartPoleState]:
         """Performs resetting of environment."""
-        init_state = jax.random.uniform(key, minval=-0.05, maxval=0.05, shape=(4,))
+        init_state = jax.random.uniform(key, minval=-0.05, maxval=0.05, shape=(4,)) * 0.0 # DEBUG: disable random init
         state = CartPoleState(
             x=init_state[0],
             x_dot=init_state[1],
-            theta=init_state[2]*20,
+            theta=init_state[2]+0.5,
             theta_dot=init_state[3],
             time=0,
             last_action=0.0
@@ -155,16 +155,32 @@ class CartPole(BaseEnvironment):
         x_dot_normed = jnp.clip(state.x_dot / 2, -1, 1)
         theta_normed = jnp.clip(jnp.abs(state.theta-jnp.pi) / jnp.pi, -1, 1)
         theta_dot_normed = jnp.clip(state.theta_dot / 4, -1, 1)
-        reward = (
-            1.0
-            - (
-                1.0 * theta_normed**2
-                # + 0.3 * theta_dot_normed**2
-                + 0.5 * x**2
-                # + 0.3 * x_dot_normed**2
-            )
-            / 1.0
-        )
+        # reward = (
+        #     1.0
+        #     - (
+        #         1.0 * theta_normed**2
+        #         # + 0.3 * theta_dot_normed**2
+        #         + 0.5 * x**2
+        #         # + 0.3 * x_dot_normed**2
+        #     )
+        #     / 1.0
+        # )
+
+        # reward_theta = (jnp.cos(state.theta-jnp.pi) + 1.0) / 2.0
+        # reward_x = jnp.cos((state.x / 2.5) * (jnp.pi / 2.0))
+        # reward = reward_theta * reward_x
+        # near_equilibrium = (jnp.abs(state.x) < 0.15) & (jnp.abs(state.theta - jnp.pi) < jnp.pi / 30)
+        # reward = jnp.where(near_equilibrium, reward+1.0, reward)
+
+        upright = (jnp.cos(state.theta - jnp.pi) + 1) / 2
+        centered = x ** 2
+        centered = (1 + centered) / 2
+        small_control = state.last_action ** 2
+        small_control = (4 + small_control) / 5
+        small_velocity = (theta_dot_normed ** 2 + x_dot_normed ** 2)/2
+        small_velocity = (1 + small_velocity) / 2
+        reward = upright * small_control * small_velocity * centered
+
         return reward
 
     def get_obs(self, state: CartPoleState, params: CartPoleParams) -> chex.Array:
@@ -281,6 +297,81 @@ class EnergyController(controllers.BaseController):
     def reset(self, env_state=None, env_params=None, control_params=None, key=None):
         return False
 
+
+def eval_env(env, controller, control_params, total_steps, filename, debug=False):
+    pass
+
+def render_env(env, controller, control_params, repeat_times, filename):
+    state_seq, reward_seq, info_seq, action_seq = [], [], [], []
+    rng = jax.random.PRNGKey(0)
+    rng, rng_reset = jax.random.split(rng)
+    env_params = env.default_params
+    obs, _, env_state = env.reset_env(rng_reset, env_params)
+    while True:
+        state_seq.append(env_state)
+        rng, rng_act, rng_step = jax.random.split(rng, 3)
+        action, control_params, control_info = controller(
+            obs, env_state, env_params, rng_act, control_params
+        )
+        next_obs, next_env_state, reward, done, info = env.step_env(
+            rng_step, env_state, action, env_params
+        )
+        action_seq.append(action)
+        info_seq.append(control_info)
+        reward_seq.append(reward)
+        if done:
+            break
+        else:
+            obs = next_obs
+            env_state = next_env_state
+    # plot theta, x, E_normed_error
+    theta = jnp.array([state.theta for state in state_seq])
+    x = jnp.array([state.x for state in state_seq])
+    theta_dot = jnp.array([state.theta_dot for state in state_seq])
+    x_dot = jnp.array([state.x_dot for state in state_seq])
+    E_normed_error = jnp.array([info.get("E_normed_error", 0) for info in info_seq])
+    action_seq = jnp.array(action_seq)
+    plt.figure(figsize=(5, 7))
+    plt.subplot(6, 1, 1)
+    plt.plot(theta)
+    plt.ylabel("theta")
+    plt.subplot(6, 1, 2)
+    plt.plot(x)
+    plt.ylabel("x")
+    plt.subplot(6, 1, 3)
+    plt.plot(theta_dot)
+    plt.ylabel("theta_dot")
+    plt.subplot(6, 1, 4)
+    plt.plot(x_dot)
+    plt.ylabel("x_dot")
+    plt.subplot(6, 1, 5)
+    plt.plot(E_normed_error)
+    plt.ylabel("E_normed_error")
+    plt.subplot(6, 1, 6)
+    plt.plot(action_seq[:, 0])
+    plt.ylabel("action")
+    plt.savefig(f"{quadjax.get_package_path()}/../results/theta_x.png")
+    # create animation with the state sequence
+    l = env_params.length
+
+    def update_plot(frame_num):
+        plt.gca().clear()
+        plt.scatter(state_seq[frame_num].x, 0, marker="o", color="red")
+        near_equilibrium = info_seq[frame_num].get("near_equilibrium", False)
+        plt.scatter(
+            state_seq[frame_num].x + l * jnp.sin(state_seq[frame_num].theta),
+            -l * jnp.cos(state_seq[frame_num].theta),
+            marker="o",
+            color="green" if near_equilibrium else "blue",
+        )
+        plt.xlim(-env_params.x_threshold, env_params.x_threshold)
+        plt.ylim(-env_params.length, env_params.length)
+        plt.gca().set_aspect("equal", adjustable="box")
+
+    plt.figure()
+    anim = FuncAnimation(plt.gcf(), update_plot, frames=len(state_seq), interval=20)
+    anim.save(f"{quadjax.get_package_path()}/../results/anim.gif", dpi=80, writer="imagemagick", fps=50)
+
 @pydataclass
 class Args:
     controller: str = "mppi"  # fixed, energy
@@ -298,6 +389,8 @@ def main(args: Args):
     H = 32 if not args.debug else 2
     lam = 0.01
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
+    # load a_mean
+    # a_mean = jnp.load("../../results/action_seq.npy")[:H]
     # other controllers
     if args.controller == "feedback":
         control_params = controllers.FeedbackParams(
@@ -344,6 +437,7 @@ def main(args: Args):
             expansion_mode=expansion_mode,
         )
     elif args.controller == "energy":
+        control_params = False
         controller = EnergyController(env=env, control_params=False)
     else:
         raise NotImplementedError
@@ -389,7 +483,6 @@ def main(args: Args):
         rng, rng_reset = jax.random.split(rng)
         env_params = env.default_params
         obs, _, env_state = env.reset_env(rng_reset, env_params)
-        control_params=False
         while True:
             state_seq.append(env_state)
             rng, rng_act, rng_step = jax.random.split(rng, 3)
@@ -414,7 +507,8 @@ def main(args: Args):
         x = jnp.array([state.x for state in state_seq])
         theta_dot = jnp.array([state.theta_dot for state in state_seq])
         x_dot = jnp.array([state.x_dot for state in state_seq])
-        E_normed_error = jnp.array([info["E_normed_error"] for info in info_seq])
+        E_normed_error = jnp.array([info.get("E_normed_error", 0) for info in info_seq])
+        action_seq = jnp.array(action_seq)
         plt.figure(figsize=(5, 7))
         plt.subplot(6, 1, 1)
         plt.plot(theta)
@@ -432,7 +526,7 @@ def main(args: Args):
         plt.plot(E_normed_error)
         plt.ylabel("E_normed_error")
         plt.subplot(6, 1, 6)
-        plt.plot(jnp.array(action_seq)[:, 0])
+        plt.plot(action_seq[:, 0])
         plt.ylabel("action")
         plt.savefig("../../results/theta_x.png")
         # create animation with the state sequence
@@ -441,7 +535,7 @@ def main(args: Args):
         def update_plot(frame_num):
             plt.gca().clear()
             plt.scatter(state_seq[frame_num].x, 0, marker="o", color="red")
-            near_equilibrium = info_seq[frame_num]["near_equilibrium"]
+            near_equilibrium = info_seq[frame_num].get("near_equilibrium", False)
             plt.scatter(
                 state_seq[frame_num].x + l * jnp.sin(state_seq[frame_num].theta),
                 -l * jnp.cos(state_seq[frame_num].theta),
@@ -455,6 +549,8 @@ def main(args: Args):
         plt.figure()
         anim = FuncAnimation(plt.gcf(), update_plot, frames=len(state_seq), interval=20)
         anim.save("../../results/anim.gif", dpi=80, writer="imagemagick", fps=50)
+        # save action_seq
+        # jnp.save("../../results/action_seq.npy", action_seq)
     else:
         rngs = jax.random.split(rng, 100)
         t0 = time.time()
