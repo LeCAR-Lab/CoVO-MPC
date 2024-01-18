@@ -151,35 +151,36 @@ class CartPole(BaseEnvironment):
 
     def get_reward(self, state: CartPoleState, params: CartPoleParams) -> float:
         """Returns reward for given state."""
-        x = jnp.clip(state.x, -1, 1)
+        # x = jnp.clip(state.x, -1, 1)
+        x_normed = state.x #/ params.x_threshold
         x_dot_normed = jnp.clip(state.x_dot / 2, -1, 1)
         theta_normed = jnp.clip(jnp.abs(state.theta-jnp.pi) / jnp.pi, -1, 1)
         theta_dot_normed = jnp.clip(state.theta_dot / 4, -1, 1)
-        # reward = (
-        #     1.0
-        #     - (
-        #         1.0 * theta_normed**2
-        #         # + 0.3 * theta_dot_normed**2
-        #         + 0.5 * x**2
-        #         # + 0.3 * x_dot_normed**2
-        #     )
-        #     / 1.0
-        # )
+        reward = (
+            1.0
+            - (
+                1.0 * theta_normed**2
+                + 0.3 * theta_dot_normed**2
+                + 0.5 * x_normed**2
+                + 0.3 * x_dot_normed**2
+            )
+            / 1.0
+        )
 
-        # reward_theta = (jnp.cos(state.theta-jnp.pi) + 1.0) / 2.0
-        # reward_x = jnp.cos((state.x / 2.5) * (jnp.pi / 2.0))
-        # reward = reward_theta * reward_x
-        # near_equilibrium = (jnp.abs(state.x) < 0.15) & (jnp.abs(state.theta - jnp.pi) < jnp.pi / 30)
-        # reward = jnp.where(near_equilibrium, reward+1.0, reward)
+        reward_theta = (jnp.cos(state.theta-jnp.pi) + 1.0) / 2.0
+        reward_x = jnp.cos((state.x / 2.5) * (jnp.pi / 2.0))
+        reward = reward_theta * reward_x
+        near_equilibrium = (jnp.abs(state.x) < 0.15) & (jnp.abs(state.theta - jnp.pi) < jnp.pi / 30)
+        reward = jnp.where(near_equilibrium, reward+1.0, reward)
 
-        upright = (jnp.cos(state.theta - jnp.pi) + 1) / 2
-        centered = x ** 2
-        centered = (1 + centered) / 2
-        small_control = state.last_action ** 2
-        small_control = (4 + small_control) / 5
-        small_velocity = (theta_dot_normed ** 2 + x_dot_normed ** 2)/2
-        small_velocity = (1 + small_velocity) / 2
-        reward = upright * small_control * small_velocity * centered
+        # upright = (jnp.cos(state.theta - jnp.pi) + 1) / 2
+        # centered = 1.0-x_normed ** 2
+        # centered = (1 + centered) / 2
+        # small_control = state.last_action ** 2
+        # small_control = (4 + small_control) / 5
+        # small_velocity = (theta_dot_normed ** 2 + x_dot_normed ** 2)/2
+        # small_velocity = (1 + small_velocity) / 2
+        # reward = upright * small_control * small_velocity * centered
 
         return reward
 
@@ -194,6 +195,7 @@ class CartPole(BaseEnvironment):
             state.x < -params.x_threshold,
             state.x > params.x_threshold,
         )
+        # done1 = False
         # done2 = jnp.logical_or(
         #     state.theta < -params.theta_threshold_radians,
         #     state.theta > params.theta_threshold_radians,
@@ -388,6 +390,12 @@ def main(args: Args):
     N = 1024 if not args.debug else 2
     H = 32 if not args.debug else 2
     lam = 0.01
+
+    sigma = 0.5
+    N = 16384
+    H = 128
+    lam = 0.01
+
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
     # load a_mean
     # a_mean = jnp.load("../../results/action_seq.npy")[:H]
@@ -532,6 +540,7 @@ def main(args: Args):
         # create animation with the state sequence
         l = env_params.length
 
+        print("saving animation...")
         def update_plot(frame_num):
             plt.gca().clear()
             plt.scatter(state_seq[frame_num].x, 0, marker="o", color="red")
