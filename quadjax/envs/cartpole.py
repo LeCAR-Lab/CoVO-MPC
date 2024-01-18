@@ -392,8 +392,8 @@ def main(args: Args):
     lam = 0.01
 
     sigma = 0.5
-    N = 16384
-    H = 128
+    N = 1024 #16384
+    H = 16 #128
     lam = 0.01
 
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
