@@ -392,7 +392,7 @@ def main(args: Args):
     lam = 0.01
 
     sigma = 0.5
-    N = 1024 #16384
+    N = 16384
     H = 128
     lam = 0.01
 
