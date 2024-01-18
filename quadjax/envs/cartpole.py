@@ -393,7 +393,7 @@ def main(args: Args):
 
     sigma = 0.5
     N = 1024 #16384
-    H = 64 #128
+    H = 32 #64 #128
     lam = 0.01
 
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
@@ -564,7 +564,7 @@ def main(args: Args):
         rngs = jax.random.split(rng, 100)
         t0 = time.time()
         rewards = jax.vmap(run_one_ep)(rngs)
-        rewards = rewards * 1000
+        rewards = rewards
         print(f"time: {time.time() - t0:.2f}s")
         print(f"cost: ${-rewards.mean():.2f} \pm {rewards.std():.2f}$")
 
