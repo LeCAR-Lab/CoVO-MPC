@@ -167,11 +167,11 @@ class CartPole(BaseEnvironment):
             / 1.0
         )
 
-        reward_theta = (jnp.cos(state.theta-jnp.pi) + 1.0) / 2.0
-        reward_x = jnp.cos((state.x / 2.5) * (jnp.pi / 2.0))
-        reward = reward_theta * reward_x
-        near_equilibrium = (jnp.abs(state.x) < 0.15) & (jnp.abs(state.theta - jnp.pi) < jnp.pi / 30)
-        reward = jnp.where(near_equilibrium, reward+1.0, reward)
+        # reward_theta = (jnp.cos(state.theta-jnp.pi) + 1.0) / 2.0
+        # reward_x = jnp.cos((state.x / 2.5) * (jnp.pi / 2.0))
+        # reward = reward_theta * reward_x
+        # near_equilibrium = (jnp.abs(state.x) < 0.15) & (jnp.abs(state.theta - jnp.pi) < jnp.pi / 30)
+        # reward = jnp.where(near_equilibrium, reward+1.0, reward)
 
         # upright = (jnp.cos(state.theta - jnp.pi) + 1) / 2
         # centered = 1.0-x_normed ** 2
@@ -393,7 +393,7 @@ def main(args: Args):
 
     sigma = 0.5
     N = 1024 #16384
-    H = 16 #128
+    H = 64 #128
     lam = 0.01
 
     a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
