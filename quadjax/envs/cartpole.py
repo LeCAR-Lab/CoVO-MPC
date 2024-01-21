@@ -15,9 +15,9 @@ from matplotlib.animation import FuncAnimation
 import control as pycontrol
 from scipy.linalg import solve_continuous_are
 
+import quadjax
 from quadjax.envs.base import BaseEnvironment
 from quadjax import controllers
-import quadjax
 
 @struct.dataclass
 class CartPoleState:
@@ -123,8 +123,8 @@ class CartPole(BaseEnvironment):
         done = self.is_terminal(state, params)
 
         return (
-            self.get_obs(state, params),
-            state,
+            lax.stop_gradient(self.get_obs(state)),
+            lax.stop_gradient(state),
             reward,
             done,
             {"err_pos": 0.0, "err_vel": 0.0, "hit_wall": False, "pass_wall": False},
@@ -497,6 +497,21 @@ def main(args: Args):
             action, control_params, control_info = controller(
                 obs, env_state, env_params, rng_act, control_params
             )
+            
+            # save control_info to a file
+            # cost = control_info["cost"]
+            # a_sampled = control_info["a_sampled"]
+            # import pickle
+            # with open("../../results/cost.pkl", "wb") as f:
+            #     pickle.dump(cost, f)
+            # with open("../../results/a_sampled.pkl", "wb") as f:
+            #     pickle.dump(a_sampled, f)
+            # with open("../../results/a_mean.pkl", "wb") as f:
+            #     pickle.dump(a_mean, f)
+            # with open("../../results/a_cov.pkl", "wb") as f:
+            #     pickle.dump(a_cov, f)
+            # exit()
+
             next_obs, next_env_state, reward, done, info = env.step_env(
                 rng_step, env_state, action, env_params
             )

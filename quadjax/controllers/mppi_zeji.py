@@ -292,7 +292,9 @@ class MPPIZejiController(controllers.BaseController):
         hessian_fn = jax.jacfwd(jabobian_fn, argnums=0)
         # jax.debug.print('H={H}', H=hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act)))
         # jax.debug.breakpoint()
-        return hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act))
+        hessian = hessian_fn(a_mean.flatten(), (env_state, env_params, rng_act))
+
+        return hessian
     
     # def get_sigma_from_R(self, R: jnp.ndarray, control_params: MPPIZejiParams):
     #     u, s, vh = jnp.linalg.svd(R)
@@ -349,6 +351,14 @@ class MPPIZejiController(controllers.BaseController):
         
         # DEBUG
         a_cov_zeji = self.get_sigma_zeji(control_params, env_state, env_params, rng_act)
+
+        # create diagnal block matrix
+        # L = jnp.eye(64)*0.1
+        # L = L.at[:, 0].set(1.0)
+        # jax.debug.print('L {L}', L=L)
+        # cov = L @ L.T
+        # a_cov_zeji = cov / jnp.linalg.det(cov) * 0.25
+        # a_cov_zeji = jnp.eye(self.H) * 0.25
 
         # save a_cov_offline as a heatmap
         # import matplotlib.pyplot as plt
