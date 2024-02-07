@@ -26,7 +26,7 @@ class EnvState2D:
 class EnvParams2D:
     max_speed: float = 8.0
     max_omega: float = 10.0 # TODO check this value
-    max_thrust: float = 0.8
+    max_thrust: float = 0.5067
     max_motor_force: float = 0.28
     max_torque: float = 1.0e-2
     extra_torque: float = 1.2e-2
@@ -180,9 +180,10 @@ class EnvState3D:
 @struct.dataclass
 class EnvParams3D:
     max_speed: float = 8.0
-    max_torque: jnp.ndarray = default_array([9e-3, 9e-3, 2e-3])
+    max_torque: jnp.ndarray = default_array([8e-3, 8e-3, 8e-3])
     max_omega: jnp.ndarray = default_array([10.0, 10.0, 3.0])
-    max_thrust: float = 0.8
+    max_alpha: jnp.ndarray = default_array([200.0, 200.0, 50.0])
+    max_thrust: float = 0.5067
     extra_torque: float = 4.5e-3 # enable it by set it to a none zero value
     dt: float = 0.02
     g: float = 9.81  # gravity
@@ -219,6 +220,7 @@ class EnvParams3D:
     alpha_thrust: float = 0.6
     alpha_bodyrate_mean: float = 0.5
     alpha_bodyrate_std: float = 0.1
+    tau_thrust: float = 0.1
 
     max_steps_in_episode: int = 300
     rope_taut_therehold: float = 1e-4

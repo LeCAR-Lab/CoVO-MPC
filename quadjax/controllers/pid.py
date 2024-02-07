@@ -197,3 +197,44 @@ class PIDControllerBodyrate(controllers.BaseController):
             + control_params.kd * derivative
         )
         return u, control_params, None
+    
+@struct.dataclass
+class PIDParamsPWM:
+    kp: jnp.ndarray
+    ki: jnp.ndarray
+    kd: jnp.ndarray
+    integral_max: jnp.ndarray
+    last_error: jnp.ndarray
+    integral: jnp.ndarray
+    
+class PIDControllerPWM(controllers.BaseController):
+    """PID controller for attitude rate control
+
+    Returns:
+        _type_: _description_
+    """
+
+    def __init__(self, env, control_params) -> None:
+        super().__init__(env, control_params)
+
+    def update_params(self, env_params, control_params):
+        return control_params.replace(
+            last_error=jnp.zeros_like(control_params.last_error),
+            integral=jnp.zeros_like(control_params.integral),
+        )
+
+    def __call__(self, obs, state, env_params, rng_act, control_params) -> jnp.ndarray:
+        dt = env_params.dt * 0.1
+        error = state.omega_tar - state.omega
+        integral = control_params.integral + error * dt
+        integral = jnp.clip(integral, -control_params.integral_max, control_params.integral_max)
+        derivative = (error - control_params.last_error) / dt
+        control_params = control_params.replace(last_error=error, integral=integral)
+        alpha_des = (
+            control_params.kp * error
+            + control_params.ki * integral
+            + control_params.kd * derivative
+        )
+        alpha_des = jnp.clip(alpha_des, -env_params.max_alpha, env_params.max_alpha)
+        torque = env_params.I @ alpha_des + jnp.cross(state.omega, env_params.I @ state.omega)
+        return torque, control_params, None

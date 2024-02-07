@@ -293,6 +293,9 @@ def get_free_dynamics_3d():
         thrust = u[0]
         torque = u[1:4]
 
+        # convert to motor force
+        
+
         r = x[:3]  # position in world frame
         q = x[3:7] / jnp.linalg.norm(x[3:7])  # quaternion in world frame
         v = x[7:10]  # velocity in body frame

@@ -6,3 +6,4 @@ from quadjax.dynamics.loose import *
 from quadjax.dynamics.taut import *
 from quadjax.dynamics.trans import *
 from quadjax.dynamics.free import *
+from quadjax.dynamics.pwm import *
