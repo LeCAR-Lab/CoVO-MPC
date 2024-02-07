@@ -618,7 +618,7 @@ def main(args: Args):
         params = runner_state[0].params + [runner_state[-1].params]
     else:
         params = runner_state[0].params
-    
+
     with open(f"{quadjax.get_package_path()}/../results/ppo_params_{filename}.pkl", "wb") as f:
         pickle.dump(params, f)
 

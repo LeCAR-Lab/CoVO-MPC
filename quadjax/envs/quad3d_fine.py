@@ -437,7 +437,7 @@ class Quad3D(BaseEnvironment):
         # RL parameters
         self.action_dim = 4
         self.adapt_obs_dim = 22 * self.default_params.adapt_horizon
-        self.param_obs_dim = 20
+        self.param_obs_dim = 9
 
     """
     environment properties
@@ -833,7 +833,7 @@ class Quad3D(BaseEnvironment):
             # I
             (params.I.diagonal() - params.I_diag_mean) / params.I_diag_std,
             # disturbance
-            (state.f_disturb) / params.disturb_scale,
+            # (state.f_disturb) / params.disturb_scale,
             # hook offset
             # (params.hook_offset - params.hook_offset_mean) / params.hook_offset_std,
             # disturbance parameters
@@ -1094,21 +1094,21 @@ def eval_env(
     # control_params = controller.reset(env_state, env_params, controller.init_control_params, rng_control)
 
     def run_one_step(carry, _):
-        obs, env_state, rng, env_params, control_params = carry
+        obs, env_state, rng, env_params, control_params, env_info = carry
         rng, rng_act, rng_step, rng_control = jax.random.split(rng, 4)
         action, control_params, control_info = controller(
-            obs, env_state, env_params, rng_act, control_params
+            obs, env_state, env_params, rng_act, control_params, env_info
         )
         if control_info is not None:
             if "a_mean" in control_info:
                 action = control_info["a_mean"]
-        next_obs, next_env_state, reward, done, info = env.step(
+        next_obs, next_env_state, reward, done, env_info = env.step(
             rng_step, env_state, action, env_params
         )
         # if done, reset controller parameters, aviod use if, use lax.cond instead
         rng, rng_control = jax.random.split(rng)
-        return (next_obs, next_env_state, rng, env_params, control_params), (
-            info["err_pos"],
+        return (next_obs, next_env_state, rng, env_params, control_params, env_info), (
+            env_info["err_pos"],
             done,
         )
 
@@ -1124,9 +1124,9 @@ def eval_env(
             env_state, env_params, controller.init_control_params, rng_control
         )
 
-        (obs, env_state, rng, env_params, control_params), (err_pos, dones) = lax.scan(
+        (obs, env_state, rng, env_params, control_params, info), (err_pos, dones) = lax.scan(
             run_one_step,
-            (obs, env_state, rng, env_params, control_params),
+            (obs, env_state, rng, env_params, control_params, info),
             jnp.arange(env.default_params.max_steps_in_episode),
         )
         return rng, err_pos
@@ -1407,9 +1407,9 @@ def get_controller(env, controller_name, controller_params=None, debug=False):
             file_path = "ppo_params_"
         else:
             file_path = f"{controller_params}"
-        control_params = pickle.load(
-            open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb")
-        )
+        
+        with open(f"{quadjax.get_package_path()}/../results/{file_path}.pkl", "rb") as f:
+            control_params = pickle.load(f)
 
         def apply_fn(train_params, last_obs, env_info):
             adapted_last_obs = adaptor.apply(train_params[2], env_info["obs_adapt"])
