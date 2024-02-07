@@ -56,7 +56,7 @@ class Quad3D(BaseEnvironment):
                 self.default_params.max_steps_in_episode,
                 self.default_params.dt,
             )
-            self.reward_fn = utils.tracking_realworld_reward_fn
+            self.reward_fn = utils.tracking_penyaw_reward_fn
             self.get_init_state = self.fixed_init_state
         elif task == "tracking_zigzag":
             self.generate_traj = partial(
@@ -300,7 +300,7 @@ class Quad3D(BaseEnvironment):
                 # jax.debug.print('force desired = {x}', x = f / 0.5067 * 4.0)
                 f = jnp.maximum(f, 0.0)
                 # convert force to pwm
-                pwm = quad_dyn.force_to_pwm(f)
+                pwm = quad_dyn.force_to_pwm(f, env_params.pwmf_mean) # NOTE: when doing control, pwmf_mean is used
                 # move down all pwm to make sure max pwm is 65535
                 pwm_drift = jnp.maximum(0.0, jnp.max(pwm) - 65535)
                 pwm = pwm - pwm_drift
@@ -350,16 +350,17 @@ class Quad3D(BaseEnvironment):
             def sample_random_params(key: chex.PRNGKey) -> EnvParams3D:
                 param_key = jax.random.split(key)[0]
                 rand_val = jax.random.uniform(
-                    param_key, shape=(17,), minval=-1.0, maxval=1.0
+                    param_key, shape=(22,), minval=-1.0, maxval=1.0
                 )  # DEBUG * 0.0
 
                 params = self.default_params
                 m = params.m_mean + rand_val[0] * params.m_std
                 I_diag = params.I_diag_mean + rand_val[1:4] * params.I_diag_std
                 I = jnp.diag(I_diag)
-                action_scale = (
-                    params.action_scale_mean + rand_val[4] * params.action_scale_std
-                )
+                # action_scale = (
+                #     params.action_scale_mean + rand_val[4] * params.action_scale_std
+                # )
+                action_scale = 1.0
                 alpha_bodyrate = (
                     params.alpha_bodyrate_mean + rand_val[5] * params.alpha_bodyrate_std
                 )
@@ -372,6 +373,10 @@ class Quad3D(BaseEnvironment):
                     params.hook_offset_mean + rand_val[14:17] * params.hook_offset_std
                 )
 
+                tau_thrust = params.thrust_tau_mean + rand_val[17] * params.thrust_tau_std
+                pwmf_scale = 1.0 + rand_val[18] * params.pwmf_scale_std
+                pwmf = pwmf_scale * (params.pwmf_mean + rand_val[19:22] * params.pwmf_std)
+
                 return EnvParams3D(
                     m=m,
                     I=I,
@@ -381,6 +386,8 @@ class Quad3D(BaseEnvironment):
                     mo=mo,
                     l=l,
                     hook_offset=hook_offset,
+                    tau_thrust=tau_thrust,
+                    pwmf=pwmf,
                 )
 
             self.sample_params = sample_random_params
@@ -480,16 +487,16 @@ class Quad3D(BaseEnvironment):
             # call controller to get sub_action and new_control_params
             sub_action, _, state = self.control_fn(None, state, params, key, action)
             next_state = self.raw_step(key, state, sub_action, params)
-            return (key, next_state, action, params), next_state
+            return (key, next_state, action, params), None
 
         # call lax.scan to get next_state
-        (_, next_state, _, params), state_seq = lax.scan(
+        (_, next_state, _, params), _ = lax.scan(
             step_once, (key, state, action, params), jnp.arange(self.sub_steps)
         )
         next_state = self.update_time(next_state)
-        obs, state, reward, done, info = self.get_obs_state_reward_done_info(state, next_state, params)
-        info['state_seq'] = state_seq
-        return obs, state, reward, done, info
+        next_obs, next_state, reward, done, info = self.get_obs_state_reward_done_info(state, next_state, params)
+        # info['state_seq'] = state_seq
+        return next_obs, next_state, reward, done, info
 
     def step_env_wocontroller(
         self,
@@ -561,7 +568,7 @@ class Quad3D(BaseEnvironment):
             next_state,
             reward,
             done,
-            self.get_info(state, params),
+            self.get_info(next_state, params),
         )
 
     def get_obs_state_reward_done_info(
@@ -570,14 +577,14 @@ class Quad3D(BaseEnvironment):
         next_state: EnvState3D,
         params: EnvParams3D,
     ) -> Tuple[chex.Array, EnvState3D, float, bool, dict]:
-        obs, state, reward, done, info = self.get_obs_state_reward_done_info_gradient(
+        next_obs, next_state, reward, done, info = self.get_obs_state_reward_done_info_gradient(
             state, next_state, params
         )
-        obs = lax.stop_gradient(obs)
-        state = lax.stop_gradient(state)
+        next_obs = lax.stop_gradient(next_obs)
+        next_state = lax.stop_gradient(next_state)
         return (
-            obs,
-            state,
+            next_obs,
+            next_state,
             reward,
             done,
             info,
@@ -743,8 +750,8 @@ class Quad3D(BaseEnvironment):
         info = self.get_info(state, params)
 
         # repeat each element in state for batch_size times
-        state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.array([x]), 10, axis=0), state)
-        info["state_seq"] = state_repeat
+        # state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.array([x]), 10, axis=0), state)
+        # info["state_seq"] = state_repeat
 
         return self.get_obs(state, params), info, state
 
@@ -821,14 +828,16 @@ class Quad3D(BaseEnvironment):
     def get_obs_paramsonly(self, state: EnvState3D, params: EnvParams3D) -> chex.Array:
         obs_elements = [
             # parameter observation
+            # pwmf
+            (params.pwmf - params.pwmf_mean) / params.pwmf_std,
             # I
             (params.I.diagonal() - params.I_diag_mean) / params.I_diag_std,
             # disturbance
             (state.f_disturb) / params.disturb_scale,
             # hook offset
-            (params.hook_offset - params.hook_offset_mean) / params.hook_offset_std,
+            # (params.hook_offset - params.hook_offset_mean) / params.hook_offset_std,
             # disturbance parameters
-            params.disturb_params,
+            # params.disturb_params,
             jnp.array(
                 [
                     # mass
@@ -836,13 +845,15 @@ class Quad3D(BaseEnvironment):
                     # action_scale
                     (params.action_scale - params.action_scale_mean)
                     / params.action_scale_std,
+                    # thrust tau
+                    (params.tau_thrust - params.thrust_tau_mean)
                     # 1st order alpha
-                    (params.alpha_bodyrate - params.alpha_bodyrate_mean)
-                    / params.alpha_bodyrate_std,
+                    # (params.alpha_bodyrate - params.alpha_bodyrate_mean)
+                    # / params.alpha_bodyrate_std,
                     # object mass
-                    (params.mo - params.mo_mean) / params.mo_std,
+                    # (params.mo - params.mo_mean) / params.mo_std,
                     # rope length
-                    (params.l - params.l_mean) / params.l_std,
+                    # (params.l - params.l_mean) / params.l_std,
                 ]
             ),
         ]  # 13+6=19
@@ -1129,7 +1140,7 @@ def eval_env(
     rng_reset_list = jax.random.split(rng_reset_meta, num_trajs)
     for i, rng_reset in enumerate(rng_reset_list):
         print(f"[DEBUG] test traj {i+1}")
-        for _ in trange(num_eps // num_trajs):
+        for _ in trange(int(num_eps // num_trajs)):
             rng, err_pos = run_one_ep_jit(rng_reset, rng)
             err_pos_ep.append(err_pos.mean())
     # last_ep_end = 0

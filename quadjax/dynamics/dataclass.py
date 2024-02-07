@@ -174,8 +174,7 @@ class EnvState3D:
     action_hist: jnp.ndarray 
 
     # control params is float or dataclass
-    control_params:  Union[float, struct.dataclass] = 0.0    
-
+    control_params:  Union[float, struct.dataclass] = 0.0   
 
 @struct.dataclass
 class EnvParams3D:
@@ -220,7 +219,16 @@ class EnvParams3D:
     alpha_thrust: float = 0.6
     alpha_bodyrate_mean: float = 0.5
     alpha_bodyrate_std: float = 0.1
-    tau_thrust: float = 0.1
+
+    tau_thrust: float = 0.1 # time constant for thrust
+    thrust_tau_mean: float = 0.1
+    thrust_tau_std: float = 0.03
+
+    # p_pwmf
+    pwmf: jnp.ndarray = default_array([1.71479058e-09,  8.80284482e-05, -2.21152097e-01])
+    pwmf_scale_std: float = 0.1
+    pwmf_mean: jnp.ndarray = default_array([1.71479058e-09,  8.80284482e-05, -2.21152097e-01])
+    pwmf_std: jnp.ndarray = default_array([3e-10, 2e-5, 0.2])
 
     max_steps_in_episode: int = 300
     rope_taut_therehold: float = 1e-4

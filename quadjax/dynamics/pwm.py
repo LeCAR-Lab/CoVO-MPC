@@ -8,16 +8,16 @@ from quadjax.dynamics import utils, geom
 from quadjax.dynamics.dataclass import EnvParams3D, EnvState3D, Action3D
 
 # polyfit using data and scripts from https://github.com/IMRCLab/crazyflie-system-id
-p = jnp.array([1.71479058e-09,  8.80284482e-05, -2.21152097e-01])
+# p = jnp.array([1.71479058e-09,  8.80284482e-05, -2.21152097e-01])
 
 @jax.jit
-def pwm_to_force(pwm):
+def pwm_to_force(pwm, p):
     force_in_grams = jnp.polyval(p, pwm)
     force_in_newton = force_in_grams * 9.81 / 1000.0
     return jnp.maximum(force_in_newton, 0)
 
 @jax.jit
-def force_to_pwm(force):
+def force_to_pwm(force, p):
     a, b, c = p
     force_in_grams = force * 1000.0 / 9.81
     pwm = (-b + jnp.sqrt(b**2 - 4*a*(c-force_in_grams))) / (2*a)
@@ -51,7 +51,7 @@ def get_free_dynamics_pwm():
         # alpha = 1.0
         u_pwm = alpha * u + (1 - alpha) * last_u
         pwm = (u_pwm + 1.0) / 2.0 * 65535
-        f = pwm_to_force(pwm)
+        f = pwm_to_force(pwm, params.pwmf)
         eta = B0 @ f
         thrust = eta[0]  # convert to motor force
         torque = eta[1:]

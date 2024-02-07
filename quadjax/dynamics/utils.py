@@ -439,11 +439,14 @@ def tracking_penyaw_reward_fn(state: EnvState3D, params = None):
     err_vel = jnp.linalg.norm(state.vel_tar - state.vel)
     q = state.quat
     yaw = jnp.arctan2(2*(q[3]*q[2]+q[0]*q[1]), 1-2*(q[1]**2+q[2]**2))
+    quat_err = 1.0 - state.quat[3] ** 2
     # underactuated_direction_panelty = jnp.sum(jnp.abs(state.pos[:2]))*0.05 # penalize x and y direction to increase stability. 
-    reward = 1.3 - \
-        0.05 * err_vel - \
-        log_pos_fn(err_pos) - \
-        jnp.abs(yaw) * 0.2 #- \
+    reward = 2.0 - \
+        1.0 * err_pos - \
+        0.2 * err_vel - \
+        jnp.abs(yaw) * 0.2 - \
+        quat_err * 1.0
+        # log_pos_fn(err_pos) - \
         # underactuated_direction_panelty
         # jnp.abs(state.omega[2]) * 0.02 - \
 

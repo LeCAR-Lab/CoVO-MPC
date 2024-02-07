@@ -518,17 +518,17 @@ def make_train(env, config):
 
 @pydataclass
 class Args:
-    task: str = "tracking_zigzag" # tracking, tracking_zigzag, 
-    env: str = "quad2d_free" # quad2d_free, quad2d, quad3d_free, quad3d
-    lower_controller: str = "base" # bodyrate, base, l1, l1_esitimate_only
+    task: str = "tracking" # tracking, tracking_zigzag, 
+    env: str = "quad3d_fine" # quad2d_free, quad2d, quad3d_free, quad3d
+    lower_controller: str = "pid_pwm" # bodyrate, base, l1, l1_esitimate_only
     obs_type: str = "quad" # quad_params, quad
     debug: bool = False
     curri: bool = False
-    dynamics: str = "free"
+    dynamics: str = "pwm"
     curri: bool = False
     RMA: bool = False
     noDR: bool = False # no domain randomization
-    disturb_type: str = "periodic" # periodic, sin, drag, mixed
+    disturb_type: str = "none" # periodic, sin, drag, mixed
     name: str = "" # experiment name
 
 
@@ -572,6 +572,10 @@ def main(args: Args):
         env = quadjax.envs.quad3d.Quad3D(task=args.task, lower_controller=args.lower_controller)
         render_fn = quadjax.envs.quad3d.render_env
         eval_fn = quadjax.envs.quad3d.eval_env
+    elif args.env == 'quad3d_fine':
+        env = quadjax.envs.quad3d_fine.Quad3D(task=args.task, lower_controller=args.lower_controller, dynamics=args.dynamics, obs_type=args.obs_type, enable_randomizer=(not args.noDR), disturb_type=args.disturb_type, disable_rollover_terminate=False)
+        render_fn = quadjax.envs.quad3d_fine.render_env
+        eval_fn = quadjax.envs.quad3d_fine.eval_env
     train_fn = make_train(env, config)
 
     t0 = time.time()
