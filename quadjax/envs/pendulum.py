@@ -38,7 +38,7 @@ class PendulumParams:
     max_torque: float = 2.0
     max_steps_in_episode: int = 200
 
-    q1: float = 1.0
+    q1: float = 10.0
     q2: float = 1.0
     r: float = 1.0
 
@@ -65,8 +65,8 @@ class Pendulum(BaseEnvironment):
 
     def get_reward(self, state: PendulumState, params: PendulumParams) -> float:
         return -(
-            params.q1 * jnp.sin(state.theta)**2
-            + params.q1 * (jnp.cos(state.theta)-1)**2
+            # params.q1 * jnp.sin(state.theta)**2
+            params.q1 * (jnp.cos(state.theta)-1)**2
             + params.q2 * state.theta_dot**2
             + params.r * state.last_u**2
         ).squeeze()
@@ -186,6 +186,27 @@ def main(args: Args):
         )
         controller = controllers.MPPIController(
             env=env, control_params=control_params, N=N, H=H, lam=lam
+        )
+    elif args.controller == "mppi_spline":
+        sigmas = jnp.array([sigma] * env.action_dim)
+        a_cov_per_step = jnp.diag(sigmas**2)
+        N = 32
+        h = 5
+        n = 10
+        H = (h-1)*n + 1
+        a_cov = jnp.tile(a_cov_per_step, (h, 1, 1))
+
+        control_params = controllers.MPPISplineParams(
+            gamma_mean=1.0,
+            gamma_sigma=0.0,
+            discount=1.0,
+            sample_sigma=sigma,
+            a_mean=jnp.zeros((H, env.action_dim)),
+            a_cov=a_cov,
+            obs_noise_scale=0.0,
+        )
+        controller = controllers.MPPISplineController(
+            env=env, control_params=control_params, N=N, h=h, lam=1e-2, n=n,
         )
     elif "covo" in args.controller:
         expansion_mode = "feedback" if "offline" in args.controller else "mean"

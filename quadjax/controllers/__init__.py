@@ -10,3 +10,5 @@ from quadjax.controllers.nladaptive import NLAdaptiveController, NLACParams
 from quadjax.controllers.mppi_zeji import MPPIZejiController, MPPIZejiParams
 from quadjax.controllers.mppi_zeji_legacy import MPPIZejiControllerLegacy, MPPIZejiParamsLegacy
 from quadjax.controllers.feedback import FeedbackController, FeedbackParams
+
+from quadjax.controllers.mppi_spline import MPPISplineController, MPPISplineParams
