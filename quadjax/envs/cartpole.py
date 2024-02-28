@@ -123,7 +123,7 @@ class CartPole(BaseEnvironment):
         done = self.is_terminal(state, params)
 
         return (
-            lax.stop_gradient(self.get_obs(state)),
+            lax.stop_gradient(self.get_obs(state, params)),
             lax.stop_gradient(state),
             reward,
             done,
@@ -422,6 +422,27 @@ def main(args: Args):
         )
         controller = controllers.MPPIController(
             env=env, control_params=control_params, N=N, H=H, lam=lam
+        )
+    elif args.controller == "mppi_spline":
+        sigmas = jnp.array([sigma] * env.action_dim)
+        a_cov_per_step = jnp.diag(sigmas**2)
+        N = 32
+        h = 5
+        n = 10
+        H = (h-1)*n + 1
+        a_cov = jnp.tile(a_cov_per_step, (h, 1, 1))
+
+        control_params = controllers.MPPISplineParams(
+            gamma_mean=1.0,
+            gamma_sigma=0.0,
+            discount=1.0,
+            sample_sigma=sigma,
+            a_mean=jnp.zeros((H, env.action_dim)),
+            a_cov=a_cov,
+            obs_noise_scale=0.0,
+        )
+        controller = controllers.MPPISplineController(
+            env=env, control_params=control_params, N=N, h=h, lam=1e-2, n=n,
         )
     elif "covo" in args.controller:
         expansion_mode = "feedback" if "offline" in args.controller else "mean"
