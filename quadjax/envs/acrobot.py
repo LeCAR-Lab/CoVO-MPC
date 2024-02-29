@@ -63,12 +63,12 @@ class Acrobot(BaseEnvironment):
     ) -> Tuple[chex.Array, AcrobotState, float, bool, dict]:
         """Performs step transitions in the environment."""
         action_clip = jnp.clip(action[0], -1, 1)
-        torque = action_clip * 50.0
+        torque = action_clip * 3.0
 
         # Augment state with force action so it can be passed to ds/dt
         s_augmented = jnp.array(
             [
-                state.joint_angle1,
+                state.joint_angle1+jnp.pi,
                 state.joint_angle2,
                 state.velocity_1,
                 state.velocity_2,
@@ -76,7 +76,7 @@ class Acrobot(BaseEnvironment):
             ]
         )
         ns = rk4(s_augmented, params)
-        joint_angle1 = (ns[0] + jnp.pi) % (2 * jnp.pi) - jnp.pi
+        joint_angle1 = (ns[0]) % (2 * jnp.pi) - jnp.pi
         joint_angle2 = (ns[1] + jnp.pi) % (2 * jnp.pi) - jnp.pi
         velocity_1 = jnp.clip(ns[2], -params.max_vel_1, params.max_vel_1)
         velocity_2 = jnp.clip(ns[3], -params.max_vel_2, params.max_vel_2)
@@ -118,13 +118,7 @@ class Acrobot(BaseEnvironment):
 
     def get_reward(self, state: AcrobotState, params: AcrobotParams) -> float:
         """Returns reward for given state."""
-        reward = (
-            -1.0 * state.joint_angle1 ** 2
-            - 0.1 * state.velocity_1**2
-            - 1.0 * (state.joint_angle2) ** 2
-            - 0.1 * state.velocity_2**2
-            - 0.1 * state.last_action**2
-        )
+        reward = jnp.cos(state.joint_angle1) + jnp.cos(state.joint_angle1 + state.joint_angle2)
         return reward
 
     def get_obs(self, state: AcrobotState, params: AcrobotParams) -> chex.Array:
@@ -155,34 +149,40 @@ def dsdt(s_augmented: chex.Array, t: float, params: AcrobotParams) -> chex.Array
     a = s_augmented[-1]
     s = s_augmented[:-1]
     theta1, theta2, dtheta1, dtheta2 = s
-    theta1 = theta1 - jnp.pi
-    d1 = m1 * lc1**2 + m2 * (l1**2 + lc2**2 + 2 * l1 * lc2 * jnp.cos(theta2)) + I1 + I2
-    d2 = m2 * (lc2**2 + l1 * lc2 * jnp.cos(theta2)) + I2
+    d1 = (
+        m1 * lc1 ** 2
+        + m2 * (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * jnp.cos(theta2))
+        + I1
+        + I2
+    )
+    d2 = m2 * (lc2 ** 2 + l1 * lc2 * jnp.cos(theta2)) + I2
     phi2 = m2 * lc2 * g * jnp.cos(theta1 + theta2 - jnp.pi / 2.0)
     phi1 = (
-        -m2 * l1 * lc2 * dtheta2**2 * jnp.sin(theta2)
+        -m2 * l1 * lc2 * dtheta2 ** 2 * jnp.sin(theta2)
         - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * jnp.sin(theta2)
         + (m1 * lc1 + m2 * l1) * g * jnp.cos(theta1 - jnp.pi / 2)
         + phi2
     )
     ddtheta2 = (
-        a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1**2 * jnp.sin(theta2) - phi2
-    ) / (m2 * lc2**2 + I2 - d2**2 / d1)
+        a
+        + d2 / d1 * phi1
+        - m2 * l1 * lc2 * dtheta1 ** 2 * jnp.sin(theta2)
+        - phi2
+    ) / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
     ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
-    return jnp.array([dtheta1+jnp.pi, dtheta2, ddtheta1, ddtheta2, 0.0])
+    return jnp.array([dtheta1, dtheta2, ddtheta1, ddtheta2, 0.0])
 
 
 def wrap(x: float, m: float, M: float) -> float:
     """For example, m = -180, M = 180 (degrees), x = 360 --> returns 0."""
     diff = M - m
-    go_up = x < m  # Wrap if x is outside the left bound
+    go_up = x < m     # Wrap if x is outside the left bound
     go_down = x >= M  # Wrap if x is outside OR on the right bound
 
-    how_often = go_up * jnp.ceil(
-        (m - x) / diff
-    ) + go_down * jnp.floor(  # if m - x is an integer, keep it
-        (x - M) / diff + 1
-    )  # if x - M is an integer, round up
+    how_often = (
+        go_up * jnp.ceil((m - x) / diff)           # if m - x is an integer, keep it
+        + go_down * jnp.floor((x - M) / diff + 1)  # if x - M is an integer, round up
+    )
     x_out = x - how_often * diff * go_down + how_often * diff * go_up
     return x_out
 
@@ -196,7 +196,6 @@ def rk4(y0: chex.Array, params: AcrobotParams):
     k4 = dsdt(y0 + params.dt * k3, params.dt, params)
     yout = y0 + params.dt / 6.0 * (k1 + 2 * k2 + 2 * k3 + k4)
     return yout
-
 
 @pydataclass
 class Args:
@@ -251,7 +250,7 @@ def main(args: Args):
         sigmas = jnp.array([sigma] * env.action_dim)
         a_cov_per_step = jnp.diag(sigmas**2)
         N = 32
-        h = 5
+        h = 10
         n = 10
         H = (h - 1) * n + 1
         a_cov = jnp.tile(a_cov_per_step, (h, 1, 1))
@@ -294,6 +293,9 @@ def main(args: Args):
             lam=lam,
             expansion_mode=expansion_mode,
         )
+    elif args.controller == "zero":
+        control_params = None
+        controller = lambda *args, **kwargs: (jnp.zeros(env.action_dim), None, None)
     else:
         raise NotImplementedError
 

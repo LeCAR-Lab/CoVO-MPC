@@ -70,7 +70,7 @@ class MPPISplineController(controllers.BaseController):
             env_state, params, reward_before, done_before = carry
             obs, env_state, reward, done, info = jax.vmap(lambda s, a, p: self.env.step_env(step_key, s, a, p))(env_state, action, params)
             reward = jnp.where(done_before, reward_before, reward)
-            return (env_state, params, reward, done | done_before), (reward, env_state.theta, env_state.theta_dot)#, env_state.pos)
+            return (env_state, params, reward, done | done_before), reward #, env_state.pos)
         # repeat env_state each element to match the sample size N
         state_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_state)
         env_params_repeat = jax.tree_map(lambda x: jnp.repeat(jnp.asarray(x)[None, ...], self.N, axis=0), env_params)
@@ -78,7 +78,7 @@ class MPPISplineController(controllers.BaseController):
         reward_repeat = jnp.full(self.N, 0.0)
 
         # _, (rewards, poses) = lax.scan(rollout_fn, (state_repeat, env_params_repeat, reward_repeat, done_repeat), a_sampled.transpose(1,0,2), length=self.H)
-        _, (rewards, thetas, theta_dots) = lax.scan(rollout_fn, (state_repeat, env_params_repeat, reward_repeat, done_repeat), a_sampled.transpose(1,0,2), length=self.H)
+        _, rewards = lax.scan(rollout_fn, (state_repeat, env_params_repeat, reward_repeat, done_repeat), a_sampled.transpose(1,0,2), length=self.H)
         # get discounted reward sum over horizon (axis=1)
         rewards = rewards.transpose(1,0) # (H, N) -> (N, H)
         discounted_rewards = jnp.sum(rewards * jnp.power(control_params.discount, jnp.arange(self.H)), axis=1, keepdims=False)
@@ -103,8 +103,8 @@ class MPPISplineController(controllers.BaseController):
             # 'pos_std': jnp.std(poses, axis=1)
             # "cost": cost,
             # "a_sampled": a_sampled,
-            "thetas": thetas,
-            "theta_dots": theta_dots,
+            # "thetas": thetas,
+            # "theta_dots": theta_dots,
         }
 
         return u, control_params, info
