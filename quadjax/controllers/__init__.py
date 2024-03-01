@@ -12,3 +12,4 @@ from quadjax.controllers.mppi_zeji_legacy import MPPIZejiControllerLegacy, MPPIZ
 from quadjax.controllers.feedback import FeedbackController, FeedbackParams
 
 from quadjax.controllers.mppi_spline import MPPISplineController, MPPISplineParams
+from quadjax.controllers.mppi_zeji_spline import MPPIZejiSplineController, MPPIZejiSplineParams

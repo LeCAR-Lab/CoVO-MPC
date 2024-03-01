@@ -204,6 +204,11 @@ class Args:
 
 
 def main(args: Args):
+    # disable jit
+    # jax.config.update("jax_disable_jit", True)
+    # use x64
+    jax.config.update("jax_enable_x64", True)
+
     # setup environment
     env = Acrobot()
 
@@ -271,6 +276,34 @@ def main(args: Args):
             h=h,
             lam=1e-2,
             n=n,
+        )
+    elif args.controller == "covo_spline":
+        N = 32
+        h = 10
+        n = 10
+        H = (h - 1) * n + 1
+        a_mean = jnp.tile(jnp.zeros(env.action_dim), (H, 1))
+        sigmas = jnp.array([sigma] * env.action_dim)
+        a_cov_per_step = jnp.diag(sigmas**2)
+        a_cov = jnp.tile(a_cov_per_step, (h, 1, 1))
+        control_params = controllers.MPPIZejiSplineParams(
+            gamma_mean=1.0,
+            gamma_sigma=0.0,
+            discount=1.0,
+            sample_sigma=sigma,
+            a_mean=a_mean,
+            a_cov=a_cov,
+            a_cov_offline=jnp.zeros((h, env.action_dim, env.action_dim)),
+            obs_noise_scale=0.0,
+        )
+        controller = controllers.MPPIZejiSplineController(
+            env=env,
+            control_params=control_params,
+            N=N,
+            h=h,
+            lam=1e-2,
+            n=n,
+            expansion_mode="mean",
         )
     elif "covo" in args.controller:
         expansion_mode = "feedback" if "offline" in args.controller else "mean"

@@ -28,8 +28,8 @@ class MPPISplineController(controllers.BaseController):
     def __init__(self, env, control_params, N: int, h: int, lam: float, n:int) -> None:
         super().__init__(env, control_params)
         self.N = N # NOTE: N is the number of samples, set here as a static number
-        self.h = h
-        self.H = (h-1)*n + 1 # horizon
+        self.h = h # knot point horizon
+        self.H = (h-1)*n + 1 # real horizon
         self.lam = lam
         self.n = n # point between two waypoints for spline
 
